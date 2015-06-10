@@ -26,11 +26,6 @@ CLICK_DECLS
 
 AvailableRates::AvailableRates()
 {
-
-  /* bleh */
-  static unsigned char bcast_addr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-  _bcast = EtherAddress(bcast_addr);
-
 }
 
 AvailableRates::~AvailableRates()
@@ -65,8 +60,8 @@ AvailableRates::parse_and_insert(String s, ErrorHandler *errh)
       return errh->error("error param %s: must start with ethernet address", s.c_str());
   }
 
-  for (int x = 1; x< args.size(); x++) {
-    int r;
+  for (int x = 1; x < args.size(); x++) {
+    int r = 0;
     IntArg().parse(args[x], r);
     if (default_rates) {
       _default_rates.push_back(r);
@@ -106,7 +101,7 @@ AvailableRates::take_state(Element *e, ErrorHandler *)
   AvailableRates *q = (AvailableRates *)e->cast("AvailableRates");
   if (!q) return;
   _rtable = q->_rtable;
-  _default_rates = _default_rates;
+  _default_rates = q->_default_rates;
 
 }
 
@@ -125,6 +120,22 @@ AvailableRates::lookup(EtherAddress eth)
 
   if (_default_rates.size()) {
     return _default_rates;
+  }
+
+  return Vector<int>();
+}
+
+Vector<int>
+AvailableRates::supported(EtherAddress eth)
+{
+  if (!eth) {
+    click_chatter("%s: lookup called with NULL eth!\n", name().c_str());
+    return Vector<int>();
+  }
+
+  DstInfo *dst = _rtable.findp(eth);
+  if (dst) {
+    return dst->_rates;
   }
 
   return Vector<int>();

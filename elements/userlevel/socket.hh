@@ -4,9 +4,11 @@
 #include <click/element.hh>
 #include <click/string.hh>
 #include <click/task.hh>
+#include <click/timer.hh>
 #include <click/notifier.hh>
 #include "../ip/iproutetable.hh"
 #include <sys/un.h>
+#include <click/handlercall.hh>
 CLICK_DECLS
 
 /*
@@ -186,6 +188,7 @@ class Socket : public Element { public:
 
   void add_handlers() CLICK_COLD;
   bool run_task(Task *);
+  void run_timer(Timer *);
   void selected(int fd, int mask);
   void push(int port, Packet*);
 
@@ -195,6 +198,7 @@ class Socket : public Element { public:
 
 protected:
   Task _task;
+  Timer _timer;
 
 private:
   int _fd;	// socket descriptor
@@ -232,8 +236,11 @@ private:
   bool _verbose;		// be verbose
   bool _client;			// client or server
   bool _proper;			// (PlanetLab only) use Proper to bind port
+  int _reconnect;       // timeout for reconnecting
   IPRouteTable *_allow;		// lookup table of good hosts
   IPRouteTable *_deny;		// lookup table of bad hosts
+
+  HandlerCall *_reconnect_call_h;
 
   int initialize_socket_error(ErrorHandler *, const char *);
 
