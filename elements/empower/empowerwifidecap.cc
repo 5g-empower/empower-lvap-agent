@@ -134,11 +134,6 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 		return 0;
 	}
 
-    if (!ess->_uplink) {
-		p->kill();
-		return 0;
-	}
-
 	if (ess->_bssid != bssid) {
 		p->kill();
 		return 0;

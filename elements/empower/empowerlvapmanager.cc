@@ -293,10 +293,6 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 	status->set_type(EMPOWER_PT_STATUS_LVAP);
 	status->set_seq(get_next_seq());
 	status->set_assoid(ess._assoc_id);
-	if (ess._downlink)
-		status->set_flag(EMPOWER_STATUS_DOWNLINK);
-	if (ess._uplink)
-		status->set_flag(EMPOWER_STATUS_UPLINK);
 	if (ess._set_mask)
 		status->set_flag(EMPOWER_STATUS_SET_MASK);
 	if (ess._authentication_status)
@@ -698,8 +694,6 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	bool authentication_state = add_lvap->flag(EMPOWER_STATUS_LVAP_AUTHENTICATED);
 	bool association_state = add_lvap->flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
 	bool set_mask = add_lvap->flag(EMPOWER_STATUS_SET_MASK);
-	bool downlink = add_lvap->flag(EMPOWER_STATUS_DOWNLINK);
-	bool uplink = add_lvap->flag(EMPOWER_STATUS_UPLINK);
 
 	if (_debug) {
 	    StringAccum sa;
@@ -717,9 +711,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 				      ssid.c_str(),
 				      sa.take_string().c_str(),
 				      assoc_id,
-				      set_mask ? "MASK" : "NO_MASK",
-					  downlink ? "DL" : "NO_DL",
-					  uplink ? "UL" : "NO_UL",
+				      set_mask ? "DL+UL" : "UL",
 				      authentication_state ? "AUTH" : "NO_AUTH",
 				      association_state ? "ASSOC" : "NO_ASSOC");
 	}
@@ -736,8 +728,6 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._rts_cts = 2346;
 		state._tx_power = 30;
 		state._set_mask = set_mask;
-		state._downlink = downlink;
-		state._uplink = uplink;
 		state._authentication_status = authentication_state;
 		state._association_status = association_state;
 		state._set_mask = set_mask;
@@ -764,8 +754,6 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	ess->_authentication_status = authentication_state;
 	ess->_association_status = association_state;
 	ess->_set_mask = set_mask;
-	ess->_downlink = downlink;
-	ess->_uplink = uplink;
 	ess->_ssid = ssid;
 
 	return 0;
@@ -961,6 +949,8 @@ int EmpowerLVAPManager::handle_assoc_response(Packet *p, uint32_t offset) {
 			      __func__,
 			      sta.unparse_colon().c_str());
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
+	ess->_assoc_id = q->assoc_id();
+	ess->_ssid = q->ssid();
 	_eassor->send_association_response(q->sta(), WIFI_STATUS_SUCCESS, ess->_iface_id);
 	return 0;
 }
@@ -1199,14 +1189,10 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 		    sa << "sta ";
 		    sa << it.key().unparse();
 		    sa << " (";
-		    if (it.value()._downlink) {
-			    sa << "D";
-		    }
-		    if (it.value()._uplink) {
-			    sa << "U";
-		    }
 		    if (it.value()._set_mask) {
-			    sa << "M";
+			    sa << "DL+UL";
+		    } else {
+			    sa << "UL";
 		    }
 		    sa << ") bssid ";
 		    sa << it.value()._bssid.unparse();
@@ -1310,6 +1296,7 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		// send status update messages
 		for (LVAPSIter it = f->_lvaps.begin(); it.live(); it++) {
 			f->send_status_lvap(it.key());
+			f->send_status_port(it.key());
 		}
 		break;
 	}

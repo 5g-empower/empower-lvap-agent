@@ -73,7 +73,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 			p->kill();
 			return;
 		}
-        if (!ess->_downlink) {
+        if (!ess->_set_mask) {
 			p->kill();
 			return;
 		}

@@ -92,8 +92,6 @@ public:
 	int _iface_id;
 	bool _power_save;
 	bool _set_mask;
-	bool _downlink;
-	bool _uplink;
 	bool _authentication_status;
 	bool _association_status;
 	bool _no_ack;
