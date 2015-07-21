@@ -98,6 +98,12 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 		return;
 	}
 
+	// if this is an uplink only lvap then ignore request
+	if (!ess->_set_mask) {
+		p->kill();
+		return;
+	}
+
 	EtherAddress bssid = EtherAddress(w->i_addr3);
 
 	//If the bssid does not match, ignore

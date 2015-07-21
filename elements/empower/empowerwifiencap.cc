@@ -106,8 +106,13 @@ EmpowerWifiEncap::push(int, Packet *p) {
 
 	// broadcast traffic
 	for (LVAPSIter it = _el->lvaps()->begin(); it.live(); it++) {
+    	if (!it.value()._set_mask) {
+    		continue;
+    	}
 		if (Packet *q = p->clone()) {
-			it.value().update_tx(q->length());
+	    	if (!_no_stats) {
+	    		it.value().update_tx(q->length());
+	    	}
 			Packet * p_out = wifi_encap(q, dst, src, it.value()._bssid);
 			SET_PAINT_ANNO(p_out, it.value()._iface_id);
 			output(0).push(p_out);

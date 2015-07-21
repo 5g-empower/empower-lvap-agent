@@ -96,6 +96,12 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 		return;
 	}
 
+	// if this is an uplink only lvap then ignore request
+	if (!ess->_set_mask) {
+		p->kill();
+		return;
+	}
+
     // If auth request is coming from different channel, ignore
 	if (ess->_iface_id != iface_id) {
 		click_chatter("%{element} :: %s :: %s is on iface %u, message coming from %u",

@@ -545,6 +545,12 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 		return;
 	}
 
+	// if this is an uplink only lvap then ignore request
+	if (!ess->_set_mask) {
+		p->kill();
+		return;
+	}
+
 	/* If the client is performing an active scan, then
      * then respond from all available SSIDs. Else, if
      * the client is probing for a particular SSID, check
