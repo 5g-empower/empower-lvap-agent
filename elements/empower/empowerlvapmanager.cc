@@ -683,6 +683,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 				      this,
 				      __func__,
 				      ssids.size());
+		return 0;
 	}
 
 	String ssid = *ssids.begin();
@@ -949,8 +950,6 @@ int EmpowerLVAPManager::handle_assoc_response(Packet *p, uint32_t offset) {
 			      __func__,
 			      sta.unparse_colon().c_str());
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-	ess->_assoc_id = q->assoc_id();
-	ess->_ssid = q->ssid();
 	_eassor->send_association_response(q->sta(), WIFI_STATUS_SUCCESS, ess->_iface_id);
 	return 0;
 }

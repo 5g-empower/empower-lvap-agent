@@ -172,12 +172,8 @@ struct empower_assoc_request : public empower_header {
 struct empower_assoc_response : public empower_header {
   private:
     uint8_t	_sta[6];
-    uint16_t _assoc_id;
-    char _ssid[];
   public:
-	String       ssid()                           { return String((char *) _ssid, WIFI_MIN(length() - sizeof(empower_assoc_response), WIFI_NWID_MAXSIZE)); }
 	EtherAddress sta()							  { return EtherAddress(_sta); }
-	uint16_t     assoc_id()                       { return ntohs(_assoc_id); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* caps request packet format */
