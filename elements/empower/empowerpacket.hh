@@ -344,6 +344,7 @@ private:
     uint8_t _channel;
     uint8_t _band;
 	uint8_t	_sta[6];
+	uint8_t	_encap[6];
 	uint8_t	_bssid[6];
 	ssid_entry *_ssids[];
 public:
@@ -352,6 +353,7 @@ public:
 	bool         flag(int f)	{ return ntohs(_flags) & f;  }
 	uint16_t     assoc_id()     { return ntohs(_assoc_id); }
 	EtherAddress sta()			{ return EtherAddress(_sta); }
+	EtherAddress encap()		{ return EtherAddress(_encap); }
 	EtherAddress bssid()		{ return EtherAddress(_bssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
@@ -370,6 +372,7 @@ private:
 	uint16_t _assoc_id;
 	uint8_t	_wtp[6];
 	uint8_t	_sta[6];
+	uint8_t	_encap[6];
     uint8_t _channel;
     uint8_t _band;
 	uint8_t	_bssid[6];
@@ -381,6 +384,7 @@ public:
 	void set_assoid(uint16_t assoc_id)  { _assoc_id = htons(assoc_id); }
 	void set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
 	void set_sta(EtherAddress sta)		{ memcpy(_sta, sta.data(), 6); }
+	void set_encap(EtherAddress encap)	{ memcpy(_encap, encap.data(), 6); }
 	void set_bssid(EtherAddress bssid)	{ memcpy(_bssid, bssid.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 

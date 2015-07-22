@@ -301,6 +301,7 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 		status->set_flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
 	status->set_wtp(_dpid);
 	status->set_sta(sta);
+	status->set_encap(ess._encap);
 	status->set_bssid(ess._bssid);
 	status->set_channel(ess._channel);
 	status->set_band(ess._band);
@@ -695,6 +696,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	bool authentication_state = add_lvap->flag(EMPOWER_STATUS_LVAP_AUTHENTICATED);
 	bool association_state = add_lvap->flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
 	bool set_mask = add_lvap->flag(EMPOWER_STATUS_SET_MASK);
+	EtherAddress encap = add_lvap->encap();
 
 	if (_debug) {
 	    StringAccum sa;
@@ -721,6 +723,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 		EmpowerStationState state;
 		state._bssid = bssid;
+		state._encap = encap;
 		state._ssids = ssids;
 		state._assoc_id = assoc_id;
 		state._channel = channel;
@@ -751,6 +754,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
 	ess->_ssids = ssids;
+	ess->_encap = encap;
 	ess->_assoc_id = assoc_id;
 	ess->_authentication_status = authentication_state;
 	ess->_association_status = association_state;
@@ -1195,6 +1199,8 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 		    }
 		    sa << ") bssid ";
 		    sa << it.value()._bssid.unparse();
+		    sa << " encap ";
+		    sa << it.value()._encap.unparse();
 		    sa << " ssid ";
 		    sa << it.value()._ssid;
 		    sa << " ssids [ ";
@@ -1295,7 +1301,9 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		// send status update messages
 		for (LVAPSIter it = f->_lvaps.begin(); it.live(); it++) {
 			f->send_status_lvap(it.key());
-			f->send_status_port(it.key());
+			if (it.value()._set_mask) {
+				f->send_status_port(it.key());
+			}
 		}
 		break;
 	}

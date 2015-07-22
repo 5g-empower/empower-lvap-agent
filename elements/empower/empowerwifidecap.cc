@@ -157,6 +157,36 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 		return 0;
 	}
 
+	// frame must be encapsulated in another ethernet frame
+	if (ess->_encap) {
+
+		WritablePacket *p_out = p->uniqueify();
+
+		if (!p_out) {
+			return 0;
+		}
+
+		p_out = p_out->push_mac_header(14);
+
+		if (!p_out) {
+			return 0;
+		}
+
+		uint16_t ether_type = 0xBBBB;
+
+		memcpy(p_out->data(), ess->_encap.data(), 6);
+		memcpy(p_out->data() + 6, _el->dpid().data(), 6);
+		memcpy(p_out->data() + 12, &ether_type, 2);
+
+		if (!_no_stats) {
+			ess->update_rx(p_out->length());
+		}
+
+		return p_out;
+
+	}
+
+	// normal wifi decap
 	WritablePacket *p_out = p->uniqueify();
 	if (!p_out) {
 		return 0;

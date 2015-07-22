@@ -165,6 +165,7 @@ public:
 	void send_summary(EtherAddress, uint32_t, const Vector<Frame> &);
 	void send_link_stats_response(EtherAddress, uint32_t);
 
+	EtherAddress dpid() { return _dpid; }
 	LVAP* lvaps() { return &_lvaps; }
 	LVAP* reverse_lvaps() { return &_reverse_lvaps; }
 	uint32_t get_next_seq() { return ++_seq; }
