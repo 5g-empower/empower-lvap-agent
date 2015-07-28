@@ -936,7 +936,7 @@ int EmpowerLVAPManager::handle_auth_response(Packet *p, uint32_t offset) {
 				      sta.unparse_colon().c_str());
 	}
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-	_eauthr->send_auth_response(q->sta(), 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
+	_eauthr->send_auth_response(sta, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
 	return 0;
 }
 
@@ -949,12 +949,8 @@ int EmpowerLVAPManager::handle_assoc_response(Packet *p, uint32_t offset) {
 				      __func__,
 				      sta.unparse_colon().c_str());
 	}
-	click_chatter("%{element} :: %s :: sta %s",
-			      this,
-			      __func__,
-			      sta.unparse_colon().c_str());
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-	_eassor->send_association_response(q->sta(), WIFI_STATUS_SUCCESS, ess->_iface_id);
+	_eassor->send_association_response(sta, WIFI_STATUS_SUCCESS, ess->_iface_id);
 	return 0;
 }
 
