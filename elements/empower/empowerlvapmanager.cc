@@ -68,6 +68,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 
 	res = Args(conf, this, errh).read_m("HWADDRS", hwaddrs)
 								.read_m("DPID", _dpid)
+								.read_m("OVS_DPID", _ovs_dpid)
 						        .read_m("EBS", ElementCastArg("EmpowerBeaconSource"), _ebs)
 			                    .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
 			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
@@ -245,6 +246,7 @@ void EmpowerLVAPManager::send_hello() {
 	hello->set_seq(get_next_seq());
 	hello->set_period(_period);
 	hello->set_wtp(_dpid);
+	hello->set_ovs_dpid(_ovs_dpid);
 
 	if (_downlink) {
 		hello->set_downlink_packets(_downlink->count());

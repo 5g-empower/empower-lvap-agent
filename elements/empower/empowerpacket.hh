@@ -101,13 +101,15 @@ struct empower_hello : public empower_header {
   private:
 	uint32_t _period;           /* Hello period */
 	uint8_t	_wtp[6];            /* DPID EtherAddress */
+	uint8_t	_ovs_dpid[6];       /* OVS DPID EtherAddress */
 	uint32_t _uplink_bytes;     /* number bytes (uplink) */
 	uint32_t _uplink_packets;   /* number packets (uplink) */
 	uint32_t _downlink_bytes;   /* number bytes (downlink) */
 	uint32_t _downlink_packets; /* number packets (downlink) */
   public:
 	void set_period(uint32_t period)        				{ _period = htonl(period); }
-	void set_wtp(EtherAddress wtp)	  	  					{ memcpy(_wtp, wtp.data(), 8); }
+	void set_wtp(EtherAddress wtp)	  	  					{ memcpy(_wtp, wtp.data(), 6); }
+	void set_ovs_dpid(EtherAddress ovs_dpid)				{ memcpy(_ovs_dpid, ovs_dpid.data(), 6); }
 	void set_uplink_bytes(uint32_t uplink_bytes)          	{ _uplink_bytes = htonl(uplink_bytes); }
 	void set_downlink_bytes(uint32_t downlink_bytes)      	{ _downlink_bytes = htonl(downlink_bytes); }
 	void set_uplink_packets(uint32_t uplink_packets)      	{ _uplink_packets = htonl(uplink_packets); }

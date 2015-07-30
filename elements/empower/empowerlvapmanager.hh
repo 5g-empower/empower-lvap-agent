@@ -192,6 +192,7 @@ private:
 	Timer _timer;
 	uint32_t _seq;
 	EtherAddress _dpid;
+	EtherAddress _ovs_dpid;
 	unsigned int _period; // msecs
 	bool _debug;
 
