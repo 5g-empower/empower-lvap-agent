@@ -168,12 +168,7 @@ void EmpowerOpenAuthResponder::push(int, Packet *p) {
 				      status);
 	}
 
-	if (ess->_authentication_status) {
-		send_auth_response(src, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
-	} else {
-		_el->send_auth_request(src);
-	}
-
+	send_auth_response(src, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
 	p->kill();
 
 }

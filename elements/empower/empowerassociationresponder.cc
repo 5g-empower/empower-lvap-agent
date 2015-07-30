@@ -399,12 +399,7 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 				      sa.take_string().c_str());
 	}
 
-	if (ess->_authentication_status) {
-		send_association_response(src, WIFI_STATUS_SUCCESS, ess->_iface_id);
-	} else {
-		_el->send_association_request(src, ssid);
-	}
-
+	_el->send_association_request(src, ssid);
 	p->kill();
 
 }
