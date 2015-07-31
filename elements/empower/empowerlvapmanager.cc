@@ -36,7 +36,7 @@ CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
 	_ebs(0), _eauthr(0), _eassor(0), _epsb(0), _ers(0), _uplink(0), _downlink(0),
-	_re(0), _timer(this), _seq(0), _period(5000), _debug(false) {
+	_re(0), _timer(this), _seq(0), _port_id(0), _period(5000), _debug(false) {
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
@@ -67,8 +67,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 	String rcs_strings;
 
 	res = Args(conf, this, errh).read_m("HWADDRS", hwaddrs)
-								.read_m("DPID", _dpid)
-								.read_m("OVS_DPID", _ovs_dpid)
+								.read_m("WTP", _wtp)
 						        .read_m("EBS", ElementCastArg("EmpowerBeaconSource"), _ebs)
 			                    .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
 			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
@@ -134,7 +133,7 @@ void EmpowerLVAPManager::send_rssi_trigger(EtherAddress sta, uint32_t trigger_id
 	request->set_type(EMPOWER_PT_RSSI_TRIGGER);
 	request->set_seq(get_next_seq());
 	request->set_trigger_id(trigger_id);
-	request->set_wtp(_dpid);
+	request->set_wtp(_wtp);
 	request->set_sta(sta);
 	request->set_relation(rel);
 	request->set_value(val);
@@ -162,7 +161,7 @@ void EmpowerLVAPManager::send_association_request(EtherAddress src, String ssid)
 	request->set_length(sizeof(empower_assoc_request) + ssid.length());
 	request->set_type(EMPOWER_PT_ASSOC_REQUEST);
 	request->set_seq(get_next_seq());
-	request->set_wtp(_dpid);
+	request->set_wtp(_wtp);
 	request->set_sta(src);
 	request->set_ssid(ssid);
 
@@ -188,7 +187,7 @@ void EmpowerLVAPManager::send_auth_request(EtherAddress src) {
 	request->set_length(sizeof(empower_auth_request));
 	request->set_type(EMPOWER_PT_AUTH_REQUEST);
 	request->set_seq(get_next_seq());
-	request->set_wtp(_dpid);
+	request->set_wtp(_wtp);
 	request->set_sta(src);
 
 	output(0).push(p);
@@ -215,7 +214,7 @@ void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, uint8
 	request->set_length(sizeof(empower_probe_request) + ssid.length());
 	request->set_type(EMPOWER_PT_PROBE_REQUEST);
 	request->set_seq(get_next_seq());
-	request->set_wtp(_dpid);
+	request->set_wtp(_wtp);
 	request->set_sta(src);
 	request->set_ssid(ssid);
 	request->set_band(re->_band);
@@ -245,8 +244,9 @@ void EmpowerLVAPManager::send_hello() {
 	hello->set_type(EMPOWER_PT_HELLO);
 	hello->set_seq(get_next_seq());
 	hello->set_period(_period);
-	hello->set_wtp(_dpid);
-	hello->set_ovs_dpid(_ovs_dpid);
+	hello->set_wtp(_wtp);
+	hello->set_port_id(_port_id);
+	hello->set_iface(_iface);
 
 	if (_downlink) {
 		hello->set_downlink_packets(_downlink->count());
@@ -301,7 +301,7 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 		status->set_flag(EMPOWER_STATUS_LVAP_AUTHENTICATED);
 	if (ess._association_status)
 		status->set_flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
-	status->set_wtp(_dpid);
+	status->set_wtp(_wtp);
 	status->set_sta(sta);
 	status->set_encap(ess._encap);
 	status->set_bssid(ess._bssid);
@@ -352,7 +352,7 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta) {
 		status->set_flag(EMPOWER_STATUS_PORT_NOACK);
 	status->set_tx_power(ess._tx_power);
 	status->set_rts_cts(ess._rts_cts);
-	status->set_wtp(_dpid);
+	status->set_wtp(_wtp);
 	status->set_sta(sta);
 	status->set_nb_mcs(ess._mcs.size());
 	status->set_channel(ess._channel);
@@ -416,7 +416,7 @@ void EmpowerLVAPManager::send_img_response(NeighborTable *table, int type,
 	imgs->set_type(type);
 	imgs->set_seq(get_next_seq());
 	imgs->set_graph_id(graph_id);
-	imgs->set_wtp(_dpid);
+	imgs->set_wtp(_wtp);
 	imgs->set_channel(channel);
 	imgs->set_band(band);
 	imgs->set_nb_neighbors(neighbors.size());
@@ -472,7 +472,7 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 	request->set_type(EMPOWER_PT_SUMMARY_TRIGGER);
 	request->set_seq(get_next_seq());
 	request->set_trigger_id(summary->_trigger_id);
-	request->set_wtp(_dpid);
+	request->set_wtp(_wtp);
 	request->set_sta(summary->_eth);
 	request->set_nb_frames(frames.size());
 
@@ -540,7 +540,7 @@ void EmpowerLVAPManager::send_link_stats_response(EtherAddress lvap, uint32_t li
 	link_stats->set_type(EMPOWER_PT_LINK_STATS_RESPONSE);
 	link_stats->set_seq(get_next_seq());
 	link_stats->set_link_stats_id(link_stats_id);
-	link_stats->set_wtp(_dpid);
+	link_stats->set_wtp(_wtp);
 	link_stats->set_sta(lvap);
 	link_stats->set_nb_link_stats(rates.size());
 
@@ -585,7 +585,7 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress lvap, uint32_t coun
 	counters->set_type(EMPOWER_PT_COUNTERS_RESPONSE);
 	counters->set_seq(get_next_seq());
 	counters->set_counters_id(counters_id);
-	counters->set_wtp(_dpid);
+	counters->set_wtp(_wtp);
 	counters->set_sta(lvap);
 	counters->set_nb_tx(ess._tx.size());
 	counters->set_nb_rx(ess._rx.size());
@@ -636,7 +636,7 @@ void EmpowerLVAPManager::send_caps_response() {
 	caps->set_length(len);
 	caps->set_type(EMPOWER_PT_CAPS_RESPONSE);
 	caps->set_seq(get_next_seq());
-	caps->set_wtp(_dpid);
+	caps->set_wtp(_wtp);
 	caps->set_nb_elements(_re->elements().size());
 
 	uint8_t *ptr = (uint8_t *) caps;
@@ -1161,7 +1161,9 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 
 enum {
 	H_BYTES,
-	H_DPID,
+	H_WTP,
+	H_PORT_ID,
+	H_IFACE,
 	H_DEBUG,
 	H_MASKS,
 	H_LVAPS,
@@ -1173,8 +1175,8 @@ enum {
 String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	EmpowerLVAPManager *td = (EmpowerLVAPManager *) e;
 	switch ((uintptr_t) thunk) {
-	case H_DPID:
-		return td->_dpid.unparse() + "\n";
+	case H_WTP:
+		return td->_wtp.unparse() + "\n";
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
 	case H_MASKS: {
@@ -1189,13 +1191,18 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 		for (LVAPSIter it = td->lvaps()->begin(); it.live(); it++) {
 		    sa << "sta ";
 		    sa << it.key().unparse();
-		    sa << " (";
 		    if (it.value()._set_mask) {
-			    sa << "DL+UL";
+			    sa << " DL+UL";
 		    } else {
-			    sa << "UL";
+			    sa << " UL";
 		    }
-		    sa << ") bssid ";
+		    if (it.value()._association_status) {
+			    sa << " ASSOC";
+		    }
+		    if (it.value()._authentication_status) {
+			    sa << " AUTH";
+		    }
+			sa << " bssid ";
 		    sa << it.value()._bssid.unparse();
 		    sa << " encap ";
 		    sa << it.value()._encap.unparse();
@@ -1280,11 +1287,25 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		f->_debug = debug;
 		break;
 	}
-	case H_DPID: {
-		EtherAddress dpid;
-		if (!EtherAddressArg().parse(s, dpid))
+	case H_WTP: {
+		EtherAddress wtp;
+		if (!EtherAddressArg().parse(s, wtp))
 			return errh->error("error parsing address");
-		f->_dpid = dpid;
+		f->_wtp = wtp;
+		break;
+	}
+	case H_PORT_ID: {
+		uint16_t port_id;
+		if (!IntArg().parse(s, port_id))
+			return errh->error("error parsing address");
+		f->_port_id = port_id;
+		break;
+	}
+	case H_IFACE: {
+		String iface;
+		if (!StringArg().parse(s, iface))
+			return errh->error("error parsing address");
+		f->_iface = iface;
 		break;
 	}
 	case H_RECONNECT: {
@@ -1311,12 +1332,14 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 
 void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
-	add_read_handler("dpid", read_handler, (void *) H_DPID);
+	add_read_handler("wtp", read_handler, (void *) H_WTP);
 	add_read_handler("lvaps", read_handler, (void *) H_LVAPS);
 	add_read_handler("masks", read_handler, (void *) H_MASKS);
 	add_read_handler("bytes", read_handler, (void *) H_BYTES);
 	add_write_handler("reconnect", write_handler, (void *) H_RECONNECT);
-	add_write_handler("dpid", write_handler, (void *) H_DPID);
+	add_write_handler("wtp", write_handler, (void *) H_WTP);
+	add_write_handler("port_id", write_handler, (void *) H_PORT_ID);
+	add_write_handler("iface", write_handler, (void *) H_IFACE);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
 }
 

@@ -165,7 +165,7 @@ public:
 	void send_summary(EtherAddress, uint32_t, const Vector<Frame> &);
 	void send_link_stats_response(EtherAddress, uint32_t);
 
-	EtherAddress dpid() { return _dpid; }
+	EtherAddress wtp() { return _wtp; }
 	LVAP* lvaps() { return &_lvaps; }
 	LVAP* reverse_lvaps() { return &_reverse_lvaps; }
 	uint32_t get_next_seq() { return ++_seq; }
@@ -191,8 +191,9 @@ private:
 	Vector<String> _debugfs_strings;
 	Timer _timer;
 	uint32_t _seq;
-	EtherAddress _dpid;
-	EtherAddress _ovs_dpid;
+	EtherAddress _wtp;
+	int _port_id;
+	String _iface;
 	unsigned int _period; // msecs
 	bool _debug;
 

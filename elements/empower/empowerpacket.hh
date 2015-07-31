@@ -100,20 +100,22 @@ struct empower_header {
 struct empower_hello : public empower_header {
   private:
 	uint32_t _period;           /* Hello period */
-	uint8_t	_wtp[6];            /* DPID EtherAddress */
-	uint8_t	_ovs_dpid[6];       /* OVS DPID EtherAddress */
+	uint8_t	_wtp[6];            /* EtherAddress */
+	uint16_t _port_id;          /* port id*/
 	uint32_t _uplink_bytes;     /* number bytes (uplink) */
 	uint32_t _uplink_packets;   /* number packets (uplink) */
 	uint32_t _downlink_bytes;   /* number bytes (downlink) */
 	uint32_t _downlink_packets; /* number packets (downlink) */
+    char _iface[];              /* oface name */
   public:
 	void set_period(uint32_t period)        				{ _period = htonl(period); }
 	void set_wtp(EtherAddress wtp)	  	  					{ memcpy(_wtp, wtp.data(), 6); }
-	void set_ovs_dpid(EtherAddress ovs_dpid)				{ memcpy(_ovs_dpid, ovs_dpid.data(), 6); }
+	void set_port_id(uint16_t port_id)                   	{ _port_id = htons(port_id); }
 	void set_uplink_bytes(uint32_t uplink_bytes)          	{ _uplink_bytes = htonl(uplink_bytes); }
 	void set_downlink_bytes(uint32_t downlink_bytes)      	{ _downlink_bytes = htonl(downlink_bytes); }
 	void set_uplink_packets(uint32_t uplink_packets)      	{ _uplink_packets = htonl(uplink_packets); }
 	void set_downlink_packets(uint32_t downlink_packets)	{ _downlink_packets = htonl(downlink_packets); }
+	void set_iface(String iface)	                        { memcpy(&_iface, iface.data(), iface.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* probe request packet format */
