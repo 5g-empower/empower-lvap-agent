@@ -192,6 +192,7 @@ private:
 	Timer _timer;
 	uint32_t _seq;
 	EtherAddress _wtp;
+	EtherAddress _hwaddr;
 	int _port_id;
 	String _iface;
 	unsigned int _period; // msecs

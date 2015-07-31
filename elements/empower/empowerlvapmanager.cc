@@ -1161,7 +1161,7 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 
 enum {
 	H_BYTES,
-	H_WTP,
+	H_HWADDR,
 	H_PORT_ID,
 	H_IFACE,
 	H_DEBUG,
@@ -1175,8 +1175,8 @@ enum {
 String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	EmpowerLVAPManager *td = (EmpowerLVAPManager *) e;
 	switch ((uintptr_t) thunk) {
-	case H_WTP:
-		return td->_wtp.unparse() + "\n";
+	case H_HWADDR:
+		return td->_hwaddr.unparse() + "\n";
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
 	case H_MASKS: {
@@ -1287,11 +1287,11 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		f->_debug = debug;
 		break;
 	}
-	case H_WTP: {
-		EtherAddress wtp;
-		if (!EtherAddressArg().parse(s, wtp))
+	case H_HWADDR: {
+		EtherAddress hwaddr;
+		if (!EtherAddressArg().parse(s, hwaddr))
 			return errh->error("error parsing address");
-		f->_wtp = wtp;
+		f->_hwaddr = hwaddr;
 		break;
 	}
 	case H_PORT_ID: {
@@ -1332,12 +1332,12 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 
 void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
-	add_read_handler("wtp", read_handler, (void *) H_WTP);
+	add_read_handler("hwaddr", read_handler, (void *) H_HWADDR);
 	add_read_handler("lvaps", read_handler, (void *) H_LVAPS);
 	add_read_handler("masks", read_handler, (void *) H_MASKS);
 	add_read_handler("bytes", read_handler, (void *) H_BYTES);
 	add_write_handler("reconnect", write_handler, (void *) H_RECONNECT);
-	add_write_handler("wtp", write_handler, (void *) H_WTP);
+	add_write_handler("hwaddr", write_handler, (void *) H_HWADDR);
 	add_write_handler("port_id", write_handler, (void *) H_PORT_ID);
 	add_write_handler("iface", write_handler, (void *) H_IFACE);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
