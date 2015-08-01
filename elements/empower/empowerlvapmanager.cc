@@ -36,7 +36,7 @@ CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
 	_ebs(0), _eauthr(0), _eassor(0), _epsb(0), _ers(0), _uplink(0), _downlink(0),
-	_re(0), _timer(this), _seq(0), _port_id(0), _period(5000), _debug(false) {
+	_re(0), _timer(this), _seq(0), _period(5000), _debug(false) {
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
@@ -245,8 +245,6 @@ void EmpowerLVAPManager::send_hello() {
 	hello->set_seq(get_next_seq());
 	hello->set_period(_period);
 	hello->set_wtp(_wtp);
-	hello->set_port_id(_port_id);
-	hello->set_iface(_iface);
 
 	if (_downlink) {
 		hello->set_downlink_packets(_downlink->count());
@@ -294,7 +292,7 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 	status->set_length(len);
 	status->set_type(EMPOWER_PT_STATUS_LVAP);
 	status->set_seq(get_next_seq());
-	status->set_assoid(ess._assoc_id);
+	status->set_assoc_id(ess._assoc_id);
 	if (ess._set_mask)
 		status->set_flag(EMPOWER_STATUS_SET_MASK);
 	if (ess._authentication_status)
@@ -661,6 +659,53 @@ void EmpowerLVAPManager::send_caps_response() {
 
 }
 
+void EmpowerLVAPManager::send_ports_response() {
+
+	int len = sizeof(empower_ports_response);
+
+	for (PortsIter iter = _ports.begin(); iter.live(); iter++) {
+		len += sizeof(struct port_elements_entry) + iter.value()._iface.length();
+	}
+
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	memset(p->data(), 0, p->length());
+
+	empower_ports_response *ports = (struct empower_ports_response *) (p->data());
+	ports->set_version(_empower_version);
+	ports->set_length(len);
+	ports->set_type(EMPOWER_PT_PORTS_RESPONSE);
+	ports->set_seq(get_next_seq());
+	ports->set_wtp(_wtp);
+	ports->set_nb_elements(_ports.size());
+
+	uint8_t *ptr = (uint8_t *) ports;
+	ptr += sizeof(struct empower_ports_response);
+
+	uint8_t *end = ptr + (len - sizeof(struct empower_ports_response));
+
+	for (PortsIter iter = _ports.begin(); iter.live(); iter++) {
+		assert (ptr <= end);
+		port_elements_entry *entry = (port_elements_entry *) ptr;
+		int entry_length = sizeof(struct port_elements_entry) + iter.value()._iface.length();
+		entry->set_hwaddr(iter.value()._hwaddr);
+		entry->set_iface(iter.value()._iface);
+		entry->set_port_id(iter.value()._port_id);
+		entry->set_length(entry_length);
+		ptr += sizeof(struct port_elements_entry);
+	}
+
+	output(0).push(p);
+
+}
+
 int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 
@@ -1011,6 +1056,11 @@ int EmpowerLVAPManager::handle_caps_request(Packet *, uint32_t) {
 	return 0;
 }
 
+int EmpowerLVAPManager::handle_ports_request(Packet *, uint32_t) {
+	send_ports_response();
+	return 0;
+}
+
 void EmpowerLVAPManager::push(int, Packet *p) {
 
 	/* This is a control packet coming from a Socket
@@ -1052,6 +1102,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_CAPS_REQUEST:
 			handle_caps_request(p, offset);
+			break;
+		case EMPOWER_PT_PORTS_REQUEST:
+			handle_ports_request(p, offset);
 			break;
 		case EMPOWER_PT_ADD_RSSI_TRIGGER:
 			handle_add_rssi_trigger(p, offset);
@@ -1113,7 +1166,7 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 
 		// For each LVAP, update the bssid mask to include
 		// the common bits of all VAPs.
-		for (LVAPSIter it = _lvaps.begin(); it.live(); it++) {
+		for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
 			int iface_id = it.value()._iface_id;
 			if (iface_id != j) {
 				continue;
@@ -1161,9 +1214,7 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 
 enum {
 	H_BYTES,
-	H_HWADDR,
-	H_PORT_ID,
-	H_IFACE,
+	H_PORTS,
 	H_DEBUG,
 	H_MASKS,
 	H_LVAPS,
@@ -1175,8 +1226,14 @@ enum {
 String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	EmpowerLVAPManager *td = (EmpowerLVAPManager *) e;
 	switch ((uintptr_t) thunk) {
-	case H_HWADDR:
-		return td->_hwaddr.unparse() + "\n";
+	case H_PORTS: {
+	    StringAccum sa;
+		for (PortsIter it = td->ports()->begin(); it.live(); it++) {
+		    sa << it.value().unparse();
+		    sa << "\n";
+		}
+		return sa.take_string();
+	}
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
 	case H_MASKS: {
@@ -1188,7 +1245,7 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	}
 	case H_LVAPS: {
 	    StringAccum sa;
-		for (LVAPSIter it = td->lvaps()->begin(); it.live(); it++) {
+		for (LVAPIter it = td->lvaps()->begin(); it.live(); it++) {
 		    sa << "sta ";
 		    sa << it.key().unparse();
 		    if (it.value()._set_mask) {
@@ -1241,7 +1298,7 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	}
 	case H_BYTES: {
 		StringAccum sa;
-		for (LVAPSIter it = td->lvaps()->begin(); it.live(); it++) {
+		for (LVAPIter it = td->lvaps()->begin(); it.live(); it++) {
 			sa << "!" << it.key().unparse() << "\n";
 			sa << "!TX\n";
 			CBytes tx = it.value()._tx;
@@ -1287,26 +1344,32 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		f->_debug = debug;
 		break;
 	}
-	case H_HWADDR: {
+	case H_PORTS: {
+
+		Vector<String> tokens;
+		cp_spacevec(s, tokens);
+
+		if (tokens.size() != 3)
+			return errh->error("ports accepts 3 parameters");
+
+
 		EtherAddress hwaddr;
-		if (!EtherAddressArg().parse(s, hwaddr))
-			return errh->error("error parsing address");
-		f->_hwaddr = hwaddr;
-		break;
-	}
-	case H_PORT_ID: {
-		uint16_t port_id;
-		if (!IntArg().parse(s, port_id))
-			return errh->error("error parsing address");
-		f->_port_id = port_id;
-		break;
-	}
-	case H_IFACE: {
+		int port_id;
 		String iface;
-		if (!StringArg().parse(s, iface))
-			return errh->error("error parsing address");
-		f->_iface = iface;
+
+		if (!EtherAddressArg().parse(tokens[0], hwaddr)) {
+			return errh->error("error param %s: must start with Ethernet address", tokens[0].c_str());
+		}
+
+		if (!IntArg().parse(tokens[1], port_id)) {
+			return errh->error("error param %s: must start with int", tokens[0].c_str());
+		}
+
+		NetworkPort port = NetworkPort(hwaddr, tokens[2], port_id);
+		f->ports()->find_insert(port_id, port);
+
 		break;
+
 	}
 	case H_RECONNECT: {
 		// clear triggers
@@ -1318,7 +1381,7 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		// send caps response
 		f->send_caps_response();
 		// send status update messages
-		for (LVAPSIter it = f->_lvaps.begin(); it.live(); it++) {
+		for (LVAPIter it = f->_lvaps.begin(); it.live(); it++) {
 			f->send_status_lvap(it.key());
 			if (it.value()._set_mask) {
 				f->send_status_port(it.key());
@@ -1332,14 +1395,12 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 
 void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
-	add_read_handler("hwaddr", read_handler, (void *) H_HWADDR);
+	add_read_handler("ports", read_handler, (void *) H_PORTS);
 	add_read_handler("lvaps", read_handler, (void *) H_LVAPS);
 	add_read_handler("masks", read_handler, (void *) H_MASKS);
 	add_read_handler("bytes", read_handler, (void *) H_BYTES);
 	add_write_handler("reconnect", write_handler, (void *) H_RECONNECT);
-	add_write_handler("hwaddr", write_handler, (void *) H_HWADDR);
-	add_write_handler("port_id", write_handler, (void *) H_PORT_ID);
-	add_write_handler("iface", write_handler, (void *) H_IFACE);
+	add_write_handler("ports", write_handler, (void *) H_PORTS);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
 }
 

@@ -105,7 +105,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	}
 
 	// broadcast traffic
-	for (LVAPSIter it = _el->lvaps()->begin(); it.live(); it++) {
+	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
     	if (!it.value()._set_mask) {
     		continue;
     	}

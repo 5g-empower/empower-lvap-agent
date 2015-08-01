@@ -79,6 +79,25 @@ public:
 };
 
 
+class NetworkPort {
+public:
+	EtherAddress _hwaddr;
+	String _iface;
+	uint16_t _port_id;
+	NetworkPort() :
+			_hwaddr(EtherAddress()), _port_id(0) {
+	}
+	NetworkPort(EtherAddress hwaddr, String iface, uint16_t port_id) :
+			_hwaddr(hwaddr), _iface(iface), _port_id(port_id) {
+	}
+	String unparse() {
+		StringAccum sa;
+		sa << _hwaddr.unparse() << ' ' << _iface << ' ' << _port_id;
+		return sa.take_string();
+	}
+};
+
+
 class EmpowerStationState {
 public:
 	EtherAddress _bssid;
@@ -114,7 +133,10 @@ public:
 };
 
 typedef HashTable<EtherAddress, EmpowerStationState> LVAP;
-typedef LVAP::iterator LVAPSIter;
+typedef LVAP::iterator LVAPIter;
+
+typedef HashTable<int, NetworkPort> Ports;
+typedef Ports::iterator PortsIter;
 
 class EmpowerLVAPManager: public Element {
 public:
@@ -141,6 +163,7 @@ public:
 	int handle_assoc_response(Packet *, uint32_t);
 	int handle_counters_request(Packet *, uint32_t);
 	int handle_caps_request(Packet *, uint32_t);
+	int handle_ports_request(Packet *, uint32_t);
 	int handle_add_rssi_trigger(Packet *, uint32_t);
 	int handle_del_rssi_trigger(Packet *, uint32_t);
 	int handle_del_summary_trigger(Packet *, uint32_t);
@@ -160,6 +183,7 @@ public:
 	void send_counters_response(EtherAddress, uint32_t);
 	void send_img_response(NeighborTable *, int, EtherAddress, uint32_t, empower_bands_types, uint8_t);
 	void send_caps_response();
+	void send_ports_response();
 	void send_rssi_trigger(EtherAddress, uint32_t, uint8_t, uint8_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);
 	void send_summary(EtherAddress, uint32_t, const Vector<Frame> &);
@@ -167,6 +191,7 @@ public:
 
 	EtherAddress wtp() { return _wtp; }
 	LVAP* lvaps() { return &_lvaps; }
+	Ports* ports() { return &_ports; }
 	LVAP* reverse_lvaps() { return &_reverse_lvaps; }
 	uint32_t get_next_seq() { return ++_seq; }
 
@@ -184,6 +209,7 @@ private:
 	class EmpowerResourceElements *_re;
 
 	LVAP _lvaps;
+	Ports _ports;
 	LVAP _reverse_lvaps;
 	Vector<EtherAddress> _hwaddrs;
 	Vector<EtherAddress> _masks;
@@ -192,9 +218,6 @@ private:
 	Timer _timer;
 	uint32_t _seq;
 	EtherAddress _wtp;
-	EtherAddress _hwaddr;
-	int _port_id;
-	String _iface;
 	unsigned int _period; // msecs
 	bool _debug;
 

@@ -15,6 +15,7 @@ enum empower_packet_types {
 	EMPOWER_PT_WTP_BYE = 0x00,          // ac -> ac
 	EMPOWER_PT_LVAP_JOIN = 0x01,        // ac -> ac
 	EMPOWER_PT_LVAP_LEAVE = 0x02,       // ac -> ac
+	EMPOWER_PT_WTP_REGISTER = 0xFF,     // ac -> ac
 
 	// LVAP messages
 	EMPOWER_PT_HELLO = 0x03,            // wtp -> ac
@@ -31,6 +32,8 @@ enum empower_packet_types {
 	EMPOWER_PT_STATUS_PORT = 0x14,      // wtp -> ac
 	EMPOWER_PT_CAPS_REQUEST = 0x15,     // ac -> wtp
 	EMPOWER_PT_CAPS_RESPONSE = 0x16,    // wtp -> ac
+	EMPOWER_PT_PORTS_REQUEST = 0x31,    // ac -> wtp
+	EMPOWER_PT_PORTS_RESPONSE = 0x32,   // wtp -> ac
 
 	// Packet/Bytes counters
 	EMPOWER_PT_COUNTERS_REQUEST = 0x17, // ac -> wtp
@@ -101,23 +104,17 @@ struct empower_hello : public empower_header {
   private:
 	uint32_t _period;           /* Hello period */
 	uint8_t	_wtp[6];            /* EtherAddress */
-	uint8_t	_hwaddr[6];         /* EtherAddress */
-	uint16_t _port_id;          /* port id*/
 	uint32_t _uplink_bytes;     /* number bytes (uplink) */
 	uint32_t _uplink_packets;   /* number packets (uplink) */
 	uint32_t _downlink_bytes;   /* number bytes (downlink) */
 	uint32_t _downlink_packets; /* number packets (downlink) */
-    char _iface[];              /* oface name */
   public:
 	void set_period(uint32_t period)        				{ _period = htonl(period); }
 	void set_wtp(EtherAddress wtp)	  	  					{ memcpy(_wtp, wtp.data(), 6); }
-	void set_hwaddr(EtherAddress hwaddr)					{ memcpy(_hwaddr, hwaddr.data(), 6); }
-	void set_port_id(uint16_t port_id)                   	{ _port_id = htons(port_id); }
 	void set_uplink_bytes(uint32_t uplink_bytes)          	{ _uplink_bytes = htonl(uplink_bytes); }
 	void set_downlink_bytes(uint32_t downlink_bytes)      	{ _downlink_bytes = htonl(downlink_bytes); }
 	void set_uplink_packets(uint32_t uplink_packets)      	{ _uplink_packets = htonl(uplink_packets); }
 	void set_downlink_packets(uint32_t downlink_packets)	{ _downlink_packets = htonl(downlink_packets); }
-	void set_iface(String iface)	                        { memcpy(&_iface, iface.data(), iface.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* probe request packet format */
@@ -184,6 +181,10 @@ struct empower_assoc_response : public empower_header {
 
 /* caps request packet format */
 struct empower_caps_request : public empower_header {
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* ports request packet format */
+struct empower_ports_request : public empower_header {
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* link stats request packet format */
@@ -294,6 +295,30 @@ public:
 	void set_nb_elements(uint8_t nb_elements)	  { _nb_elements = nb_elements; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
+/* ports response packet format */
+struct empower_ports_response : public empower_header {
+private:
+  uint8_t	_wtp[6];
+  uint8_t	_nb_elements;
+public:
+	void set_wtp(EtherAddress wtp)		          { memcpy(_wtp, wtp.data(), 6); }
+	void set_nb_elements(uint8_t nb_elements)	  { _nb_elements = nb_elements; }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* port element entry format */
+struct port_elements_entry {
+  private:
+    uint8_t	_hwaddr[6];
+	uint16_t _port_id;
+	uint8_t _length;
+	char _iface[];
+  public:
+	void set_hwaddr(EtherAddress hwaddr)	{ memcpy(_hwaddr, hwaddr.data(), 6); }
+	void set_port_id(uint16_t port_id)	    { _port_id = htons(port_id); }
+	void set_length(uint8_t length)	   		{ _length = length; }
+	void set_iface(String iface)			{ memcpy(&_iface, iface.data(), iface.length()); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
 /* counters entryformat */
 struct counters_entry {
   private:
@@ -387,7 +412,7 @@ public:
 	void set_band(uint8_t band)	        { _band = band; }
 	void set_channel(uint8_t channel)	{ _channel = channel; }
 	void set_flag(uint16_t f)           { _flags = htons(ntohs(_flags) | f); }
-	void set_assoid(uint16_t assoc_id)  { _assoc_id = htons(assoc_id); }
+	void set_assoc_id(uint16_t assoc_id){ _assoc_id = htons(assoc_id); }
 	void set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
 	void set_sta(EtherAddress sta)		{ memcpy(_sta, sta.data(), 6); }
 	void set_encap(EtherAddress encap)	{ memcpy(_encap, encap.data(), 6); }
