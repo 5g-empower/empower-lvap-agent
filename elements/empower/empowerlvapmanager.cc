@@ -247,12 +247,10 @@ void EmpowerLVAPManager::send_hello() {
 	hello->set_wtp(_wtp);
 
 	if (_downlink) {
-		hello->set_downlink_packets(_downlink->count());
 		hello->set_downlink_bytes(_downlink->byte_count());
 	}
 
 	if (_uplink) {
-		hello->set_uplink_packets(_uplink->count());
 		hello->set_uplink_bytes(_uplink->byte_count());
 	}
 
@@ -616,7 +614,12 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress lvap, uint32_t coun
 void EmpowerLVAPManager::send_caps_response() {
 
 	int len = sizeof(empower_caps_response);
-	len += _re->elements().size() * 4;
+
+	len += _re->elements().size() * sizeof(struct resource_elements_entry);
+
+	for (PortsIter iter = _ports.begin(); iter.live(); iter++) {
+		len += sizeof(struct port_elements_entry);
+	}
 
 	WritablePacket *p = Packet::make(len);
 
@@ -635,7 +638,8 @@ void EmpowerLVAPManager::send_caps_response() {
 	caps->set_type(EMPOWER_PT_CAPS_RESPONSE);
 	caps->set_seq(get_next_seq());
 	caps->set_wtp(_wtp);
-	caps->set_nb_elements(_re->elements().size());
+	caps->set_nb_resources_elements(_re->elements().size());
+	caps->set_nb_ports_elements(_ports.size());
 
 	uint8_t *ptr = (uint8_t *) caps;
 	ptr += sizeof(struct empower_caps_response);
@@ -653,52 +657,12 @@ void EmpowerLVAPManager::send_caps_response() {
 		ptr += sizeof(struct resource_elements_entry);
 	}
 
-	caps->set_type(EMPOWER_PT_CAPS_RESPONSE);
-
-	output(0).push(p);
-
-}
-
-void EmpowerLVAPManager::send_ports_response() {
-
-	int len = sizeof(empower_ports_response);
-
-	for (PortsIter iter = _ports.begin(); iter.live(); iter++) {
-		len += sizeof(struct port_elements_entry) + iter.value()._iface.length();
-	}
-
-	WritablePacket *p = Packet::make(len);
-
-	if (!p) {
-		click_chatter("%{element} :: %s :: cannot make packet!",
-					  this,
-					  __func__);
-		return;
-	}
-
-	memset(p->data(), 0, p->length());
-
-	empower_ports_response *ports = (struct empower_ports_response *) (p->data());
-	ports->set_version(_empower_version);
-	ports->set_length(len);
-	ports->set_type(EMPOWER_PT_PORTS_RESPONSE);
-	ports->set_seq(get_next_seq());
-	ports->set_wtp(_wtp);
-	ports->set_nb_elements(_ports.size());
-
-	uint8_t *ptr = (uint8_t *) ports;
-	ptr += sizeof(struct empower_ports_response);
-
-	uint8_t *end = ptr + (len - sizeof(struct empower_ports_response));
-
 	for (PortsIter iter = _ports.begin(); iter.live(); iter++) {
 		assert (ptr <= end);
 		port_elements_entry *entry = (port_elements_entry *) ptr;
-		int entry_length = sizeof(struct port_elements_entry) + iter.value()._iface.length();
 		entry->set_hwaddr(iter.value()._hwaddr);
 		entry->set_iface(iter.value()._iface);
 		entry->set_port_id(iter.value()._port_id);
-		entry->set_length(entry_length);
 		ptr += sizeof(struct port_elements_entry);
 	}
 
@@ -1056,11 +1020,6 @@ int EmpowerLVAPManager::handle_caps_request(Packet *, uint32_t) {
 	return 0;
 }
 
-int EmpowerLVAPManager::handle_ports_request(Packet *, uint32_t) {
-	send_ports_response();
-	return 0;
-}
-
 void EmpowerLVAPManager::push(int, Packet *p) {
 
 	/* This is a control packet coming from a Socket
@@ -1102,9 +1061,6 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_CAPS_REQUEST:
 			handle_caps_request(p, offset);
-			break;
-		case EMPOWER_PT_PORTS_REQUEST:
-			handle_ports_request(p, offset);
 			break;
 		case EMPOWER_PT_ADD_RSSI_TRIGGER:
 			handle_add_rssi_trigger(p, offset);

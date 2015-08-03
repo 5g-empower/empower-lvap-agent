@@ -163,7 +163,6 @@ public:
 	int handle_assoc_response(Packet *, uint32_t);
 	int handle_counters_request(Packet *, uint32_t);
 	int handle_caps_request(Packet *, uint32_t);
-	int handle_ports_request(Packet *, uint32_t);
 	int handle_add_rssi_trigger(Packet *, uint32_t);
 	int handle_del_rssi_trigger(Packet *, uint32_t);
 	int handle_del_summary_trigger(Packet *, uint32_t);
@@ -183,7 +182,6 @@ public:
 	void send_counters_response(EtherAddress, uint32_t);
 	void send_img_response(NeighborTable *, int, EtherAddress, uint32_t, empower_bands_types, uint8_t);
 	void send_caps_response();
-	void send_ports_response();
 	void send_rssi_trigger(EtherAddress, uint32_t, uint8_t, uint8_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);
 	void send_summary(EtherAddress, uint32_t, const Vector<Frame> &);
