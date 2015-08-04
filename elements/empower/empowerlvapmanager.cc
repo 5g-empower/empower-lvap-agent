@@ -1306,7 +1306,6 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		if (tokens.size() != 3)
 			return errh->error("ports accepts 3 parameters");
 
-
 		EtherAddress hwaddr;
 		int port_id;
 		String iface;
@@ -1321,6 +1320,8 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 
 		NetworkPort port = NetworkPort(hwaddr, tokens[2], port_id);
 		f->ports()->find_insert(port_id, port);
+
+		f->send_caps_response();
 
 		break;
 
