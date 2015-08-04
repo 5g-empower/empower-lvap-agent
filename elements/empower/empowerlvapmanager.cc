@@ -824,8 +824,6 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 
 	assert(ess->_mcs.size() == q->nb_mcs());
 
-	send_status_port(sta);
-
 	return 0;
 
 }
