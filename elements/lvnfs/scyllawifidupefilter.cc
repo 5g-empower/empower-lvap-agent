@@ -8,7 +8,6 @@
 #include <click/etheraddress.hh>
 #include <clicknet/wifi.h>
 #include "scyllawifidupefilter.hh"
-
 CLICK_DECLS
 
 ScyllaWifiDupeFilter::ScyllaWifiDupeFilter() :
@@ -48,23 +47,23 @@ ScyllaWifiDupeFilter::simple_action(Packet *p_in) {
 	if (!nfo) {
 		_table.insert(src, ScyllaDupeFilterDstInfo(src));
 		nfo = _table.findp(src);
-		nfo->clear();
 	}
 
-	if (seq == nfo->seq && (!is_frag || frag <= nfo->frag)) {
+	if (seq == nfo->_seq && (!is_frag || frag <= nfo->_frag)) {
 		nfo->_dupes++;
 		p_in->kill();
 		return 0;
 	}
 
-	nfo->seq = seq;
-	nfo->frag = frag;
+	nfo->_seq = seq;
+	nfo->_frag = frag;
 
 	return p_in;
 }
 
 enum {
-	H_DEBUG
+	H_DEBUG,
+	H_STATE_TABLE
 };
 
 String ScyllaWifiDupeFilter::read_handler(Element *e, void *thunk) {
@@ -72,6 +71,15 @@ String ScyllaWifiDupeFilter::read_handler(Element *e, void *thunk) {
 	switch ((uintptr_t) thunk) {
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
+	case H_STATE_TABLE: {
+		StringAccum sa;
+		for (DupeIter it = td->table()->begin(); it.live(); it++) {
+			sa << it.value()._eth.unparse() << ' ' << it.value()._dupes << ' '
+					<< it.value()._packets << ' ' << it.value()._seq << ' '
+					<< it.value()._frag << "\n";
+		}
+		return sa.take_string();
+	}
 	default:
 		return String();
 	}
@@ -79,10 +87,8 @@ String ScyllaWifiDupeFilter::read_handler(Element *e, void *thunk) {
 
 int ScyllaWifiDupeFilter::write_handler(const String &in_s, Element *e,
 		void *vparam, ErrorHandler *errh) {
-
 	ScyllaWifiDupeFilter *f = (ScyllaWifiDupeFilter *) e;
 	String s = cp_uncomment(in_s);
-
 	switch ((intptr_t) vparam) {
 	case H_DEBUG: {    //debug
 		bool debug;
@@ -91,13 +97,44 @@ int ScyllaWifiDupeFilter::write_handler(const String &in_s, Element *e,
 		f->_debug = debug;
 		break;
 	}
+	case H_STATE_TABLE: {
+		Vector<String> tokens;
+		cp_spacevec(s, tokens);
+		if (tokens.size() != 5)
+			return errh->error("state_table accepts 5 parameters");
+		EtherAddress eth;
+		int dupes;
+		int packets;
+		uint16_t seq;
+		uint16_t frag;
+		if (!EtherAddressArg().parse(tokens[0], eth)) {
+			return errh->error("error param %s: must start with Ethernet address", tokens[0].c_str());
+		}
+		if (!IntArg().parse(tokens[1], dupes)) {
+			return errh->error("error param %s: must start with int", tokens[1].c_str());
+		}
+		if (!IntArg().parse(tokens[1], packets)) {
+			return errh->error("error param %s: must start with int", tokens[2].c_str());
+		}
+		if (!IntArg().parse(tokens[1], seq)) {
+			return errh->error("error param %s: must start with int", tokens[3].c_str());
+		}
+		if (!IntArg().parse(tokens[1], frag)) {
+			return errh->error("error param %s: must start with int", tokens[4].c_str());
+		}
+		f->table()->insert(eth, ScyllaDupeFilterDstInfo(eth, dupes, packets, seq, frag));
+		break;
+	}
 	}
 	return 0;
+
 }
 
 void ScyllaWifiDupeFilter::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
+	add_read_handler("state_table", read_handler, (void *) H_STATE_TABLE);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
+	add_write_handler("state_table", write_handler, (void *) H_STATE_TABLE);
 }
 
 CLICK_ENDDECLS

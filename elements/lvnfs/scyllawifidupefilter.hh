@@ -10,24 +10,26 @@ public:
 	EtherAddress _eth;
 	int _dupes;
 	int _packets;
-	uint16_t seq;
-	uint16_t frag;
+	uint16_t _seq;
+	uint16_t _frag;
 	ScyllaDupeFilterDstInfo() :
-			_dupes(0), _packets(0), seq(0), frag(0) {
+			_dupes(0), _packets(0), _seq(0), _frag(0) {
 	}
 	ScyllaDupeFilterDstInfo(EtherAddress eth) :
-			_dupes(0), _packets(0), seq(0), frag(0) {
+			_dupes(0), _packets(0), _seq(0), _frag(0) {
 		_eth = eth;
 	}
+	ScyllaDupeFilterDstInfo(EtherAddress eth, int dupes, int packets,
+			uint16_t seq, uint16_t frag) {
+		_eth = eth;
+		_dupes = dupes;
+		_packets = packets;
+		_seq = seq;
+		_frag = frag;
+	}
 	void clear() {
-		_dupes = 0;
-		_packets = 0;
-		seq = 0;
-		frag = 0;
-
 	}
 };
-
 
 typedef HashMap <EtherAddress, ScyllaDupeFilterDstInfo> DupeTable;
 typedef DupeTable::const_iterator DupeIter;
@@ -49,6 +51,8 @@ class ScyllaWifiDupeFilter : public Element {
   Packet *simple_action(Packet *);
 
   void add_handlers() CLICK_COLD;
+
+  DupeTable* table() { return &_table; }
 
 private:
 
