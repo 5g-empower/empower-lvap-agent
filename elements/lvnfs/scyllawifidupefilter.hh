@@ -89,25 +89,25 @@ private:
 
 };
 
-class ScyllaDupeFilterDstInfo {
+class DupeFilterDstInfo {
 public:
 	EtherAddress _eth;
 	int _dupes;
 	int _buffer_size;
 	SeqBuffer * _buffer;
-	ScyllaDupeFilterDstInfo() {
+	DupeFilterDstInfo() {
 		_eth = EtherAddress();
 		_dupes = 0;
 		_buffer_size = 5;
 		_buffer = new SeqBuffer(_buffer_size);
 	}
-	ScyllaDupeFilterDstInfo(EtherAddress eth, int buffer_size) {
+	DupeFilterDstInfo(EtherAddress eth, int buffer_size) {
 		_eth = eth;
 		_dupes = 0;
 		_buffer_size = buffer_size;
 		_buffer = new SeqBuffer(_buffer_size);
 	}
-	ScyllaDupeFilterDstInfo(EtherAddress eth, int dupes, int buffer_size, SeqBuffer * buffer) {
+	DupeFilterDstInfo(EtherAddress eth, int dupes, int buffer_size, SeqBuffer * buffer) {
 		_eth = eth;
 		_dupes = dupes;
 		_buffer_size = buffer_size;
@@ -115,8 +115,8 @@ public:
 	}
 };
 
-typedef HashMap <EtherAddress, ScyllaDupeFilterDstInfo> DupeTable;
-typedef DupeTable::const_iterator DupeIter;
+typedef HashMap <EtherAddress, DupeFilterDstInfo> DupesTable;
+typedef DupesTable::const_iterator DupesIter;
 
 class ScyllaWifiDupeFilter : public Element {
 
@@ -136,14 +136,14 @@ class ScyllaWifiDupeFilter : public Element {
 
   void add_handlers() CLICK_COLD;
 
-  DupeTable* table() { return &_table; }
+  DupesTable* dupes_table() { return &_dupes_table; }
 
 private:
 
   bool _debug;
   int _buffer_size;
 
-  DupeTable _table;
+  DupesTable _dupes_table;
 
   static int write_handler(const String &, Element *, void *, ErrorHandler *);
   static String read_handler(Element *, void *);

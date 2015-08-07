@@ -40,15 +40,15 @@ ScyllaWifiDupeFilter::simple_action(Packet *p_in) {
 
 	bool is_frag = frag || more_frag;
 
-	ScyllaDupeFilterDstInfo *nfo = _table.findp(src);
+	DupeFilterDstInfo *nfo = _dupes_table.findp(src);
 
 	if ((w->i_fc[0] & WIFI_FC0_TYPE_CTL) || dst.is_group() || is_frag) {
 		return p_in;
 	}
 
 	if (!nfo) {
-		_table.insert(src, ScyllaDupeFilterDstInfo(src, _buffer_size));
-		nfo = _table.findp(src);
+		_dupes_table.insert(src, DupeFilterDstInfo(src, _buffer_size));
+		nfo = _dupes_table.findp(src);
 	}
 
 	if (nfo->_buffer->contains(seq)) {
@@ -63,7 +63,7 @@ ScyllaWifiDupeFilter::simple_action(Packet *p_in) {
 
 enum {
 	H_DEBUG,
-	H_STATE_TABLE
+	H_DUPES_TABLE
 };
 
 String ScyllaWifiDupeFilter::read_handler(Element *e, void *thunk) {
@@ -71,10 +71,12 @@ String ScyllaWifiDupeFilter::read_handler(Element *e, void *thunk) {
 	switch ((uintptr_t) thunk) {
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
-	case H_STATE_TABLE: {
+	case H_DUPES_TABLE: {
 		StringAccum sa;
-		for (DupeIter it = td->table()->begin(); it.live(); it++) {
-			sa << it.value()._eth.unparse() << ' ' << it.value()._dupes << ' ' << it.value()._buffer_size << it.value()._buffer->unparse() << ' '  << "\n";
+		for (DupesIter it = td->dupes_table()->begin(); it.live(); it++) {
+			sa << it.value()._eth.unparse() << ' ' << it.value()._dupes << ' '
+					<< it.value()._buffer_size << it.value()._buffer->unparse()
+					<< ' ' << "\n";
 		}
 		return sa.take_string();
 	}
@@ -95,7 +97,7 @@ int ScyllaWifiDupeFilter::write_handler(const String &in_s, Element *e,
 		f->_debug = debug;
 		break;
 	}
-	case H_STATE_TABLE: {
+	case H_DUPES_TABLE: {
 		Vector<String> tokens;
 		cp_spacevec(s, tokens);
 		if (tokens.size() < 4)
@@ -121,7 +123,7 @@ int ScyllaWifiDupeFilter::write_handler(const String &in_s, Element *e,
 			click_chatter("adding %u", seq);
 			buffer->add(seq);
 		}
-		f->table()->insert(eth, ScyllaDupeFilterDstInfo(eth, dupes, buffer_size, buffer));
+		f->dupes_table()->insert(eth, DupeFilterDstInfo(eth, dupes, buffer_size, buffer));
 		break;
 	}
 	}
@@ -131,9 +133,9 @@ int ScyllaWifiDupeFilter::write_handler(const String &in_s, Element *e,
 
 void ScyllaWifiDupeFilter::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
-	add_read_handler("state_table", read_handler, (void *) H_STATE_TABLE);
+	add_read_handler("dupes_table", read_handler, (void *) H_DUPES_TABLE);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
-	add_write_handler("state_table", write_handler, (void *) H_STATE_TABLE);
+	add_write_handler("dupes_table", write_handler, (void *) H_DUPES_TABLE);
 }
 
 CLICK_ENDDECLS
