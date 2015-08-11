@@ -128,6 +128,8 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid, Stri
 	}
 
 	struct click_wifi *w = (struct click_wifi *) p->data();
+	struct click_wifi_extra *ceh = WIFI_EXTRA_ANNO(p);
+	ceh->flags |= WIFI_EXTRA_TX_NOACK;
 
 	w->i_fc[0] = WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_MGT;
 	if (probe) {

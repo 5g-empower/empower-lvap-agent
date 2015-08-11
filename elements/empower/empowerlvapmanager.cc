@@ -73,7 +73,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
 			                    .read_m("RE", ElementCastArg("ResourceElements"), _re)
 			                    .read_m("DEBUGFS", debugfs_strings)
-			                    .read_m("RCS", rcs_strings)
+			                    .read("RCS", rcs_strings)
 			                    .read("ERS", ElementCastArg("EmpowerRXStats"), _ers)
 			                    .read("UPLINK", ElementCastArg("Counter"), _uplink)
 			                    .read("DOWNLINK", ElementCastArg("Counter"), _downlink)
@@ -99,6 +99,11 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 		_hwaddrs.push_back(eth);
 	}
 
+	if (_debugfs_strings.size() != _hwaddrs.size()) {
+		return errh->error("debugfs has %u values, while hwaddrs has %u values",
+				_debugfs_strings.size(), _hwaddrs.size());
+	}
+
 	tokens.clear();
 	cp_spacevec(rcs_strings, tokens);
 
@@ -108,6 +113,11 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			return errh->error("error param %s: must be a Minstrel element", tokens[i].c_str());
 		}
 		_rcs.push_back(rc);
+	}
+
+	if (_rcs.size() > _hwaddrs.size()) {
+		return errh->error("rcs has %u values, while hwaddrs has %u values",
+				_rcs.size(), _hwaddrs.size());
 	}
 
 	return res;
@@ -500,6 +510,10 @@ void EmpowerLVAPManager::send_link_stats_response(EtherAddress lvap, uint32_t li
 	Vector<Rate> rates;
 
 	EmpowerStationState ess = _lvaps.get(lvap);
+
+	if (ess._iface_id >= _rcs.size()) {
+		return;
+	}
 
 	Minstrel *rc = _rcs.at(ess._iface_id);
 
