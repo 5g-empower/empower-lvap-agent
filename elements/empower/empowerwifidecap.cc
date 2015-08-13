@@ -157,14 +157,13 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 		return 0;
 	}
 
+	WritablePacket *p_out = p->uniqueify();
+	if (!p_out) {
+		return 0;
+	}
+
 	// frame must be encapsulated in another ethernet frame
 	if (ess->_encap) {
-
-		WritablePacket *p_out = p->uniqueify();
-
-		if (!p_out) {
-			return 0;
-		}
 
 		p_out = p_out->push_mac_header(14);
 
@@ -187,11 +186,6 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 	}
 
 	// normal wifi decap
-	WritablePacket *p_out = p->uniqueify();
-	if (!p_out) {
-		return 0;
-	}
-
 	uint16_t ether_type;
 	if (!memcmp(WIFI_LLC_HEADER, p_out->data() + wifi_header_size, WIFI_LLC_HEADER_LEN)) {
 		memcpy(&ether_type, p_out->data() + wifi_header_size + sizeof(click_llc) - 2, 2);
