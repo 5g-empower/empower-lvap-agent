@@ -273,6 +273,7 @@ void EmpowerRXStats::del_rssi_trigger(EtherAddress eth, uint32_t trigger_id, rel
 	RssiTrigger * rssi = new RssiTrigger(eth, trigger_id, rel, val, false, _period, _el, this);
 	for (RTIter qi = _rssi_triggers.begin(); qi != _rssi_triggers.end(); qi++) {
 		if (*rssi== **qi) {
+			(*qi)->_trigger_timer->clear();
 			_rssi_triggers.erase(qi);
 			break;
 		}
@@ -280,8 +281,14 @@ void EmpowerRXStats::del_rssi_trigger(EtherAddress eth, uint32_t trigger_id, rel
 }
 
 void EmpowerRXStats::clear_triggers() {
+	// clear rssi triggers
+	for (RTIter qi = _rssi_triggers.begin(); qi != _rssi_triggers.end(); qi++) {
+		(*qi)->_trigger_timer->clear();
+	}
 	_rssi_triggers.clear();
+	// clear summary triggers
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
+		(*qi)->_trigger_timer->clear();
 		delete *qi;
 	}
 	_summary_triggers.clear();
@@ -308,6 +315,7 @@ void EmpowerRXStats::del_summary_trigger(EtherAddress eth, uint32_t summary_id, 
 	SummaryTrigger summary = SummaryTrigger(eth, summary_id, limit, period, _el, this);
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
 		if (summary == **qi) {
+			(*qi)->_trigger_timer->clear();
 			_summary_triggers.erase(qi);
 			delete *qi;
 			break;
