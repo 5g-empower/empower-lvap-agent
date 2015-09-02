@@ -120,7 +120,6 @@ int ScyllaWifiDupeFilter::write_handler(const String &in_s, Element *e,
 			if (!IntArg().parse(tokens[i], seq)) {
 				return errh->error("error param %s: must start with int", tokens[i].c_str());
 			}
-			click_chatter("adding %u", seq);
 			buffer->add(seq);
 		}
 		f->dupes_table()->insert(eth, DupeFilterDstInfo(eth, dupes, buffer_size, buffer));
