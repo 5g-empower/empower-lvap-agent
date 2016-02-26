@@ -67,7 +67,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	EtherAddress dst = EtherAddress(eh->ether_dhost);
 
 	// unicast traffic
-	if (!dst.is_broadcast()) {
+	if (!dst.is_broadcast() && !dst.is_group()) {
         EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
         if (!ess) {
 			p->kill();
@@ -104,7 +104,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 		return;
 	}
 
-	// broadcast traffic
+	// broadcast and multicast traffic
 	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
     	if (!it.value()._set_mask) {
     		continue;

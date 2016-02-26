@@ -46,8 +46,8 @@ int EmpowerWifiDecap::configure(Vector<String> &conf,
 
 }
 
-Packet *
-EmpowerWifiDecap::simple_action(Packet *p) {
+void
+EmpowerWifiDecap::push(int, Packet *p) {
 
 	if (p->length() < sizeof(struct click_wifi)) {
 		click_chatter("%{element} :: %s :: packet too small: %d vs %d",
@@ -56,7 +56,7 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 				      p->length(),
 				      sizeof(struct click_ether));
 		p->kill();
-		return 0;
+		return;
 	}
 
 	struct click_wifi *w = (struct click_wifi *) p->data();
@@ -83,12 +83,12 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 					      wifi_header_size + sizeof(struct click_llc));
 		}
 		p->kill();
-		return 0;
+		return;
 	}
 
 	if (w->i_fc[1] & WIFI_FC1_WEP) {
 		p->kill();
-		return 0;
+		return;
 	}
 
 	uint8_t dir = w->i_fc[1] & WIFI_FC1_DIR_MASK;
@@ -124,19 +124,19 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 				      __func__,
 				      dir);
 		p->kill();
-		return 0;
+		return;
 	}
 
     EmpowerStationState *ess = _el->lvaps()->get_pointer(src);
 
     if (!ess) {
 		p->kill();
-		return 0;
+		return;
 	}
 
 	if (ess->_bssid != bssid) {
 		p->kill();
-		return 0;
+		return;
 	}
 
 	if (!ess->_authentication_status) {
@@ -145,7 +145,7 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 				      __func__,
 				      src.unparse().c_str());
 		p->kill();
-		return 0;
+		return;
 	}
 
 	if (!ess->_association_status) {
@@ -154,12 +154,12 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 				      __func__,
 				      src.unparse().c_str());
 		p->kill();
-		return 0;
+		return;
 	}
 
 	WritablePacket *p_out = p->uniqueify();
 	if (!p_out) {
-		return 0;
+		return;
 	}
 
 	// frame must be encapsulated in another ethernet frame
@@ -168,7 +168,7 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 		p_out = p_out->push_mac_header(14);
 
 		if (!p_out) {
-			return 0;
+			return;
 		}
 
 		uint16_t ether_type = 0xBBBB;
@@ -181,7 +181,10 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 			ess->update_rx(p_out->length());
 		}
 
-		return p_out;
+		if (Packet *clone = p->clone())
+			output(1).push(clone);
+
+		output(0).push(p);
 
 	}
 
@@ -191,7 +194,7 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 		memcpy(&ether_type, p_out->data() + wifi_header_size + sizeof(click_llc) - 2, 2);
 	} else {
 		p_out->kill();
-		return 0;
+		return;
 	}
 
 	p_out->pull(wifi_header_size + sizeof(struct click_llc));
@@ -199,7 +202,7 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 	p_out = p_out->push_mac_header(14);
 
 	if (!p_out) {
-		return 0;
+		return;
 	}
 
 	memcpy(p_out->data(), dst.data(), 6);
@@ -210,7 +213,10 @@ EmpowerWifiDecap::simple_action(Packet *p) {
 		ess->update_rx(p_out->length());
 	}
 
-	return p_out;
+	if (Packet *clone = p->clone())
+		output(1).push(clone);
+
+	output(0).push(p);
 
 }
 
