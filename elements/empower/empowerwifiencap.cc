@@ -105,6 +105,8 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	}
 
 	// broadcast and multicast traffic
+	// note, we need to transmit one frame for each unique bssid. this is due
+	// to the fact that we can have the same bssid for multiple LVAPs
 	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
     	if (!it.value()._set_mask) {
     		continue;
