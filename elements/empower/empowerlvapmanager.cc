@@ -29,13 +29,12 @@
 #include "empowerbeaconsource.hh"
 #include "empoweropenauthresponder.hh"
 #include "empowerassociationresponder.hh"
-#include "empowerpowersavebuffer.hh"
 #include "empowerresourceelements.hh"
 #include "empowerrxstats.hh"
 CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
-	_ebs(0), _eauthr(0), _eassor(0), _epsb(0), _ers(0), _uplink(0), _downlink(0),
+	_ebs(0), _eauthr(0), _eassor(0), _ers(0), _uplink(0), _downlink(0),
 	_re(0), _timer(this), _seq(0), _period(5000), _debug(false) {
 }
 
@@ -77,7 +76,6 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read("ERS", ElementCastArg("EmpowerRXStats"), _ers)
 			                    .read("UPLINK", ElementCastArg("Counter"), _uplink)
 			                    .read("DOWNLINK", ElementCastArg("Counter"), _downlink)
-			                    .read("EPSB", ElementCastArg("EmpowerPowerSaveBuffer"), _epsb)
 								.read("PERIOD", _period)
 			                    .read("DEBUG", _debug)
 			                    .complete();
@@ -760,18 +758,12 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._authentication_status = authentication_state;
 		state._association_status = association_state;
 		state._set_mask = set_mask;
-		state._power_save = false;
 		state._ssid = ssid;
 		state._iface_id = _re->element_to_iface(channel, band);
 		_lvaps.set(sta, state);
-		_reverse_lvaps.set(bssid, state);
 
 		/* Regenerate the BSSID mask */
 		compute_bssid_mask();
-
-		if (_epsb) {
-			_epsb->request_queue(bssid);
-		}
 
 		return 0;
 
@@ -912,14 +904,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 		return -1;
 	}
 
-	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-
-	if (_epsb) {
-		_epsb->release_queue(ess->_bssid);
-	}
-
 	_lvaps.erase(_lvaps.find(sta));
-	_reverse_lvaps.erase(_reverse_lvaps.find(ess->_bssid));
 
 	// Remove this VAP's BSSID from the mask
 	compute_bssid_mask();
@@ -1112,6 +1097,17 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 
 }
 
+Vector<EtherAddress>::iterator find(Vector<EtherAddress>::iterator begin, Vector<EtherAddress>::iterator end, EtherAddress element) {
+	while (begin != end) {
+		if (*begin == element) {
+			break;
+		} else {
+			begin++;
+		}
+	}
+	return begin;
+}
+
 /*
  * This re-computes the BSSID mask for this node
  * using all the BSSIDs of the VAPs, and sets the
@@ -1124,6 +1120,7 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 
 	for (int j = 0; j < _hwaddrs.size(); j++) {
 
+		// start building mask
 		uint8_t bssid_mask[6];
 		int i;
 
@@ -1133,16 +1130,35 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 		}
 
 		// For each LVAP, update the bssid mask to include
-		// the common bits of all VAPs.
+		// the common bits of all LVAPs.
 		for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
+			// check iface
 			int iface_id = it.value()._iface_id;
 			if (iface_id != j) {
 				continue;
 			}
+			// check set mask flag
 			bool set_mask = it.value()._set_mask;
 			if (!set_mask) {
 				continue;
 			}
+			// add to mask
+			for (i = 0; i < 6; i++) {
+				const uint8_t *hw = (const uint8_t *) _hwaddrs[iface_id].data();
+				const uint8_t *bssid = (const uint8_t *) it.value()._bssid.data();
+				bssid_mask[i] &= ~(hw[i] ^ bssid[i]);
+			}
+		}
+
+		// For each VAP, update the bssid mask to include
+		// the common bits of all VAPs.
+		for (VAPIter it = _vaps.begin(); it.live(); it++) {
+			// check iface
+			int iface_id = it.value()._iface_id;
+			if (iface_id != j) {
+				continue;
+			}
+			// add to mask
 			for (i = 0; i < 6; i++) {
 				const uint8_t *hw = (const uint8_t *) _hwaddrs[iface_id].data();
 				const uint8_t *bssid = (const uint8_t *) it.value()._bssid.data();
@@ -1186,6 +1202,7 @@ enum {
 	H_DEBUG,
 	H_MASKS,
 	H_LVAPS,
+	H_VAPS,
 	H_ADD_LVAP,
 	H_DEL_LVAP,
 	H_RECONNECT
@@ -1254,12 +1271,26 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 			sa << "]";
 		    sa << " rts/cts ";
 			sa << it.value()._rts_cts;
-		    if (it.value()._power_save) {
-		    	sa << " PS";
-		    }
 		    if (it.value()._no_ack) {
 		    	sa << " NO_ACK";
 		    }
+		    sa << "\n";
+		}
+		return sa.take_string();
+	}
+	case H_VAPS: {
+	    StringAccum sa;
+		for (VAPIter it = td->vaps()->begin(); it.live(); it++) {
+		    sa << "bssid ";
+		    sa << it.key().unparse();
+		    sa << " ssid ";
+		    sa << it.value()._ssid;
+		    sa << " iface_id ";
+	    	sa << it.value()._iface_id;
+		    sa << " channel ";
+	    	sa << it.value()._channel;
+		    sa << " band ";
+	    	sa << it.value()._band;
 		    sa << "\n";
 		}
 		return sa.take_string();
@@ -1366,6 +1397,7 @@ void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
 	add_read_handler("ports", read_handler, (void *) H_PORTS);
 	add_read_handler("lvaps", read_handler, (void *) H_LVAPS);
+	add_read_handler("vaps", read_handler, (void *) H_VAPS);
 	add_read_handler("masks", read_handler, (void *) H_MASKS);
 	add_read_handler("bytes", read_handler, (void *) H_BYTES);
 	add_write_handler("reconnect", write_handler, (void *) H_RECONNECT);

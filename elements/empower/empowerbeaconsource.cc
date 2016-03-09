@@ -56,9 +56,6 @@ int EmpowerBeaconSource::initialize(ErrorHandler *) {
 void EmpowerBeaconSource::run_timer(Timer *) {
 	// send beacon
 	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-		if (it.value()._power_save) {
-			continue;
-		}
 		send_beacon(it.key(), it.value()._bssid, it.value()._ssids,
 				it.value()._channel, it.value()._iface_id, false);
 	}

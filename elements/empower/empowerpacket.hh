@@ -57,6 +57,11 @@ enum empower_packet_types {
 	EMPOWER_PT_LINK_STATS_REQUEST = 0x29,    // ac -> wtp
 	EMPOWER_PT_LINK_STATS_RESPONSE = 0x30,   // wtp -> ac
 
+	// VAPs
+	EMPOWER_PT_ADD_VAP = 0x31,         // ac -> wtp
+	EMPOWER_PT_DEL_VAP = 0x32,         // ac -> wtp
+	EMPOWER_PT_STATUS_VAP = 0x33,      // wtp -> ac
+
 };
 
 enum empower_port_flags {
@@ -549,6 +554,48 @@ public:
     int16_t limit()                          { return ntohs(_limit); }
     uint16_t period()                        { return ntohs(_period); }
 	EtherAddress sta()					     { return EtherAddress(_sta); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* add vap packet format */
+struct empower_add_vap : public empower_header {
+private:
+	uint16_t _flags;
+    uint8_t _channel;
+    uint8_t _band;
+	uint8_t	_bssid[6];
+	char _ssid[];
+public:
+	uint8_t      band()	        { return _band; }
+	uint8_t      channel()	    { return _channel; }
+	bool         flag(int f)	{ return ntohs(_flags) & f;  }
+	EtherAddress bssid()		{ return EtherAddress(_bssid); }
+	String       ssid()         { int len = 8 + 10; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* del vap packet format */
+struct empower_del_vap : public empower_header {
+  private:
+    uint8_t	_bssid[6];
+  public:
+	EtherAddress sta()							  { return EtherAddress(_bssid); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* lvap status packet format */
+struct empower_status_vap : public empower_header {
+private:
+	uint16_t _flags;
+	uint8_t	_wtp[6];
+    uint8_t _channel;
+    uint8_t _band;
+	uint8_t	_bssid[6];
+	char _ssid[];
+public:
+	void set_band(uint8_t band)	        { _band = band; }
+	void set_channel(uint8_t channel)	{ _channel = channel; }
+	void set_flag(uint16_t f)           { _flags = htons(ntohs(_flags) | f); }
+	void set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
+	void set_bssid(EtherAddress bssid)	{ memcpy(_bssid, bssid.data(), 6); }
+	void set_ssid(String ssid)		    { memcpy(&_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 CLICK_ENDDECLS

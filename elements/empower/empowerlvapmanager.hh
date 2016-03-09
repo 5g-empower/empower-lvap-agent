@@ -98,8 +98,18 @@ public:
 };
 
 
+class EmpowerVAPState {
+public:
+	EtherAddress _bssid;
+	String _ssid;
+	int _channel;
+	int _band;
+	int _iface_id;
+};
+
 class EmpowerStationState {
 public:
+	EtherAddress _lvap_bssid;
 	EtherAddress _bssid;
 	EtherAddress _encap;
 	Vector<String> _ssids;
@@ -109,7 +119,6 @@ public:
 	int _channel;
 	int _band;
 	int _iface_id;
-	bool _power_save;
 	bool _set_mask;
 	bool _authentication_status;
 	bool _association_status;
@@ -131,6 +140,9 @@ public:
 		(*_rx.get_pointer(len))++;
 	}
 };
+
+typedef HashTable<EtherAddress, EmpowerVAPState> VAP;
+typedef VAP::iterator VAPIter;
 
 typedef HashTable<EtherAddress, EmpowerStationState> LVAP;
 typedef LVAP::iterator LVAPIter;
@@ -189,8 +201,8 @@ public:
 
 	EtherAddress wtp() { return _wtp; }
 	LVAP* lvaps() { return &_lvaps; }
+	VAP* vaps() { return &_vaps; }
 	Ports* ports() { return &_ports; }
-	LVAP* reverse_lvaps() { return &_reverse_lvaps; }
 	uint32_t get_next_seq() { return ++_seq; }
 
 private:
@@ -200,7 +212,6 @@ private:
 	class EmpowerBeaconSource *_ebs;
 	class EmpowerOpenAuthResponder *_eauthr;
 	class EmpowerAssociationResponder *_eassor;
-	class EmpowerPowerSaveBuffer *_epsb;
 	class EmpowerRXStats *_ers;
 	class Counter *_uplink;
 	class Counter *_downlink;
@@ -208,7 +219,7 @@ private:
 
 	LVAP _lvaps;
 	Ports _ports;
-	LVAP _reverse_lvaps;
+	VAP _vaps;
 	Vector<EtherAddress> _hwaddrs;
 	Vector<EtherAddress> _masks;
 	Vector<Minstrel *> _rcs;
