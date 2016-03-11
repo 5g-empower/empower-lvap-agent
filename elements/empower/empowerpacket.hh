@@ -563,13 +563,15 @@ private:
     uint8_t _channel;
     uint8_t _band;
 	uint8_t	_bssid[6];
+	uint8_t _ssid_length;
 	char _ssid[];
 public:
 	uint8_t      band()	        { return _band; }
 	uint8_t      channel()	    { return _channel; }
 	bool         flag(int f)	{ return ntohs(_flags) & f;  }
 	EtherAddress bssid()		{ return EtherAddress(_bssid); }
-	String       ssid()         { int len = 8 + 10; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+	uint8_t      ssid_length()	{ return _ssid_length; }
+	String       ssid()         { return String((char *) _ssid, WIFI_MIN(_ssid_length, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del vap packet format */
