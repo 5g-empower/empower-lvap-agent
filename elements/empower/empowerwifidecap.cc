@@ -162,7 +162,7 @@ EmpowerWifiDecap::push(int, Packet *p) {
 		return;
 	}
 
-	// frame must be encapsulated in another ethernet frame
+	// frame must be encapsulated in another Ethernet frame
 	if (ess->_encap) {
 
 		p_out = p_out->push_mac_header(14);
@@ -185,6 +185,8 @@ EmpowerWifiDecap::push(int, Packet *p) {
 			output(1).push(clone);
 
 		output(0).push(p);
+
+		return;
 
 	}
 
