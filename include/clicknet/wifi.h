@@ -25,7 +25,7 @@ enum {
   WIFI_EXTRA_MCS		        = (1<<9),
   WIFI_EXTRA_MCS_SGI		    = (1<<10),
   WIFI_EXTRA_MCS_BW_40		    = (1<<11),
-  WIFI_EXTRA_TX_NOACK		= (1<<12)
+  WIFI_EXTRA_TX_NOACK			= (1<<12)
 };
 
 struct click_wifi_extra {
