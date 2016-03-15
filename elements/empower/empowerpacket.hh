@@ -575,7 +575,7 @@ struct empower_del_vap : public empower_header {
   private:
     uint8_t	_bssid[6];
   public:
-	EtherAddress sta()							  { return EtherAddress(_bssid); }
+	EtherAddress bssid()							  { return EtherAddress(_bssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap status packet format */

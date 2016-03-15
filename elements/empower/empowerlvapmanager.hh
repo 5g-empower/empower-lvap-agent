@@ -109,7 +109,6 @@ public:
 
 class EmpowerStationState {
 public:
-	EtherAddress _lvap_bssid;
 	EtherAddress _bssid;
 	EtherAddress _encap;
 	Vector<String> _ssids;
@@ -218,6 +217,8 @@ public:
 
 	int handle_add_lvap(Packet *, uint32_t);
 	int handle_del_lvap(Packet *, uint32_t);
+	int handle_add_vap(Packet *, uint32_t);
+	int handle_del_vap(Packet *, uint32_t);
 	int handle_probe_response(Packet *, uint32_t);
 	int handle_auth_response(Packet *, uint32_t);
 	int handle_assoc_response(Packet *, uint32_t);

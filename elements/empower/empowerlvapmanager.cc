@@ -725,6 +725,75 @@ void EmpowerLVAPManager::send_caps_response() {
 
 }
 
+int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
+
+	struct empower_add_vap *add_vap = (struct empower_add_vap *) (p->data() + offset);
+
+	EtherAddress bssid = add_vap->bssid();
+	String ssid = add_vap->ssid();
+	int channel = add_vap->channel();
+	empower_bands_types band = (empower_bands_types) add_vap->band();
+
+	if (_debug) {
+		click_chatter("%{element} :: %s :: bssid %s ssid %s ",
+				      this,
+				      __func__,
+					  bssid.unparse().c_str(),
+					  ssid.c_str());
+	}
+
+	if (_vaps.find(bssid) == _vaps.end()) {
+
+		EmpowerVAPState state;
+		state._bssid = bssid;
+		state._channel = channel;
+		state._band = band;
+		state._ssid = ssid;
+		state._iface_id = element_to_iface(channel, band);
+		_vaps.set(bssid, state);
+
+		/* Regenerate the BSSID mask */
+		compute_bssid_mask();
+
+		return 0;
+
+	}
+
+	return 0;
+
+}
+
+int EmpowerLVAPManager::handle_del_vap(Packet *p, uint32_t offset) {
+
+	struct empower_del_vap *q = (struct empower_del_vap *) (p->data() + offset);
+	EtherAddress bssid = q->bssid();
+
+	if (_debug) {
+		click_chatter("%{element} :: %s :: sta %s",
+				      this,
+				      __func__,
+					  bssid.unparse_colon().c_str());
+	}
+
+	// First make sure that this VAP isn't here already, in which
+	// case we'll just ignore the request
+	if (_vaps.find(bssid) == _vaps.end()) {
+		click_chatter("%{element} :: %s :: Ignoring VAP delete request because the agent isn't hosting the VAP",
+				      this,
+				      __func__);
+
+		return -1;
+	}
+
+	_vaps.erase(_vaps.find(bssid));
+
+	// Remove this VAP's BSSID from the mask
+	compute_bssid_mask();
+
+	return 0;
+
+}
+
 int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 
@@ -1086,6 +1155,12 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_DEL_LVAP:
 			handle_del_lvap(p, offset);
+			break;
+		case EMPOWER_PT_ADD_VAP:
+			handle_add_vap(p, offset);
+			break;
+		case EMPOWER_PT_DEL_VAP:
+			handle_del_vap(p, offset);
 			break;
 		case EMPOWER_PT_PROBE_RESPONSE:
 			handle_probe_response(p, offset);
