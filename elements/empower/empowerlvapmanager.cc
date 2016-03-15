@@ -1470,7 +1470,6 @@ void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("vaps", read_handler, (void *) H_VAPS);
 	add_read_handler("masks", read_handler, (void *) H_MASKS);
 	add_read_handler("bytes", read_handler, (void *) H_BYTES);
-	add_read_handler("bytes", read_handler, (void *) H_BYTES);
 	add_read_handler("empower_iface", read_handler, (void *) H_EMPOWER_IFACE);
 	add_read_handler("elements", read_handler, (void *) H_ELEMENTS);
 	add_read_handler("interfaces", read_handler, (void *) H_INTERFACES);
