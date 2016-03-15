@@ -1,7 +1,5 @@
 # 12 "/tmp/empower.click"
 rates :: AvailableRates(DEFAULT 12 18 24 36 48 72 96 108);
-# 14 "/tmp/empower.click"
-re :: EmpowerResourceElements( 1/20 2/20 3/20 4/20 5/20 6/20/1 7/20 8/20 9/20 10/20 11/20 36/20/0 40/20 44/20 48/20 52/20 56/20 60/20 64/20 149/20 153/20 157/20 161/20 165/20);
 # 16 "/tmp/empower.click"
 ControlSocket@3 :: ControlSocket("TCP", 7777);
 # 17 "/tmp/empower.click"
