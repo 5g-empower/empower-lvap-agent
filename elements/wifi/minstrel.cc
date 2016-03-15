@@ -46,11 +46,7 @@ void Minstrel::run_timer(Timer *)
 		int i;
 		uint32_t p;
 		for (i = 0; i < nfo->rates.size(); i++) {
-			if (_rtable_ht) {
-				usecs = calc_usecs_wifi_packet_ht(1500, nfo->rates[i], 0);
-			} else {
-				usecs = calc_usecs_wifi_packet(1500, nfo->rates[i], 0);
-			}
+			usecs = calc_usecs_wifi_packet(1500, nfo->rates[i], 0);
 			if (!usecs) {
 				usecs = 1000000;
 			}
@@ -116,22 +112,14 @@ int Minstrel::configure(Vector<String> &conf, ErrorHandler *errh)
 
 	int ret = Args(conf, this, errh)
 		      .read("OFFSET", _offset)
-		      .read("RT", ElementCastArg("AvailableRates"), _rtable)
-              .read("RT_HT", ElementCastArg("AvailableRates"), _rtable_ht)
+		      .read_m("RT", ElementCastArg("AvailableRates"), _rtable)
+              .read_m("RT_HT", ElementCastArg("AvailableRates"), _rtable_ht)
 		      .read("LOOKAROUND_RATE", _lookaround_rate)
 		      .read("EWMA_LEVEL", _ewma_level)
 		      .read("PERIOD", _period)
 		      .read("ACTIVE",  _active)
 		      .read("DEBUG",  _debug)
 		      .complete();
-
-	if (_rtable && _rtable_ht) {
-	      return errh->error("error you can not specify both RT and RT_HT");
-	}
-
-	if (!_rtable && !_rtable_ht) {
-	      return errh->error("error must specify either RT or RT_HT");
-	}
 
 	return ret;
 
@@ -212,11 +200,7 @@ void Minstrel::assign_rate(Packet *p_in)
 					dst.unparse().c_str());
 		}
 		Vector<int> rates;
-		if (_rtable_ht) {
-			rates = _rtable_ht->supported(dst);
-		} else {
-			rates = _rtable->supported(dst);
-		}
+		rates = _rtable->supported(dst);
 		if (rates.size() == 0) {
 			if (_debug) {
 				click_chatter("%{element} :: %s :: rate info not found for %s",
@@ -225,11 +209,7 @@ void Minstrel::assign_rate(Packet *p_in)
 						dst.unparse().c_str());
 			}
 			Vector<int> rates = _rtable->lookup(EtherAddress::make_broadcast());
-			if (_rtable_ht) {
-				ceh->rate = (rates.size()) ? rates[0] : ceh->rate = 0;
-			} else {
-				ceh->rate = (rates.size()) ? rates[0] : ceh->rate = 12;
-			}
+			ceh->rate = (rates.size()) ? rates[0] : ceh->rate = 12;
 			ceh->max_tries = WIFI_MAX_RETRIES + 1;
 			return;
 		}
@@ -272,10 +252,6 @@ void Minstrel::assign_rate(Packet *p_in)
 	}
 
 	ceh->magic = WIFI_EXTRA_MAGIC;
-
-	if (_rtable_ht) {
-		ceh->flags |= WIFI_EXTRA_MCS;
-	}
 
 	if (sample) {
 		if (nfo->rates[ndx] < nfo->rates[nfo->max_tp_rate]) {
@@ -336,28 +312,16 @@ String Minstrel::print_rates()
 			tp = nfo->cur_tp[i] / ((18000 << 10) / 96);
 			prob = nfo->cur_prob[i] / 18;
 			eprob = nfo->probability[i] / 18;
-			if (_rtable_ht) {
-				sprintf(buffer, "%2d    %2u.%1u    %3u.%1u    %3u.%1u    %3u (%3u)    %8llu    %8llu\n",
-						nfo->rates[i],
-						tp / 10, tp % 10,
-						eprob / 10, eprob % 10,
-						prob / 10, prob % 10,
-						nfo->last_successes[i],
-						nfo->last_attempts[i],
-						(unsigned long long) nfo->hist_successes[i],
-						(unsigned long long) nfo->hist_attempts[i]);
-			} else {
-				sprintf(buffer, "%2d%s    %2u.%1u    %3u.%1u    %3u.%1u    %3u (%3u)    %8llu    %8llu\n",
-						nfo->rates[i] / 2,
-						(nfo->rates[i] & 1) ? ".5" : "  ",
-						tp / 10, tp % 10,
-						eprob / 10, eprob % 10,
-						prob / 10, prob % 10,
-						nfo->last_successes[i],
-						nfo->last_attempts[i],
-						(unsigned long long) nfo->hist_successes[i],
-						(unsigned long long) nfo->hist_attempts[i]);
-			}
+			sprintf(buffer, "%2d%s    %2u.%1u    %3u.%1u    %3u.%1u    %3u (%3u)    %8llu    %8llu\n",
+					nfo->rates[i] / 2,
+					(nfo->rates[i] & 1) ? ".5" : "  ",
+					tp / 10, tp % 10,
+					eprob / 10, eprob % 10,
+					prob / 10, prob % 10,
+					nfo->last_successes[i],
+					nfo->last_attempts[i],
+					(unsigned long long) nfo->hist_successes[i],
+					(unsigned long long) nfo->hist_attempts[i]);
 			if (i == nfo->max_tp_rate)
 				sa << 'T';
 			else if (i == nfo->max_tp_rate2)

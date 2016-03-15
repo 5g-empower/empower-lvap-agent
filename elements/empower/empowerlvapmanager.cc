@@ -135,11 +135,11 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 
 	for (int x = 0; x < tokens.size(); x++) {
 
-		Vector<String> tokens;
+		Vector<String> tokens_re;
 
-		cp_slashvec(tokens[x], tokens);
+		cp_slashvec(tokens[x], tokens_re);
 
-		if (tokens.size() != 2 ) {
+		if (tokens_re.size() != 2 ) {
 			return errh->error(
 					"error param %s: must be in the form <channel/band>",
 					tokens[x].c_str());
@@ -148,13 +148,13 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 		int channel = -1;
 		empower_bands_types band = EMPOWER_BT_L20;
 
-		IntArg().parse(tokens[0], channel);
+		IntArg().parse(tokens_re[0], channel);
 
-		if (tokens[1] == "L20") {
+		if (tokens_re[1] == "L20") {
 			band = EMPOWER_BT_L20;
-		} else if (tokens[1] == "HT20") {
+		} else if (tokens_re[1] == "HT20") {
 			band = EMPOWER_BT_HT20;
-		} else if (tokens[1] == "HT40") {
+		} else if (tokens_re[1] == "HT40") {
 			band = EMPOWER_BT_HT40;
 		}
 
