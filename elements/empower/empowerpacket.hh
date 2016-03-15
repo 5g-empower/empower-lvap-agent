@@ -80,10 +80,6 @@ enum empower_bands_types {
 	EMPOWER_BT_HT40 = 0x2,
 };
 
-enum empower_bands_flags {
-	EMPOWER_RE_BLACKLISTED = (1<<0),
-};
-
 /* header format, common to all messages */
 struct empower_header {
   private:

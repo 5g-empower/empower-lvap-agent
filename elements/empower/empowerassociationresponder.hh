@@ -52,8 +52,6 @@ public:
 
 private:
 
-	class AvailableRates *_rtable;
-	class AvailableRates *_rtable_ht;
 	class EmpowerLVAPManager *_el;
 
 	bool _debug;

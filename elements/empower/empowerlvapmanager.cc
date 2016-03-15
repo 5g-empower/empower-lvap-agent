@@ -29,13 +29,12 @@
 #include "empowerbeaconsource.hh"
 #include "empoweropenauthresponder.hh"
 #include "empowerassociationresponder.hh"
-#include "empowerresourceelements.hh"
 #include "empowerrxstats.hh"
 CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
 	_ebs(0), _eauthr(0), _eassor(0), _ers(0), _uplink(0), _downlink(0),
-	_re(0), _timer(this), _seq(0), _period(5000), _debug(false) {
+	_timer(this), _seq(0), _period(5000), _debug(false) {
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
@@ -57,6 +56,17 @@ void EmpowerLVAPManager::run_timer(Timer *) {
 	_timer.schedule_after_msec(_period + j - max_jitter);
 }
 
+void cp_slashvec(const String &str, Vector<String> &conf) {
+	int start = 0;
+	int pos = str.find_left('/');
+	int len = str.length();
+	do {
+	    conf.push_back(str.substring(start, pos - start));
+		start = pos + 1;
+	} while ((pos = str.find_left('/', start)) != -1);
+	conf.push_back(str.substring(start, len - start));
+}
+
 int EmpowerLVAPManager::configure(Vector<String> &conf,
 		ErrorHandler *errh) {
 
@@ -64,18 +74,20 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 	String hwaddrs;
 	String debugfs_strings;
 	String rcs_strings;
+	String res_strings;
 
-	res = Args(conf, this, errh).read_m("HWADDRS", hwaddrs)
+	res = Args(conf, this, errh).read_m("EMPOWER_IFACE", _empower_iface)
+								.read_m("HWADDRS", hwaddrs)
 								.read_m("WTP", _wtp)
 						        .read_m("EBS", ElementCastArg("EmpowerBeaconSource"), _ebs)
 			                    .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
 			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
-			                    .read_m("RE", ElementCastArg("ResourceElements"), _re)
 			                    .read_m("DEBUGFS", debugfs_strings)
-			                    .read("RCS", rcs_strings)
-			                    .read("ERS", ElementCastArg("EmpowerRXStats"), _ers)
-			                    .read("UPLINK", ElementCastArg("Counter"), _uplink)
-			                    .read("DOWNLINK", ElementCastArg("Counter"), _downlink)
+			                    .read_m("RCS", rcs_strings)
+			                    .read_m("RES", res_strings)
+			                    .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
+			                    .read_m("UPLINK", ElementCastArg("Counter"), _uplink)
+			                    .read_m("DOWNLINK", ElementCastArg("Counter"), _downlink)
 								.read("PERIOD", _period)
 			                    .read("DEBUG", _debug)
 			                    .complete();
@@ -116,6 +128,40 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 	if (_rcs.size() > _hwaddrs.size()) {
 		return errh->error("rcs has %u values, while hwaddrs has %u values",
 				_rcs.size(), _hwaddrs.size());
+	}
+
+	tokens.clear();
+	cp_spacevec(res_strings, tokens);
+
+	for (int x = 0; x < tokens.size(); x++) {
+
+		Vector<String> tokens;
+
+		cp_slashvec(tokens[x], tokens);
+
+		if (tokens.size() != 2 ) {
+			return errh->error(
+					"error param %s: must be in the form <channel/band>",
+					tokens[x].c_str());
+		}
+
+		int channel = -1;
+		empower_bands_types band = EMPOWER_BT_L20;
+
+		IntArg().parse(tokens[0], channel);
+
+		if (tokens[1] == "L20") {
+			band = EMPOWER_BT_L20;
+		} else if (tokens[1] == "HT20") {
+			band = EMPOWER_BT_HT20;
+		} else if (tokens[1] == "HT40") {
+			band = EMPOWER_BT_HT40;
+		}
+
+		ResourceElement elm = ResourceElement(channel, band);
+		_ifaces_to_elements.set(x, elm);
+		_elements_to_ifaces.set(elm, x);
+
 	}
 
 	return res;
@@ -215,7 +261,7 @@ void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, uint8
 
 	memset(p->data(), 0, p->length());
 
-	const ResourceElement *re = _re->iface_to_element(iface_id);
+	const ResourceElement *re = iface_to_element(iface_id);
 
 	empower_probe_request *request = (struct empower_probe_request *) (p->data());
 	request->set_version(_empower_version);
@@ -392,7 +438,7 @@ void EmpowerLVAPManager::send_img_response(NeighborTable *table, int type,
 	// Select stations active on the specified resource element (iface_id)
 	// Select only measurements for the specified rates
 
-	int iface_id = _re->element_to_iface(channel, band);
+	int iface_id = element_to_iface(channel, band);
 
 	for (NTIter iter = table->begin(); iter.live(); iter++) {
 		if (iter.value()._iface_id != iface_id) {
@@ -627,7 +673,7 @@ void EmpowerLVAPManager::send_caps_response() {
 
 	int len = sizeof(empower_caps_response);
 
-	len += _re->elements().size() * sizeof(struct resource_elements_entry);
+	len += elements().size() * sizeof(struct resource_elements_entry);
 
 	for (PortsIter iter = _ports.begin(); iter.live(); iter++) {
 		len += sizeof(struct port_elements_entry);
@@ -650,7 +696,7 @@ void EmpowerLVAPManager::send_caps_response() {
 	caps->set_type(EMPOWER_PT_CAPS_RESPONSE);
 	caps->set_seq(get_next_seq());
 	caps->set_wtp(_wtp);
-	caps->set_nb_resources_elements(_re->elements().size());
+	caps->set_nb_resources_elements(elements().size());
 	caps->set_nb_ports_elements(_ports.size());
 
 	uint8_t *ptr = (uint8_t *) caps;
@@ -658,14 +704,11 @@ void EmpowerLVAPManager::send_caps_response() {
 
 	uint8_t *end = ptr + (len - sizeof(struct empower_caps_response));
 
-	for (IfIter iter = _re->elements().begin(); iter.live(); iter++) {
+	for (IfIter iter = elements().begin(); iter.live(); iter++) {
 		assert (ptr <= end);
 		resource_elements_entry *entry = (resource_elements_entry *) ptr;
 		entry->set_channel(iter.key()._channel);
 		entry->set_band(iter.key()._band);
-		if (iter.value() == -1) {
-			entry->set_flag(EMPOWER_RE_BLACKLISTED);
-		}
 		ptr += sizeof(struct resource_elements_entry);
 	}
 
@@ -759,7 +802,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._association_status = association_state;
 		state._set_mask = set_mask;
 		state._ssid = ssid;
-		state._iface_id = _re->element_to_iface(channel, band);
+		state._iface_id = element_to_iface(channel, band);
 		_lvaps.set(sta, state);
 
 		/* Regenerate the BSSID mask */
@@ -1205,7 +1248,10 @@ enum {
 	H_VAPS,
 	H_ADD_LVAP,
 	H_DEL_LVAP,
-	H_RECONNECT
+	H_RECONNECT,
+	H_EMPOWER_IFACE,
+	H_ELEMENTS,
+	H_INTERFACES
 };
 
 String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
@@ -1221,6 +1267,8 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	}
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
+	case H_EMPOWER_IFACE:
+		return String(td->_empower_iface) + "\n";
 	case H_MASKS: {
 	    StringAccum sa;
 	    for (int i = 0; i < td->_masks.size(); i++) {
@@ -1275,6 +1323,20 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 		    	sa << " NO_ACK";
 		    }
 		    sa << "\n";
+		}
+		return sa.take_string();
+	}
+	case H_ELEMENTS: {
+		StringAccum sa;
+		for (IfIter iter = td->_elements_to_ifaces.begin(); iter.live(); iter++) {
+			sa << iter.key().unparse() << " -> " << iter.value()  << "\n";
+		}
+		return sa.take_string();
+	}
+	case H_INTERFACES: {
+		StringAccum sa;
+		for (REIter iter = td->_ifaces_to_elements.begin(); iter.live(); iter++) {
+			sa << iter.key() << " -> " << iter.value().unparse()  << "\n";
 		}
 		return sa.take_string();
 	}
@@ -1356,15 +1418,23 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		String iface;
 
 		if (!EtherAddressArg().parse(tokens[0], hwaddr)) {
-			return errh->error("error param %s: must start with Ethernet address", tokens[0].c_str());
+			return errh->error("error param %s: must start with an Ethernet address", tokens[0].c_str());
 		}
 
 		if (!IntArg().parse(tokens[1], port_id)) {
-			return errh->error("error param %s: must start with int", tokens[0].c_str());
+			return errh->error("error param %s: must start with an int", tokens[1].c_str());
+		}
+
+		if (!StringArg().parse(tokens[2], iface)) {
+			return errh->error("error param %s: must start with a String", tokens[2].c_str());
 		}
 
 		NetworkPort port = NetworkPort(hwaddr, tokens[2], port_id);
 		f->ports()->find_insert(port_id, port);
+
+		if (iface == f->_empower_iface) {
+			f->_ebs->set_encap_hwaddr(hwaddr);
+		}
 
 		f->send_caps_response();
 
@@ -1400,6 +1470,10 @@ void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("vaps", read_handler, (void *) H_VAPS);
 	add_read_handler("masks", read_handler, (void *) H_MASKS);
 	add_read_handler("bytes", read_handler, (void *) H_BYTES);
+	add_read_handler("bytes", read_handler, (void *) H_BYTES);
+	add_read_handler("empower_iface", read_handler, (void *) H_EMPOWER_IFACE);
+	add_read_handler("elements", read_handler, (void *) H_ELEMENTS);
+	add_read_handler("interfaces", read_handler, (void *) H_INTERFACES);
 	add_write_handler("reconnect", write_handler, (void *) H_RECONNECT);
 	add_write_handler("ports", write_handler, (void *) H_PORTS);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);

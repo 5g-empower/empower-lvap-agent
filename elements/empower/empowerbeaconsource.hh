@@ -69,10 +69,12 @@ public:
 
 	void push(int, Packet *);
 
+	void set_encap_hwaddr(EtherAddress encap_hwaddr) { _encap_hwaddr = encap_hwaddr; };
+
 private:
 
-	class AvailableRates *_rtable;
-	class AvailableRates *_rtable_ht;
+	EtherAddress _encap_hwaddr;
+
 	class EmpowerLVAPManager *_el;
 
 	unsigned int _period; // msecs

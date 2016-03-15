@@ -150,6 +150,54 @@ typedef LVAP::iterator LVAPIter;
 typedef HashTable<int, NetworkPort> Ports;
 typedef Ports::iterator PortsIter;
 
+class ResourceElement {
+public:
+
+	int _channel;
+	empower_bands_types _band;
+
+	ResourceElement() : _channel(1), _band(EMPOWER_BT_L20) {
+	}
+
+	ResourceElement(int channel, empower_bands_types band) : _channel(channel), _band(band) {
+	}
+
+	inline size_t hashcode() const {
+		return _channel | _band;
+	}
+
+	inline String unparse() const {
+		StringAccum sa;
+		sa << "(";
+		sa << _channel;
+		sa << ", ";
+		switch (_band) {
+		case EMPOWER_BT_L20:
+			sa << "L20";
+			break;
+		case EMPOWER_BT_HT20:
+			sa << "HT20";
+			break;
+		case EMPOWER_BT_HT40:
+			sa << "HT40";
+			break;
+		}
+		sa << ")";
+		return sa.take_string();
+	}
+
+};
+
+inline bool operator==(const ResourceElement &a, const ResourceElement &b) {
+	return a._channel == b._channel && a._band == b._band;
+}
+
+typedef HashTable<ResourceElement, int> IfTable;
+typedef IfTable::const_iterator IfIter;
+
+typedef HashTable<int, ResourceElement> RETable;
+typedef RETable::const_iterator REIter;
+
 class EmpowerLVAPManager: public Element {
 public:
 
@@ -205,7 +253,20 @@ public:
 	Ports* ports() { return &_ports; }
 	uint32_t get_next_seq() { return ++_seq; }
 
+	const IfTable & elements() { return _elements_to_ifaces; }
+
+	int element_to_iface(uint8_t channel, empower_bands_types band) {
+		return _elements_to_ifaces.find(ResourceElement(channel, band)).value();
+	}
+
+	ResourceElement* iface_to_element(int iface) { return _ifaces_to_elements.get_pointer(iface); }
+
+	Vector<Minstrel *> * rcs() { return &_rcs; }
+
 private:
+
+	IfTable _elements_to_ifaces;
+	RETable _ifaces_to_elements;
 
 	void compute_bssid_mask();
 
@@ -215,8 +276,8 @@ private:
 	class EmpowerRXStats *_ers;
 	class Counter *_uplink;
 	class Counter *_downlink;
-	class EmpowerResourceElements *_re;
 
+	String _empower_iface;
 	LVAP _lvaps;
 	Ports _ports;
 	VAP _vaps;
