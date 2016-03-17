@@ -53,9 +53,18 @@ int EmpowerBeaconSource::initialize(ErrorHandler *) {
 }
 
 void EmpowerBeaconSource::run_timer(Timer *) {
-	// send beacon
+	// send LVAP beacon
 	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
+		// check for shared
 		send_beacon(it.key(), it.value()._bssid, it.value()._ssids,
+				it.value()._channel, it.value()._iface_id, false);
+	}
+	// send VAP beacons
+	for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
+
+		click_chatter("Sending : %s", it.value()._ssid.c_str());
+
+		send_beacon(EtherAddress::make_broadcast(), it.value()._bssid, it.value()._ssid,
 				it.value()._channel, it.value()._iface_id, false);
 	}
 	// re-schedule the timer with some jitter

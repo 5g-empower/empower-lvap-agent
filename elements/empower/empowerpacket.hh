@@ -546,7 +546,7 @@ private:
 	uint16_t _period;
 	uint8_t	_sta[6];
 public:
-    uint32_t trigger_id()                       { return ntohl(_trigger_id); }
+    uint32_t trigger_id()                    { return ntohl(_trigger_id); }
     int16_t limit()                          { return ntohs(_limit); }
     uint16_t period()                        { return ntohs(_period); }
 	EtherAddress sta()					     { return EtherAddress(_sta); }
@@ -555,19 +555,15 @@ public:
 /* add vap packet format */
 struct empower_add_vap : public empower_header {
 private:
-	uint16_t _flags;
     uint8_t _channel;
     uint8_t _band;
 	uint8_t	_bssid[6];
-	uint8_t _ssid_length;
 	char _ssid[];
 public:
 	uint8_t      band()	        { return _band; }
 	uint8_t      channel()	    { return _channel; }
-	bool         flag(int f)	{ return ntohs(_flags) & f;  }
 	EtherAddress bssid()		{ return EtherAddress(_bssid); }
-	uint8_t      ssid_length()	{ return _ssid_length; }
-	String       ssid()         { return String((char *) _ssid, WIFI_MIN(_ssid_length, WIFI_NWID_MAXSIZE)); }
+	String       ssid()         { int len = length() - 16; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del vap packet format */
@@ -581,7 +577,6 @@ struct empower_del_vap : public empower_header {
 /* lvap status packet format */
 struct empower_status_vap : public empower_header {
 private:
-	uint16_t _flags;
 	uint8_t	_wtp[6];
     uint8_t _channel;
     uint8_t _band;
@@ -589,8 +584,8 @@ private:
 	char _ssid[];
 public:
 	void set_band(uint8_t band)	        { _band = band; }
+
 	void set_channel(uint8_t channel)	{ _channel = channel; }
-	void set_flag(uint16_t f)           { _flags = htons(ntohs(_flags) | f); }
 	void set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
 	void set_bssid(EtherAddress bssid)	{ memcpy(_bssid, bssid.data(), 6); }
 	void set_ssid(String ssid)		    { memcpy(&_ssid, ssid.data(), ssid.length()); }

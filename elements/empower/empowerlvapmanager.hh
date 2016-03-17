@@ -239,6 +239,7 @@ public:
 	void send_auth_request(EtherAddress);
 	void send_association_request(EtherAddress, String);
 	void send_status_lvap(EtherAddress);
+	void send_status_vap(EtherAddress);
 	void send_status_port(EtherAddress);
 	void send_counters_response(EtherAddress, uint32_t);
 	void send_img_response(NeighborTable *, int, EtherAddress, uint32_t, empower_bands_types, uint8_t);

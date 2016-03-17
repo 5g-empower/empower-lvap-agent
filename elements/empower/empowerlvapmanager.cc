@@ -374,6 +374,40 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 
 }
 
+void EmpowerLVAPManager::send_status_vap(EtherAddress bssid) {
+
+	Vector<String> ssids;
+
+	EmpowerVAPState evs = _vaps.get(bssid);
+
+	int len = sizeof(empower_status_vap) + evs._ssid.length();
+
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	memset(p->data(), 0, p->length());
+
+	empower_status_vap *status = (struct empower_status_vap *) (p->data());
+	status->set_version(_empower_version);
+	status->set_length(len);
+	status->set_type(EMPOWER_PT_STATUS_VAP);
+	status->set_seq(get_next_seq());
+	status->set_wtp(_wtp);
+	status->set_bssid(evs._bssid);
+	status->set_channel(evs._channel);
+	status->set_band(evs._band);
+	status->set_ssid(evs._ssid);
+
+	output(0).push(p);
+
+}
+
 void EmpowerLVAPManager::send_status_port(EtherAddress sta) {
 
 	Vector<String> ssids;
@@ -1525,12 +1559,16 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		f->send_hello();
 		// send caps response
 		f->send_caps_response();
-		// send status update messages
+		// send LVAP status update messages
 		for (LVAPIter it = f->_lvaps.begin(); it.live(); it++) {
 			f->send_status_lvap(it.key());
 			if (it.value()._set_mask) {
 				f->send_status_port(it.key());
 			}
+		}
+		// send VAP status update messages
+		for (VAPIter it = f->_vaps.begin(); it.live(); it++) {
+			f->send_status_vap(it.key());
 		}
 		break;
 	}
