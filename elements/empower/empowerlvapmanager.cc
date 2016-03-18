@@ -299,13 +299,14 @@ void EmpowerLVAPManager::send_hello() {
 	hello->set_seq(get_next_seq());
 	hello->set_period(_period);
 	hello->set_wtp(_wtp);
+	hello->set_downlink_bytes(_downlink->byte_count());
+	hello->set_uplink_bytes(_uplink->byte_count());
 
-	if (_downlink) {
-		hello->set_downlink_bytes(_downlink->byte_count());
-	}
-
-	if (_uplink) {
-		hello->set_uplink_bytes(_uplink->byte_count());
+	if (_debug) {
+		click_chatter("%{element} :: %s :: sending hello (%u)!",
+				      this,
+				      __func__,
+					  hello->seq());
 	}
 
 	checked_output_push(0, p);
@@ -720,6 +721,12 @@ void EmpowerLVAPManager::send_caps_response() {
 					  this,
 					  __func__);
 		return;
+	}
+
+	if (_debug) {
+		click_chatter("%{element} :: %s :: sending caps response!",
+				      this,
+				      __func__);
 	}
 
 	memset(p->data(), 0, p->length());
