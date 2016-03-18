@@ -61,11 +61,9 @@ void EmpowerBeaconSource::run_timer(Timer *) {
 	}
 	// send VAP beacons
 	for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
-
-		click_chatter("Sending : %s", it.value()._ssid.c_str());
-
-		send_beacon(EtherAddress::make_broadcast(), it.value()._bssid, it.value()._ssid,
-				it.value()._channel, it.value()._iface_id, false);
+		send_beacon(EtherAddress::make_broadcast(), it.value()._bssid,
+				it.value()._ssid, it.value()._channel, it.value()._iface_id,
+				false);
 	}
 	// re-schedule the timer with some jitter
 	_timer.schedule_after_msec(_period);
