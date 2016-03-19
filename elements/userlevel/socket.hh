@@ -236,13 +236,12 @@ private:
   bool _verbose;		// be verbose
   bool _client;			// client or server
   bool _proper;			// (PlanetLab only) use Proper to bind port
-  int _reconnect;       // timeout for reconnecting
   IPRouteTable *_allow;		// lookup table of good hosts
   IPRouteTable *_deny;		// lookup table of bad hosts
 
-  HandlerCall *_reconnect_call_h;
-
   int initialize_socket_error(ErrorHandler *, const char *);
+
+  HandlerCall *_reconnect_call_h;
 
 };
 

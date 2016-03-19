@@ -33,7 +33,6 @@
 #include <fcntl.h>
 #include <click/timer.hh>
 #include <click/handlercall.hh>
-#include <errno.h>
 #include "socket.hh"
 
 #ifdef HAVE_PROPER
@@ -48,7 +47,7 @@ Socket::Socket()
     _local_port(0), _local_pathname(""),
     _timestamp(true), _sndbuf(-1), _rcvbuf(-1),
     _snaplen(2048), _headroom(Packet::default_headroom), _nodelay(1),
-    _verbose(false), _client(false), _proper(false), _reconnect(5), _allow(0), _deny(0), _reconnect_call_h(0)
+    _verbose(false), _client(false), _proper(false), _allow(0), _deny(0), _reconnect_call_h(0)
 {
 }
 
@@ -58,159 +57,14 @@ Socket::~Socket()
 
 void Socket::run_timer(Timer *) {
 
-	if (_active == -1) {
+  ErrorHandler *errh = new ErrorHandler();
 
-		// open socket, set options
-		_fd = socket(_family, _socktype, _protocol);
-		if (_fd < 0)
-			goto reschedule;
+  if (_active == -1) {
+    initialize(errh);
+  }
 
-		if (_family == AF_INET) {
-			_remote.in.sin_family = _family;
-			_remote.in.sin_port = htons(_remote_port);
-			_remote.in.sin_addr = _remote_ip.in_addr();
-			_remote_len = sizeof(_remote.in);
-			_local.in.sin_family = _family;
-			_local.in.sin_port = htons(_local_port);
-			_local.in.sin_addr = _local_ip.in_addr();
-			_local_len = sizeof(_local.in);
-		} else {
-			_remote.un.sun_family = _family;
-			_remote_len = offsetof(struct sockaddr_un, sun_path)
-					+ _remote_pathname.length();
-			if (_remote_pathname[0]) {
-				strcpy(_remote.un.sun_path, _remote_pathname.c_str());
-				_remote_len++;
-			} else
-				memcpy(_remote.un.sun_path, _remote_pathname.c_str(),
-						_remote_pathname.length());
-			_local.un.sun_family = _family;
-			_local_len = offsetof(struct sockaddr_un, sun_path)
-					+ _local_pathname.length();
-			if (_local_pathname[0]) {
-				strcpy(_local.un.sun_path, _local_pathname.c_str());
-				_local_len++;
-			} else
-				memcpy(_local.un.sun_path, _local_pathname.c_str(),
-						_local_pathname.length());
-		}
-
-#ifdef TCP_NODELAY
-		// disable Nagle algorithm
-		if (_protocol == IPPROTO_TCP && _nodelay)
-			if (setsockopt(_fd, IP_PROTO_TCP, TCP_NODELAY, &_nodelay,
-					sizeof(_nodelay)) < 0)
-				goto reschedule;
-#endif
-
-		// set socket send buffer size
-		if (_sndbuf >= 0)
-			if (setsockopt(_fd, SOL_SOCKET, SO_SNDBUF, &_sndbuf,
-					sizeof(_sndbuf)) < 0)
-				goto reschedule;
-
-		// set socket receive buffer size
-		if (_rcvbuf >= 0)
-			if (setsockopt(_fd, SOL_SOCKET, SO_RCVBUF, &_rcvbuf,
-					sizeof(_rcvbuf)) < 0)
-				goto reschedule;
-
-		// if a server, then the first arguments should be interpreted as
-		// the address/port/file to bind() to, not to connect() to
-		if (!_client) {
-			memcpy(&_local, &_remote, _remote_len);
-			_local_len = _remote_len;
-		}
-
-		// if a server, or if the optional local arguments have been
-		// specified, bind() to the specified address/port/file
-		if (!_client || _local_port != 0 || _local_pathname != "") {
-#ifdef HAVE_PROPER
-			int ret = -1;
-			if (_proper) {
-				ret = prop_bind_socket(_fd, (struct sockaddr *)&_local, _local_len);
-				if (ret < 0)
-				errh->warning("prop_bind_socket: %s", strerror(errno));
-			}
-			if (ret < 0)
-#endif
-			if (bind(_fd, (struct sockaddr *) &_local, _local_len) < 0)
-				goto reschedule;
-		}
-
-		// nonblocking I/O and close-on-exec for the socket
-		fcntl(_fd, F_SETFL, O_NONBLOCK);
-		fcntl(_fd, F_SETFD, FD_CLOEXEC);
-
-		if (_client) {
-			// connect
-			if (_socktype == SOCK_STREAM) {
-				if (connect(_fd, (struct sockaddr *) &_remote, _remote_len) < 0) {
-					if (errno == EINPROGRESS) {
-						if (_verbose) {
-							click_chatter("%s: EINPROGRESS in connect()", declaration().c_str());
-						}
-					} else {
-						if (_verbose) {
-							click_chatter("%s: unable to connect %d to %s:%d",
-									declaration().c_str(), _fd,
-									IPAddress(_remote.in.sin_addr).unparse().c_str(),
-									ntohs(_remote.in.sin_port));
-						}
-					}
-				} else {
-					if (_verbose) {
-						click_chatter("%s: opened connection %d to %s:%d",
-								declaration().c_str(), _fd,
-								IPAddress(_remote.in.sin_addr).unparse().c_str(),
-								ntohs(_remote.in.sin_port));
-					}
-					_active = _fd;
-				}
-			}
-		} else {
-			// start listening
-			if (_socktype == SOCK_STREAM) {
-				if (listen(_fd, 2) < 0)
-					goto reschedule;
-				if (_verbose) {
-					if (_family == AF_INET)
-						click_chatter(
-								"%s: listening for connections on %s:%d (%d)",
-								declaration().c_str(),
-								IPAddress(_local.in.sin_addr).unparse().c_str(),
-								ntohs(_local.in.sin_port), _fd);
-					else
-						click_chatter(
-								"%s: listening for connections on %s (%d)",
-								declaration().c_str(), _local.un.sun_path, _fd);
-				}
-			} else {
-				_active = _fd;
-			}
-		}
-
-		if (noutputs()) {
-			if (add_select(_fd, SELECT_READ) > -1) {
-				_active = _fd;
-			}
-		}
-
-		if (_active > -1) {
-			if (_verbose) {
-				click_chatter("%s: Calling reconnect handler", declaration().c_str());
-			}
-			if (_reconnect_call_h) {
-				(void) _reconnect_call_h->call_write();
-			}
-		}
-
-	}
-
-reschedule:
-
-	_timer.reschedule_after_sec(_reconnect);
-	return;
+  _timer.reschedule_after_sec(2);
+  return;
 
 }
 
@@ -236,16 +90,14 @@ Socket::configure(Vector<String> &conf, ErrorHandler *errh)
       .read("NODELAY", _nodelay)
       .read("CLIENT", _client)
       .read("PROPER", _proper)
-      .read("RECONNECT", _reconnect)
       .read("RECONNECT_CALL", AnyArg(), reconnect_call)
       .read("ALLOW", allow)
       .read("DENY", deny)
       .consume() < 0)
     return -1;
 
-  if (reconnect_call) {
-	  _reconnect_call_h = new HandlerCall(reconnect_call);
-  }
+  if (reconnect_call)
+    _reconnect_call_h = new HandlerCall(reconnect_call);
 
   if (allow && !(_allow = (IPRouteTable *)allow->cast("IPRouteTable")))
     return errh->error("%s is not an IPRouteTable", allow->name().c_str());
@@ -302,12 +154,24 @@ Socket::initialize_socket_error(ErrorHandler *errh, const char *syscall)
     _fd = -1;
   }
 
-  return errh->error("%s: %s", syscall, strerror(e));
+  click_chatter("%s: %s: %s", declaration().c_str(), syscall, strerror(e));
+
+  return 0;
+
 }
 
 int
 Socket::initialize(ErrorHandler *errh)
 {
+
+  // initialize timer
+  _timer.initialize(this);
+  _timer.reschedule_after_sec(2);
+
+  // initialize callback
+  if (_reconnect_call_h && (_reconnect_call_h->initialize_write(this, errh) < 0))
+    return initialize_socket_error(errh, "callback");
+
   // open socket, set options
   _fd = socket(_family, _socktype, _protocol);
   if (_fd < 0)
@@ -380,36 +244,15 @@ Socket::initialize(ErrorHandler *errh)
       return initialize_socket_error(errh, "bind");
   }
 
-  // nonblocking I/O and close-on-exec for the socket
-  fcntl(_fd, F_SETFL, O_NONBLOCK);
-  fcntl(_fd, F_SETFD, FD_CLOEXEC);
-
   if (_client) {
     // connect
-	if (_socktype == SOCK_STREAM) {
-		if (connect(_fd, (struct sockaddr *) &_remote, _remote_len) < 0) {
-			if (errno == EINPROGRESS) {
-				if (_verbose) {
-					click_chatter("%s: EINPROGRESS in connect()", declaration().c_str());
-				}
-			} else {
-				if (_verbose) {
-					click_chatter("%s: unable to connect %d to %s:%d",
-							declaration().c_str(), _fd,
-							IPAddress(_remote.in.sin_addr).unparse().c_str(),
-							ntohs(_remote.in.sin_port));
-				}
-			}
-		} else {
-			if (_verbose) {
-				click_chatter("%s: opened connection %d to %s:%d",
-						declaration().c_str(), _fd,
-						IPAddress(_remote.in.sin_addr).unparse().c_str(),
-						ntohs(_remote.in.sin_port));
-			}
-			_active = _fd;
-		}
-	}
+    if (_socktype == SOCK_STREAM) {
+      if (connect(_fd, (struct sockaddr *)&_remote, _remote_len) < 0)
+	return initialize_socket_error(errh, "connect");
+      if (_verbose)
+	click_chatter("%s: opened connection %d to %s:%d", declaration().c_str(), _fd, IPAddress(_remote.in.sin_addr).unparse().c_str(), ntohs(_remote.in.sin_port));
+    }
+    _active = _fd;
   } else {
     // start listening
     if (_socktype == SOCK_STREAM) {
@@ -426,25 +269,21 @@ Socket::initialize(ErrorHandler *errh)
     }
   }
 
-  if (noutputs()) {
-	if (add_select(_fd, SELECT_READ) > -1) {
-		_active = _fd;
-	}
-  }
+  // nonblocking I/O and close-on-exec for the socket
+  fcntl(_fd, F_SETFL, O_NONBLOCK);
+  fcntl(_fd, F_SETFD, FD_CLOEXEC);
+
+  if (noutputs())
+    add_select(_fd, SELECT_READ);
 
   if (ninputs() && input_is_pull(0)) {
     ScheduleInfo::join_scheduler(this, &_task, errh);
     _signal = Notifier::upstream_empty_signal(this, 0, &_task);
-    if (_active > 0)
-      add_select(_fd, SELECT_WRITE);
+    add_select(_fd, SELECT_WRITE);
   }
 
-  if (_client && _reconnect) {
-	if (_reconnect_call_h && (_reconnect_call_h->initialize_write(this, errh) < 0))
-	  return -1;
-	_timer.initialize(this);
-	_timer.schedule_now();
-  }
+  if (_reconnect_call_h)
+    (void) _reconnect_call_h->call_write();
 
   return 0;
 }
@@ -633,10 +472,10 @@ Socket::write_packet(Packet *p)
 
       // connection probably terminated or other fatal error
       else {
-       if (_verbose)
-         click_chatter("%s: %s", declaration().c_str(), strerror(errno));
-       close_active();
-       break;
+	if (_verbose)
+	  click_chatter("%s: %s", declaration().c_str(), strerror(errno));
+	close_active();
+	break;
       }
     } else
       // this segment OK
