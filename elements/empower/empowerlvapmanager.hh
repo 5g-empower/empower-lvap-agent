@@ -122,7 +122,6 @@ public:
 	bool _authentication_status;
 	bool _association_status;
 	bool _no_ack;
-	int _tx_power;
 	int _rts_cts;
 	CBytes _rx;
 	CBytes _tx;

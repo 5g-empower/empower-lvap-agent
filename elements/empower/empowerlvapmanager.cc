@@ -435,7 +435,6 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta) {
 	status->set_seq(get_next_seq());
 	if (ess._no_ack)
 		status->set_flag(EMPOWER_STATUS_PORT_NOACK);
-	status->set_tx_power(ess._tx_power);
 	status->set_rts_cts(ess._rts_cts);
 	status->set_wtp(_wtp);
 	status->set_sta(sta);
@@ -906,7 +905,6 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._band = band;
 		state._no_ack = false;
 		state._rts_cts = 2346;
-		state._tx_power = 30;
 		state._set_mask = set_mask;
 		state._authentication_status = authentication_state;
 		state._association_status = association_state;
@@ -952,23 +950,20 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 	}
 
 	bool no_ack = q->flag(EMPOWER_STATUS_PORT_NOACK);
-	int tx_power = q->tx_power();
 	int rts_cts = q->rts_cts();
 
 	if (_debug) {
 	    StringAccum sa;
-		click_chatter("%{element} :: %s :: sta %s tx power %u rts/cts %u %s ",
+		click_chatter("%{element} :: %s :: sta %s rts/cts %u %s ",
 				      this,
 				      __func__,
 				      sta.unparse_colon().c_str(),
-					  tx_power,
 					  rts_cts,
 				      no_ack ? "NO ACK" : "");
 	}
 
 	ess->_no_ack = no_ack;
 	ess->_rts_cts = rts_cts;
-	ess->_tx_power = tx_power;
 
 	uint8_t *ptr = (uint8_t *) q;
 	ptr += sizeof(struct empower_set_port);
@@ -1423,8 +1418,6 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	    	sa << it.value()._assoc_id;
 		    sa << " iface_id ";
 	    	sa << it.value()._iface_id;
-		    sa << " tx power ";
-		    sa << it.value()._tx_power;
 			sa << " mcs [";
 		    if (it.value()._mcs.size() > 0) {
 				sa << it.value()._mcs[0];
