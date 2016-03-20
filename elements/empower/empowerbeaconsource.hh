@@ -69,11 +69,7 @@ public:
 
 	void push(int, Packet *);
 
-	void set_encap_hwaddr(EtherAddress encap_hwaddr) { _encap_hwaddr = encap_hwaddr; };
-
 private:
-
-	EtherAddress _encap_hwaddr;
 
 	class EmpowerLVAPManager *_el;
 

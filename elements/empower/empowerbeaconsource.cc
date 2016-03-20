@@ -548,14 +548,11 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 
 enum {
 	H_DEBUG,
-	H_EMPOWER_HWADDR
 };
 
 String EmpowerBeaconSource::read_handler(Element *e, void *thunk) {
 	EmpowerBeaconSource *td = (EmpowerBeaconSource *) e;
 	switch ((uintptr_t) thunk) {
-	case H_EMPOWER_HWADDR:
-		return td->_encap_hwaddr.unparse() + "\n";
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
 	default:
@@ -583,7 +580,6 @@ int EmpowerBeaconSource::write_handler(const String &in_s, Element *e,
 
 void EmpowerBeaconSource::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
-	add_read_handler("empower_hwaddr", read_handler, (void *) H_EMPOWER_HWADDR);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
 }
 

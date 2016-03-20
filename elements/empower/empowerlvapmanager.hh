@@ -249,6 +249,7 @@ public:
 	void send_link_stats_response(EtherAddress, uint32_t);
 
 	EtherAddress wtp() { return _wtp; }
+	EtherAddress empower_hwaddr() { return _empower_hwaddr; }
 	LVAP* lvaps() { return &_lvaps; }
 	VAP* vaps() { return &_vaps; }
 	Ports* ports() { return &_ports; }
@@ -279,6 +280,7 @@ private:
 	class Counter *_downlink;
 
 	String _empower_iface;
+	EtherAddress _empower_hwaddr;
 	LVAP _lvaps;
 	Ports _ports;
 	VAP _vaps;

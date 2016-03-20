@@ -1361,6 +1361,7 @@ enum {
 	H_DEL_LVAP,
 	H_RECONNECT,
 	H_EMPOWER_IFACE,
+	H_EMPOWER_HWADDR,
 	H_ELEMENTS,
 	H_INTERFACES
 };
@@ -1466,6 +1467,8 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 		}
 		return sa.take_string();
 	}
+	case H_EMPOWER_HWADDR:
+		return td->_empower_hwaddr.unparse() + "\n";
 	case H_BYTES: {
 		StringAccum sa;
 		for (LVAPIter it = td->lvaps()->begin(); it.live(); it++) {
@@ -1542,7 +1545,7 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		f->ports()->find_insert(port_id, port);
 
 		if (iface == f->_empower_iface) {
-			f->_ebs->set_encap_hwaddr(hwaddr);
+			f->_empower_hwaddr = hwaddr;
 		}
 
 		f->send_caps_response();
@@ -1584,6 +1587,7 @@ void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("masks", read_handler, (void *) H_MASKS);
 	add_read_handler("bytes", read_handler, (void *) H_BYTES);
 	add_read_handler("empower_iface", read_handler, (void *) H_EMPOWER_IFACE);
+	add_read_handler("empower_hwaddr", read_handler, (void *) H_EMPOWER_HWADDR);
 	add_read_handler("elements", read_handler, (void *) H_ELEMENTS);
 	add_read_handler("interfaces", read_handler, (void *) H_INTERFACES);
 	add_write_handler("reconnect", write_handler, (void *) H_RECONNECT);
