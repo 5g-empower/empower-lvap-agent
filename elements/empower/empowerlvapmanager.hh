@@ -97,20 +97,36 @@ public:
 	}
 };
 
-
+// An EmPOWER Virtual Access Point or VAP. This is an AP than
+// can be used by multiple clients (unlike the LVAP that is
+// specific to each client.
+// The _net_bssid is write only and is used to set the bssid
+// mask, meaning that the monitor interface must ACK frames
+// addressed to this VAP
 class EmpowerVAPState {
 public:
-	EtherAddress _bssid;
+	EtherAddress _net_bssid;
 	String _ssid;
 	int _channel;
 	int _band;
 	int _iface_id;
 };
 
+// An EmPOWER Light Virtual Access Point or LVAP. This is an
+// AP that is defined for a specific client. The net_bssid is
+// generated from a controller-specific prefix plus the last
+// three bytes of the station address. The net_bssid is write
+// only and is used to set the bssid mask. Meaning that frame
+// addressed to net_bssid must be acked by this WTP.
+// The lvap_bssid is the one to which the client is currently
+// attached. The lvap_bssid can be modified only as the result
+// of auth request and assoc request messages. Probe request
+// cannot modify the lvap_bssid.
 class EmpowerStationState {
 public:
 	EtherAddress _sta;
-	EtherAddress _bssid;
+	EtherAddress _net_bssid;
+	EtherAddress _lvap_bssid;
 	EtherAddress _encap;
 	Vector<String> _ssids;
 	Vector<int> _mcs;

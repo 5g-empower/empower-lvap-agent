@@ -117,11 +117,11 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 	EtherAddress bssid = EtherAddress(w->i_addr3);
 
 	//If the bssid does not match, ignore
-	if (ess->_bssid != bssid) {
+	if (ess->_lvap_bssid != bssid) {
 		click_chatter("%{element} :: %s :: BSSID does not match, expected %s received %s",
 				      this,
 				      __func__,
-				      ess->_bssid.unparse().c_str(),
+				      ess->_lvap_bssid.unparse().c_str(),
 				      bssid.unparse().c_str());
 		p->kill();
 		return;
@@ -371,7 +371,7 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 			sa << " TX " << ht_rates.size() / 8 << "SS";
 		}
 
-		if ((ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_MCS_SET_DEFINED) && ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_RX_MCS_SET_NOT_EQUAL) {
+		if ((ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_MCS_SET_DEFINED) && (ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_RX_MCS_SET_NOT_EQUAL)) {
 			int max_ss= ht->rx_supported_mcs[11] & WIFI_HT_CI_SM12_TX_MAX_SS_MASK >> WIFI_HT_CI_SM12_TX_MAX_SS_SHIFT;
 			if (max_ss == 0) {
 				sa << " TX 1SS";
@@ -440,8 +440,8 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 	w->i_fc[1] = WIFI_FC1_DIR_NODS;
 
 	memcpy(w->i_addr1, dst.data(), 6);
-	memcpy(w->i_addr2, ess->_bssid.data(), 6);
-	memcpy(w->i_addr3, ess->_bssid.data(), 6);
+	memcpy(w->i_addr2, ess->_lvap_bssid.data(), 6);
+	memcpy(w->i_addr3, ess->_lvap_bssid.data(), 6);
 
 	w->i_dur = 0;
 	w->i_seq = 0;
@@ -468,7 +468,7 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 	Minstrel * rc = _el->rcs()->at(iface_id);
 	AvailableRates * rtable = rc->rtable();
 
-	Vector<int> rates = rtable->lookup(ess->_bssid);
+	Vector<int> rates = rtable->lookup(ess->_sta);
 	ptr[0] = WIFI_ELEMID_RATES;
 	ptr[1] = WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 	for (int x = 0; x < WIFI_MIN(WIFI_RATE_SIZE, rates.size()); x++) {

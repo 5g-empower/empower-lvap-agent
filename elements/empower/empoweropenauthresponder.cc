@@ -129,11 +129,11 @@ void EmpowerOpenAuthResponder::push(int, Packet *p) {
 	EtherAddress bssid = EtherAddress(w->i_addr3);
 
 	//If the bssid does not match, ignore
-	if (ess->_bssid != bssid) {
+	if (ess->_lvap_bssid != bssid) {
 		click_chatter("%{element} :: %s :: BSSID does not match, expected %s received %s",
 				      this,
 				      __func__,
-				      ess->_bssid.unparse().c_str(),
+				      ess->_lvap_bssid.unparse().c_str(),
 				      bssid.unparse().c_str());
 		p->kill();
 		return;
@@ -206,8 +206,8 @@ void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, uint16_t seq
 	w->i_fc[1] = WIFI_FC1_DIR_NODS;
 
 	memcpy(w->i_addr1, dst.data(), 6);
-	memcpy(w->i_addr2, ess->_bssid.data(), 6);
-	memcpy(w->i_addr3, ess->_bssid.data(), 6);
+	memcpy(w->i_addr2, ess->_lvap_bssid.data(), 6);
+	memcpy(w->i_addr3, ess->_lvap_bssid.data(), 6);
 
 	w->i_dur = 0;
 	w->i_seq = 0;

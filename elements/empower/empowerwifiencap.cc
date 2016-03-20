@@ -98,7 +98,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
     		ess->update_tx(p->length());
     	}
 
-        Packet * p_out = wifi_encap(p, dst, src, ess->_bssid);
+        Packet * p_out = wifi_encap(p, dst, src, ess->_lvap_bssid);
 		SET_PAINT_ANNO(p_out, ess->_iface_id);
 		output(0).push(p_out);
 		return;
@@ -115,7 +115,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	    	if (!_no_stats) {
 	    		it.value().update_tx(q->length());
 	    	}
-			Packet * p_out = wifi_encap(q, dst, src, it.value()._bssid);
+			Packet * p_out = wifi_encap(q, dst, src, it.value()._lvap_bssid);
 			SET_PAINT_ANNO(p_out, it.value()._iface_id);
 			output(0).push(p_out);
 		}

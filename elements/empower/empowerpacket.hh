@@ -357,7 +357,8 @@ private:
     uint8_t _band;
 	uint8_t	_sta[6];
 	uint8_t	_encap[6];
-	uint8_t	_bssid[6];
+	uint8_t	_net_bssid[6];
+	uint8_t	_lvap_bssid[6];
 	ssid_entry *_ssids[];
 public:
 	uint8_t      band()	        { return _band; }
@@ -366,7 +367,8 @@ public:
 	uint16_t     assoc_id()     { return ntohs(_assoc_id); }
 	EtherAddress sta()			{ return EtherAddress(_sta); }
 	EtherAddress encap()		{ return EtherAddress(_encap); }
-	EtherAddress bssid()		{ return EtherAddress(_bssid); }
+	EtherAddress net_bssid()		{ return EtherAddress(_net_bssid); }
+	EtherAddress lvap_bssid()		{ return EtherAddress(_lvap_bssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del vap packet format */
@@ -387,7 +389,8 @@ private:
 	uint8_t	_encap[6];
     uint8_t _channel;
     uint8_t _band;
-	uint8_t	_bssid[6];
+	uint8_t	_net_bssid[6];
+	uint8_t	_lvap_bssid[6];
 	ssid_entry *_ssids[];
 public:
 	void set_band(uint8_t band)	        { _band = band; }
@@ -397,7 +400,8 @@ public:
 	void set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
 	void set_sta(EtherAddress sta)		{ memcpy(_sta, sta.data(), 6); }
 	void set_encap(EtherAddress encap)	{ memcpy(_encap, encap.data(), 6); }
-	void set_bssid(EtherAddress bssid)	{ memcpy(_bssid, bssid.data(), 6); }
+	void set_net_bssid(EtherAddress bssid)	{ memcpy(_net_bssid, bssid.data(), 6); }
+	void set_lvap_bssid(EtherAddress bssid)	{ memcpy(_lvap_bssid, bssid.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* set port packet format */
@@ -553,21 +557,21 @@ struct empower_add_vap : public empower_header {
 private:
     uint8_t _channel;
     uint8_t _band;
-	uint8_t	_bssid[6];
+	uint8_t	_net_bssid[6];
 	char _ssid[];
 public:
 	uint8_t      band()	        { return _band; }
 	uint8_t      channel()	    { return _channel; }
-	EtherAddress bssid()		{ return EtherAddress(_bssid); }
+	EtherAddress net_bssid()		{ return EtherAddress(_net_bssid); }
 	String       ssid()         { int len = length() - 16; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del vap packet format */
 struct empower_del_vap : public empower_header {
   private:
-    uint8_t	_bssid[6];
+    uint8_t	_net_bssid[6];
   public:
-	EtherAddress bssid()							  { return EtherAddress(_bssid); }
+	EtherAddress net_bssid()							  { return EtherAddress(_net_bssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap status packet format */
@@ -576,14 +580,14 @@ private:
 	uint8_t	_wtp[6];
     uint8_t _channel;
     uint8_t _band;
-	uint8_t	_bssid[6];
+	uint8_t	_net_bssid[6];
 	char _ssid[];
 public:
 	void set_band(uint8_t band)	        { _band = band; }
 
 	void set_channel(uint8_t channel)	{ _channel = channel; }
 	void set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
-	void set_bssid(EtherAddress bssid)	{ memcpy(_bssid, bssid.data(), 6); }
+	void set_net_bssid(EtherAddress bssid)	{ memcpy(_net_bssid, bssid.data(), 6); }
 	void set_ssid(String ssid)		    { memcpy(&_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
