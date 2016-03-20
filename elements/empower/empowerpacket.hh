@@ -405,14 +405,12 @@ struct empower_set_port : public empower_header {
 private:
 	uint16_t _flags;
 	uint8_t	_sta[6];
-	uint8_t _tx_power;
 	uint16_t _rts_cts;
 	uint8_t _nb_mcs;
 	uint8_t *mcs[];
 public:
 	bool flag(int f)                          { return ntohs(_flags) & f;  }
 	EtherAddress sta()					      { return EtherAddress(_sta); }
-	uint8_t tx_power()					      { return _tx_power; }
 	uint16_t rts_cts()					      { return ntohs(_rts_cts); }
 	uint8_t nb_mcs()					      { return _nb_mcs; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
@@ -425,7 +423,6 @@ private:
 	uint8_t	_sta[6];
     uint8_t _channel;
     uint8_t _band;
-	uint8_t _tx_power;
 	uint16_t _rts_cts;
 	uint8_t _nb_mcs;
 	uint8_t *mcs[];
@@ -435,7 +432,6 @@ public:
 	void      set_flag(uint16_t f)          { _flags = htons(ntohs(_flags) | f); }
 	void      set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
 	void      set_sta(EtherAddress sta)		{ memcpy(_sta, sta.data(), 6); }
-	void      set_tx_power(uint8_t tx_power){ _tx_power = tx_power; }
 	void      set_rts_cts(uint16_t rts_cts) { _rts_cts = htons(rts_cts); }
 	void      set_nb_mcs(uint8_t nb_mcs)    { _nb_mcs = nb_mcs; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
