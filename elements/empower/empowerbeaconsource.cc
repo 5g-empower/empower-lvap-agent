@@ -53,49 +53,22 @@ int EmpowerBeaconSource::initialize(ErrorHandler *) {
 }
 
 void EmpowerBeaconSource::run_timer(Timer *) {
+
 	// send LVAP beacon
 	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-		// check for shared
-		send_beacon(it.key(), it.value()._bssid, it.value()._ssids,
-				it.value()._channel, it.value()._iface_id, false);
-	}
-	// send VAP beacons
-	for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
-		send_beacon(EtherAddress::make_broadcast(), it.value()._bssid,
-				it.value()._ssid, it.value()._channel, it.value()._iface_id,
-				false);
-	}
-	// re-schedule the timer with some jitter
-	_timer.schedule_after_msec(_period);
-}
-
-void EmpowerBeaconSource::send_beacon(EtherAddress dst, int channel,
-		int iface_id, bool probe) {
-	Vector<String> ssids = _el->lvaps()->get_pointer(dst)->_ssids;
-	EtherAddress bssid = _el->lvaps()->get_pointer(dst)->_bssid;
-	for (int i = 0; i < ssids.size(); i++) {
-		send_beacon(dst, bssid, ssids[i], channel, iface_id, probe);
-	}
-}
-
-void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
-		Vector<String> ssids, int channel, int iface_id, bool probe) {
-
-	for (int i = 0; i < ssids.size(); i++) {
-		send_beacon(dst, bssid, ssids[i], channel, iface_id, probe);
-	}
-}
-
-void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
-		Vector<String> ssids, String ssid, int channel, int iface_id,
-		bool probe) {
-
-	for (int i = 0; i < ssids.size(); i++) {
-		if (ssids[i] == ssid) {
-			send_beacon(dst, bssid, ssid, channel, iface_id, probe);
-			break;
+		for (int i = 0; i < it.value()._ssids.size(); i++) {
+			send_beacon(it.key(), it.value()._bssid, it.value()._ssids[i], it.value()._channel, it.value()._iface_id, false);
 		}
 	}
+
+	// send VAP beacons
+	for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
+		send_beacon(EtherAddress::make_broadcast(), it.value()._bssid, it.value()._ssid, it.value()._channel, it.value()._iface_id, false);
+	}
+
+	// re-schedule the timer with some jitter
+	_timer.schedule_after_msec(_period);
+
 }
 
 void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid, String ssid, int channel, int iface_id, bool probe) {
@@ -536,9 +509,20 @@ void EmpowerBeaconSource::push(int, Packet *p) {
      */
 
 	if (ssid == "") {
-		send_beacon(src, ess->_bssid, ess->_ssids, ess->_channel, ess->_iface_id, true);
+
+		for (int i = 0; i < ess->_ssids.size(); i++) {
+			send_beacon(src, ess->_bssid, ess->_ssids[i], ess->_channel, ess->_iface_id, true);
+		}
+
 	} else {
-		send_beacon(src, ess->_bssid, ess->_ssids, ssid, ess->_channel, ess->_iface_id, true);
+
+		for (int i = 0; i < ess->_ssids.size(); i++) {
+			if (ess->_ssids[i] == ssid) {
+				send_beacon(src, ess->_bssid, ssid, ess->_channel, ess->_iface_id, true);
+				break;
+			}
+		}
+
 	}
 
 	/* probe processed */

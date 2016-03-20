@@ -1063,15 +1063,19 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 }
 
 int EmpowerLVAPManager::handle_probe_response(Packet *p, uint32_t offset) {
+
 	struct empower_probe_response *q = (struct empower_probe_response *) (p->data() + offset);
 	EtherAddress sta = q->sta();
+
 	if (_debug) {
 		click_chatter("%{element} :: %s :: sta %s",
 				      this,
 				      __func__,
 				      sta.unparse_colon().c_str());
 	}
+
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
+
 	if (!ess) {
 		click_chatter("%{element} :: %s :: unknown LVAP %s ignoring",
 				      this,
@@ -1079,8 +1083,13 @@ int EmpowerLVAPManager::handle_probe_response(Packet *p, uint32_t offset) {
 				      sta.unparse_colon().c_str());
 		return 0;
 	}
-	_ebs->send_beacon(ess->_sta, ess->_channel, ess->_iface_id, true);
+
+	for (int i = 0; i < ess->_ssids.size(); i++) {
+		_ebs->send_beacon(ess->_sta, ess->_bssid, ess->_ssids[i], ess->_channel, ess->_iface_id, true);
+	}
+
 	return 0;
+
 }
 
 int EmpowerLVAPManager::handle_auth_response(Packet *p, uint32_t offset) {
