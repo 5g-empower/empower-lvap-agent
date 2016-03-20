@@ -109,6 +109,7 @@ public:
 
 class EmpowerStationState {
 public:
+	EtherAddress _sta;
 	EtherAddress _bssid;
 	EtherAddress _encap;
 	Vector<String> _ssids;

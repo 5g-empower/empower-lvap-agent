@@ -353,7 +353,7 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 	if (ess._association_status)
 		status->set_flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
 	status->set_wtp(_wtp);
-	status->set_sta(sta);
+	status->set_sta(ess._sta);
 	status->set_encap(ess._encap);
 	status->set_bssid(ess._bssid);
 	status->set_channel(ess._channel);
@@ -437,7 +437,7 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta) {
 		status->set_flag(EMPOWER_STATUS_PORT_NOACK);
 	status->set_rts_cts(ess._rts_cts);
 	status->set_wtp(_wtp);
-	status->set_sta(sta);
+	status->set_sta(ess._sta);
 	status->set_nb_mcs(ess._mcs.size());
 	status->set_channel(ess._channel);
 	status->set_band(ess._band);
@@ -583,11 +583,11 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
 }
 
-void EmpowerLVAPManager::send_link_stats_response(EtherAddress lvap, uint32_t link_stats_id) {
+void EmpowerLVAPManager::send_link_stats_response(EtherAddress sta, uint32_t link_stats_id) {
 
 	Vector<Rate> rates;
 
-	EmpowerStationState ess = _lvaps.get(lvap);
+	EmpowerStationState ess = _lvaps.get(sta);
 
 	if (ess._iface_id >= _rcs.size()) {
 		return;
@@ -629,7 +629,7 @@ void EmpowerLVAPManager::send_link_stats_response(EtherAddress lvap, uint32_t li
 	link_stats->set_seq(get_next_seq());
 	link_stats->set_link_stats_id(link_stats_id);
 	link_stats->set_wtp(_wtp);
-	link_stats->set_sta(lvap);
+	link_stats->set_sta(ess._sta);
 	link_stats->set_nb_link_stats(rates.size());
 
 	uint8_t *ptr = (uint8_t *) link_stats;
@@ -648,9 +648,9 @@ void EmpowerLVAPManager::send_link_stats_response(EtherAddress lvap, uint32_t li
 
 }
 
-void EmpowerLVAPManager::send_counters_response(EtherAddress lvap, uint32_t counters_id) {
+void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t counters_id) {
 
-	EmpowerStationState ess = _lvaps.get(lvap);
+	EmpowerStationState ess = _lvaps.get(sta);
 
 	int len = sizeof(empower_counters_response);
 	len += ess._tx.size() * 6; // the tx samples
@@ -674,7 +674,7 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress lvap, uint32_t coun
 	counters->set_seq(get_next_seq());
 	counters->set_counters_id(counters_id);
 	counters->set_wtp(_wtp);
-	counters->set_sta(lvap);
+	counters->set_sta(ess._sta);
 	counters->set_nb_tx(ess._tx.size());
 	counters->set_nb_rx(ess._rx.size());
 
@@ -897,6 +897,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	if (_lvaps.find(sta) == _lvaps.end()) {
 
 		EmpowerStationState state;
+		state._sta = sta;
 		state._bssid = bssid;
 		state._encap = encap;
 		state._ssids = ssids;
@@ -1078,7 +1079,7 @@ int EmpowerLVAPManager::handle_probe_response(Packet *p, uint32_t offset) {
 				      sta.unparse_colon().c_str());
 		return 0;
 	}
-	_ebs->send_beacon(q->sta(), ess->_channel, ess->_iface_id, true);
+	_ebs->send_beacon(ess->_sta, ess->_channel, ess->_iface_id, true);
 	return 0;
 }
 
@@ -1092,7 +1093,7 @@ int EmpowerLVAPManager::handle_auth_response(Packet *p, uint32_t offset) {
 				      sta.unparse_colon().c_str());
 	}
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-	_eauthr->send_auth_response(sta, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
+	_eauthr->send_auth_response(ess->_sta, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
 	return 0;
 }
 
@@ -1106,7 +1107,7 @@ int EmpowerLVAPManager::handle_assoc_response(Packet *p, uint32_t offset) {
 				      sta.unparse_colon().c_str());
 	}
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-	_eassor->send_association_response(sta, WIFI_STATUS_SUCCESS, ess->_iface_id);
+	_eassor->send_association_response(ess->_sta, WIFI_STATUS_SUCCESS, ess->_iface_id);
 	return 0;
 }
 
