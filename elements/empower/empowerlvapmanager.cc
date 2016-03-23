@@ -197,7 +197,7 @@ void EmpowerLVAPManager::send_rssi_trigger(EtherAddress sta, uint32_t trigger_id
 
 }
 
-void EmpowerLVAPManager::send_association_request(EtherAddress src, String ssid) {
+void EmpowerLVAPManager::send_association_request(EtherAddress src, EtherAddress bssid, String ssid) {
 
 	WritablePacket *p = Packet::make(sizeof(empower_assoc_request) + ssid.length());
 
@@ -217,13 +217,14 @@ void EmpowerLVAPManager::send_association_request(EtherAddress src, String ssid)
 	request->set_seq(get_next_seq());
 	request->set_wtp(_wtp);
 	request->set_sta(src);
+	request->set_bssid(bssid);
 	request->set_ssid(ssid);
 
 	output(0).push(p);
 
 }
 
-void EmpowerLVAPManager::send_auth_request(EtherAddress src) {
+void EmpowerLVAPManager::send_auth_request(EtherAddress src, EtherAddress bssid) {
 
 	WritablePacket *p = Packet::make(sizeof(empower_auth_request));
 
@@ -243,6 +244,7 @@ void EmpowerLVAPManager::send_auth_request(EtherAddress src) {
 	request->set_seq(get_next_seq());
 	request->set_wtp(_wtp);
 	request->set_sta(src);
+	request->set_bssid(bssid);
 
 	output(0).push(p);
 
@@ -926,6 +928,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	}
 
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
+	ess->_lvap_bssid = lvap_bssid;
 	ess->_ssids = ssids;
 	ess->_encap = encap;
 	ess->_assoc_id = assoc_id;
@@ -1111,7 +1114,9 @@ int EmpowerLVAPManager::handle_auth_response(Packet *p, uint32_t offset) {
 				      sta.unparse_colon().c_str());
 	}
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-	_eauthr->send_auth_response(ess->_sta, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
+	ess->_authentication_status = true;
+	ess->_association_status = false;
+	_eauthr->send_auth_response(ess->_sta, ess->_lvap_bssid, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
 	return 0;
 }
 

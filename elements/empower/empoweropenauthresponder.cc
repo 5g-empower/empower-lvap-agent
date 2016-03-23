@@ -126,19 +126,6 @@ void EmpowerOpenAuthResponder::push(int, Packet *p) {
 		return;
 	}
 
-	EtherAddress bssid = EtherAddress(w->i_addr3);
-
-	//If the bssid does not match, ignore
-	if (ess->_lvap_bssid != bssid) {
-		click_chatter("%{element} :: %s :: BSSID does not match, expected %s received %s",
-				      this,
-				      __func__,
-				      ess->_lvap_bssid.unparse().c_str(),
-				      bssid.unparse().c_str());
-		p->kill();
-		return;
-	}
-
 	if (algo != WIFI_AUTH_ALG_OPEN) {
 		click_chatter("%{element} :: %s :: Algorithm %d from %s not supported",
 				      this,
@@ -168,27 +155,58 @@ void EmpowerOpenAuthResponder::push(int, Packet *p) {
 				      status);
 	}
 
-	send_auth_response(src, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
+	EtherAddress bssid = EtherAddress(w->i_addr3);
+
+	//If the BSSID matches, then reply without reaching the controller
+	if (ess->_lvap_bssid == bssid) {
+
+		if (_debug) {
+
+			click_chatter("%{element} :: %s :: BSSID match, expected %s received %s, replying",
+						  this,
+						  __func__,
+						  ess->_lvap_bssid.unparse().c_str(),
+						  bssid.unparse().c_str());
+
+		}
+
+		ess->_authentication_status = true;
+		ess->_association_status = false;
+
+		send_auth_response(src, bssid, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
+
+		p->kill();
+		return;
+
+	}
+
+	if (_debug) {
+
+		click_chatter("%{element} :: %s :: BSSID does not match, expected %s received %s, sending to controller",
+					  this,
+					  __func__,
+					  ess->_lvap_bssid.unparse().c_str(),
+					  bssid.unparse().c_str());
+
+	}
+
+	_el->send_auth_request(src, bssid);
 	p->kill();
 
 }
 
-void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, uint16_t seq,
-		uint16_t status, int iface_id) {
+void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, EtherAddress bssid, uint16_t seq, uint16_t status, int iface_id) {
 
 	if (_debug) {
-		click_chatter("%{element} :: %s :: authentication %s sequence number %u status %u",
+		click_chatter("%{element} :: %s :: authentication %s bssid %s sequence number %u status %u",
 				      this,
 				      __func__,
 				      dst.unparse().c_str(),
+					  bssid.unparse().c_str(),
 				      seq,
 				      status);
 
 	}
-
-    EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
-	ess->_authentication_status = true;
-	ess->_association_status = false;
 
 	int len = sizeof(struct click_wifi) + 2 + /* alg */
 		2 + /* seq */
@@ -206,8 +224,8 @@ void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, uint16_t seq
 	w->i_fc[1] = WIFI_FC1_DIR_NODS;
 
 	memcpy(w->i_addr1, dst.data(), 6);
-	memcpy(w->i_addr2, ess->_lvap_bssid.data(), 6);
-	memcpy(w->i_addr3, ess->_lvap_bssid.data(), 6);
+	memcpy(w->i_addr2, bssid.data(), 6);
+	memcpy(w->i_addr3, bssid.data(), 6);
 
 	w->i_dur = 0;
 	w->i_seq = 0;

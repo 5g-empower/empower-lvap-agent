@@ -252,8 +252,8 @@ public:
 
 	void send_hello();
 	void send_probe_request(EtherAddress, String, uint8_t);
-	void send_auth_request(EtherAddress);
-	void send_association_request(EtherAddress, String);
+	void send_auth_request(EtherAddress, EtherAddress);
+	void send_association_request(EtherAddress, EtherAddress, String);
 	void send_status_lvap(EtherAddress);
 	void send_status_vap(EtherAddress);
 	void send_status_port(EtherAddress);

@@ -141,9 +141,11 @@ struct empower_auth_request : public empower_header {
   private:
     uint8_t	_wtp[6];
     uint8_t	_sta[6];
+    uint8_t	_bssid[6];
   public:
 	void set_wtp(EtherAddress wtp) { memcpy(_wtp, wtp.data(), 6); }
 	void set_sta(EtherAddress sta) { memcpy(_sta, sta.data(), 6); }
+	void set_bssid(EtherAddress bssid) { memcpy(_bssid, bssid.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* auth response packet format */
@@ -159,10 +161,12 @@ struct empower_assoc_request : public empower_header {
   private:
     uint8_t	_wtp[6];
     uint8_t	_sta[6];
+    uint8_t	_bssid[6];
     char _ssid[];
   public:
 	void         set_wtp(EtherAddress wtp)		  { memcpy(_wtp, wtp.data(), 6); }
 	void         set_sta(EtherAddress sta)		  { memcpy(_sta, sta.data(), 6); }
+	void         set_bssid(EtherAddress bssid)	  { memcpy(_bssid, bssid.data(), 6); }
 	void         set_ssid(String ssid)		      { memcpy(&_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 

@@ -116,17 +116,6 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 	EtherAddress dst = EtherAddress(w->i_addr1);
 	EtherAddress bssid = EtherAddress(w->i_addr3);
 
-	//If the bssid does not match, ignore
-	if (ess->_lvap_bssid != bssid) {
-		click_chatter("%{element} :: %s :: BSSID does not match, expected %s received %s",
-				      this,
-				      __func__,
-				      ess->_lvap_bssid.unparse().c_str(),
-				      bssid.unparse().c_str());
-		p->kill();
-		return;
-	}
-
 	uint8_t *ptr = (uint8_t *) p->data() + sizeof(struct click_wifi);
 
 	/* capability */
@@ -199,21 +188,6 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 					  src.unparse().c_str());
 		p->kill();
 		return;
-	}
-
-	for (int i = 0; i < ess->_ssids.size(); i++) {
-		if (ess->_ssids[i] == ssid) {
-			break;
-		}
-		if (i == (ess->_ssids.size() - 1)) {
-			click_chatter("%{element} :: %s :: Invalid SSID %s from %s",
-						  this,
-						  __func__,
-						  ssid.c_str(),
-						  src.unparse().c_str());
-				p->kill();
-			return;
-		}
 	}
 
 	StringAccum sa;
@@ -398,7 +372,51 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 				      sa.take_string().c_str());
 	}
 
-	_el->send_association_request(src, ssid);
+	//If the bssid does not match, ignore
+	if (ess->_lvap_bssid != bssid) {
+		click_chatter("%{element} :: %s :: BSSID does not match, expected %s received %s",
+				      this,
+				      __func__,
+				      ess->_lvap_bssid.unparse().c_str(),
+				      bssid.unparse().c_str());
+		p->kill();
+		return;
+	}
+
+	Vector<String>::const_iterator it = ess->_ssids.begin();
+
+	while (it != ess->_ssids.end()) {
+		if (*it == ssid && ess->_lvap_bssid ==  bssid) {
+			break;
+		}
+		it++;
+	}
+
+	if (it == ess->_ssids.end()) {
+
+		VAPIter vit = _el->vaps()->begin();
+
+		while (vit != _el->vaps()->end()) {
+			if (vit.value()._ssid == ssid && vit.value()._net_bssid == bssid) {
+				break;
+			}
+			vit++;
+		}
+
+		if (vit == _el->vaps()->end()) {
+
+			click_chatter("%{element} :: %s :: Invalid SSID %s from %s",
+						  this,
+						  __func__,
+						  ssid.c_str(),
+						  src.unparse().c_str());
+			p->kill();
+			return;
+
+		}
+	}
+
+	_el->send_association_request(src, bssid, ssid);
 	p->kill();
 
 }
