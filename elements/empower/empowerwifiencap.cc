@@ -31,7 +31,7 @@
 CLICK_DECLS
 
 EmpowerWifiEncap::EmpowerWifiEncap() :
-		_el(0), _debug(false), _no_stats(false) {
+		_el(0), _debug(false) {
 }
 
 EmpowerWifiEncap::~EmpowerWifiEncap() {
@@ -42,7 +42,6 @@ int EmpowerWifiEncap::configure(Vector<String> &conf,
 
 	return Args(conf, this, errh)
 			.read_m("EL", ElementCastArg("EmpowerLVAPManager"), _el)
-			.read("NO_STATS", _no_stats)
 			.read("DEBUG", _debug)
 			.complete();
 
@@ -94,11 +93,9 @@ EmpowerWifiEncap::push(int, Packet *p) {
 			return;
 		}
 
-    	if (!_no_stats) {
-    		ess->update_tx(p->length());
-    	}
+		ess->update_tx(p->length());
 
-        Packet * p_out = wifi_encap(p, dst, src, ess->_lvap_bssid);
+		Packet * p_out = wifi_encap(p, dst, src, ess->_lvap_bssid);
 		SET_PAINT_ANNO(p_out, ess->_iface_id);
 		output(0).push(p_out);
 		return;
@@ -107,18 +104,21 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	// broadcast and multicast traffic
 	// note, we need to transmit one frame for each unique bssid. this is due
 	// to the fact that we can have the same bssid for multiple LVAPs
-	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-    	if (!it.value()._set_mask) {
-    		continue;
-    	}
-		if (Packet *q = p->clone()) {
-	    	if (!_no_stats) {
-	    		it.value().update_tx(q->length());
-	    	}
-			Packet * p_out = wifi_encap(q, dst, src, it.value()._lvap_bssid);
-			SET_PAINT_ANNO(p_out, it.value()._iface_id);
-			output(0).push(p_out);
+	for (IBIter iter = _el->info_bssids()->begin(); iter.live(); iter++) {
+		Packet *q = p->clone();
+		if (!q) {
+			continue;
 		}
+		for (int i = 0; i < iter.value()._stas.size(); i++) {
+			EmpowerStationState *ess = _el->lvaps()->get_pointer(iter.value()._stas[i]);
+			if (!ess) {
+				continue;
+			}
+			ess->update_tx(q->length());
+		}
+		Packet * p_out = wifi_encap(q, dst, src, iter.key());
+		SET_PAINT_ANNO(p_out, iter.value()._iface_id);
+		output(0).push(p_out);
 	}
 
 	p->kill();

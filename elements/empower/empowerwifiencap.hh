@@ -55,7 +55,6 @@ private:
 	class EmpowerLVAPManager *_el;
 
 	bool _debug;
-	bool _no_stats;
 
 	Packet *wifi_encap(Packet *, EtherAddress, EtherAddress, EtherAddress);
 

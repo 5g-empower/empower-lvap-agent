@@ -117,10 +117,12 @@ struct empower_probe_request : public empower_header {
   private:
     uint8_t	_wtp[6];
     uint8_t	_sta[6];
+    uint8_t	_hwaddr[6];
     uint8_t _channel;
     uint8_t _band;
     char _ssid[];
   public:
+	void set_hwaddr(EtherAddress hwaddr){ memcpy(_hwaddr, hwaddr.data(), 6); }
 	void set_band(uint8_t band)			{ _band = band; }
 	void set_channel(uint8_t channel)	{ _channel = channel; }
 	void set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
@@ -223,6 +225,7 @@ struct empower_cqm_request : public empower_header {,
 private:
   uint32_t _graph_id;
   uint8_t _addr[6];
+  uint8_t _hwaddr[6];
   uint8_t _channel;
   uint8_t _band;
 public:
@@ -230,6 +233,7 @@ public:
 	uint8_t channel() 		            { return _channel; }
 	uint8_t band() 		                { return _band; }
 	EtherAddress addr()				    { return EtherAddress(_addr); }
+	EtherAddress hwaddr()				{ return EtherAddress(_hwaddr); }
 });
 
 /* channel quality map entry format */
@@ -257,12 +261,14 @@ struct empower_cqm_response : public empower_header {
 private:
   uint32_t _graph_id;
   uint8_t _wtp[6];
+  uint8_t _hwaddr[6];
   uint8_t _channel;
   uint8_t _band;
   uint16_t _nb_neighbors;
 public:
 	void set_graph_id(uint32_t graph_id)          { _graph_id = htonl(graph_id); }
 	void set_wtp(EtherAddress wtp)		  		  { memcpy(_wtp, wtp.data(), 6); }
+	void set_hwaddr(EtherAddress hwaddr)		  { memcpy(_hwaddr, hwaddr.data(), 6); }
 	void set_band(uint8_t band)	        		  { _band = band; }
 	void set_channel(uint8_t channel)			  { _channel = channel; }
 	void set_nb_neighbors(uint16_t nb_neighbors)  { _nb_neighbors = htons(nb_neighbors); }
@@ -271,10 +277,12 @@ public:
 /* resource element entry format */
 struct resource_elements_entry {
   private:
+    uint8_t	_hwaddr[6];
 	uint8_t _channel;
 	uint8_t _band;
 	uint16_t _flags;
   public:
+	void set_hwaddr(EtherAddress hwaddr){ memcpy(_hwaddr, hwaddr.data(), 6); }
 	void set_flag(uint16_t f)           { _flags = htons(ntohs(_flags) | f); }
 	void set_band(uint8_t band)	        { _band = band; }
 	void set_channel(uint8_t channel)	{ _channel = channel; }
@@ -357,7 +365,8 @@ struct empower_add_lvap : public empower_header {
 private:
 	uint16_t _flags;
 	uint16_t _assoc_id;
-    uint8_t _channel;
+	uint8_t	_hwaddr[6];
+	uint8_t _channel;
     uint8_t _band;
 	uint8_t	_sta[6];
 	uint8_t	_encap[6];
@@ -370,6 +379,7 @@ public:
 	bool         flag(int f)	{ return ntohs(_flags) & f;  }
 	uint16_t     assoc_id()     { return ntohs(_assoc_id); }
 	EtherAddress sta()			{ return EtherAddress(_sta); }
+	EtherAddress hwaddr()		{ return EtherAddress(_hwaddr); }
 	EtherAddress encap()		{ return EtherAddress(_encap); }
 	EtherAddress net_bssid()		{ return EtherAddress(_net_bssid); }
 	EtherAddress lvap_bssid()		{ return EtherAddress(_lvap_bssid); }
@@ -391,6 +401,7 @@ private:
 	uint8_t	_wtp[6];
 	uint8_t	_sta[6];
 	uint8_t	_encap[6];
+	uint8_t	_hwaddr[6];
     uint8_t _channel;
     uint8_t _band;
 	uint8_t	_net_bssid[6];
@@ -401,6 +412,7 @@ public:
 	void set_channel(uint8_t channel)	{ _channel = channel; }
 	void set_flag(uint16_t f)           { _flags = htons(ntohs(_flags) | f); }
 	void set_assoc_id(uint16_t assoc_id){ _assoc_id = htons(assoc_id); }
+	void set_hwaddr(EtherAddress hwaddr){ memcpy(_hwaddr, hwaddr.data(), 6); }
 	void set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
 	void set_sta(EtherAddress sta)		{ memcpy(_sta, sta.data(), 6); }
 	void set_encap(EtherAddress encap)	{ memcpy(_encap, encap.data(), 6); }
@@ -429,6 +441,7 @@ private:
 	uint16_t _flags;
     uint8_t	_wtp[6];
 	uint8_t	_sta[6];
+	uint8_t	_hwaddr[6];
     uint8_t _channel;
     uint8_t _band;
 	uint16_t _rts_cts;
@@ -438,6 +451,7 @@ public:
 	void set_band(uint8_t band)	        { _band = band; }
 	void set_channel(uint8_t channel)	{ _channel = channel; }
 	void      set_flag(uint16_t f)          { _flags = htons(ntohs(_flags) | f); }
+	void      set_hwaddr(EtherAddress hwaddr)		{ memcpy(_hwaddr, hwaddr.data(), 6); }
 	void      set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
 	void      set_sta(EtherAddress sta)		{ memcpy(_sta, sta.data(), 6); }
 	void      set_rts_cts(uint16_t rts_cts) { _rts_cts = htons(rts_cts); }
@@ -559,6 +573,7 @@ public:
 /* add vap packet format */
 struct empower_add_vap : public empower_header {
 private:
+	uint8_t	_hwaddr[6];
     uint8_t _channel;
     uint8_t _band;
 	uint8_t	_net_bssid[6];
@@ -566,8 +581,9 @@ private:
 public:
 	uint8_t      band()	        { return _band; }
 	uint8_t      channel()	    { return _channel; }
-	EtherAddress net_bssid()		{ return EtherAddress(_net_bssid); }
-	String       ssid()         { int len = length() - 16; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+	EtherAddress hwaddr()		{ return EtherAddress(_hwaddr); }
+	EtherAddress net_bssid()	{ return EtherAddress(_net_bssid); }
+	String       ssid()         { int len = length() - 22; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del vap packet format */
@@ -582,13 +598,14 @@ struct empower_del_vap : public empower_header {
 struct empower_status_vap : public empower_header {
 private:
 	uint8_t	_wtp[6];
+	uint8_t	_hwaddr[6];
     uint8_t _channel;
     uint8_t _band;
 	uint8_t	_net_bssid[6];
 	char _ssid[];
 public:
 	void set_band(uint8_t band)	        { _band = band; }
-
+	void set_hwaddr(EtherAddress hwaddr)		{ memcpy(_hwaddr, hwaddr.data(), 6); }
 	void set_channel(uint8_t channel)	{ _channel = channel; }
 	void set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
 	void set_net_bssid(EtherAddress bssid)	{ memcpy(_net_bssid, bssid.data(), 6); }

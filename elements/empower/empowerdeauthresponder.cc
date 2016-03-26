@@ -128,6 +128,7 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 	ess->_authentication_status = false;
 	ess->_assoc_id = 0;
 	ess->_ssid = '\0';
+	ess->_lvap_bssid = ess->_net_bssid;
 
 	_el->send_status_lvap(src);
 

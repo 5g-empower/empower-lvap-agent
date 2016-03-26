@@ -107,6 +107,7 @@ class EmpowerVAPState {
 public:
 	EtherAddress _net_bssid;
 	String _ssid;
+	EtherAddress _hwaddr;
 	int _channel;
 	int _band;
 	int _iface_id;
@@ -132,6 +133,7 @@ public:
 	Vector<int> _mcs;
 	String _ssid;
 	int _assoc_id;
+	EtherAddress _hwaddr;
 	int _channel;
 	int _band;
 	int _iface_id;
@@ -156,6 +158,18 @@ public:
 	}
 };
 
+// Cross structure mapping bssids to list of associated
+// station and to the interface id
+class EmpowerInfoBssid {
+public:
+	EtherAddress _bssid;
+	Vector<EtherAddress> _stas;
+	int _iface_id;
+};
+
+typedef HashTable<EtherAddress, EmpowerInfoBssid> InfoBssid;
+typedef InfoBssid::iterator IBIter;
+
 typedef HashTable<EtherAddress, EmpowerVAPState> VAP;
 typedef VAP::iterator VAPIter;
 
@@ -168,13 +182,16 @@ typedef Ports::iterator PortsIter;
 class ResourceElement {
 public:
 
+	EtherAddress _hwaddr;
 	int _channel;
 	empower_bands_types _band;
 
-	ResourceElement() : _channel(1), _band(EMPOWER_BT_L20) {
+	ResourceElement() :
+			_hwaddr(EtherAddress()), _channel(1), _band(EMPOWER_BT_L20) {
 	}
 
-	ResourceElement(int channel, empower_bands_types band) : _channel(channel), _band(band) {
+	ResourceElement(EtherAddress hwaddr, int channel, empower_bands_types band) :
+			_hwaddr(hwaddr), _channel(channel), _band(band) {
 	}
 
 	inline size_t hashcode() const {
@@ -184,6 +201,8 @@ public:
 	inline String unparse() const {
 		StringAccum sa;
 		sa << "(";
+		sa << _hwaddr.unparse();
+		sa << ", ";
 		sa << _channel;
 		sa << ", ";
 		switch (_band) {
@@ -204,7 +223,7 @@ public:
 };
 
 inline bool operator==(const ResourceElement &a, const ResourceElement &b) {
-	return a._channel == b._channel && a._band == b._band;
+	return a._hwaddr == b._hwaddr && a._channel == b._channel && a._band == b._band;
 }
 
 typedef HashTable<ResourceElement, int> IfTable;
@@ -258,7 +277,7 @@ public:
 	void send_status_vap(EtherAddress);
 	void send_status_port(EtherAddress);
 	void send_counters_response(EtherAddress, uint32_t);
-	void send_img_response(NeighborTable *, int, EtherAddress, uint32_t, empower_bands_types, uint8_t);
+	void send_img_response(NeighborTable *, int, EtherAddress, uint32_t, EtherAddress, uint8_t, empower_bands_types);
 	void send_caps_response();
 	void send_rssi_trigger(EtherAddress, uint32_t, uint8_t, uint8_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);
@@ -269,16 +288,44 @@ public:
 	EtherAddress empower_hwaddr() { return _empower_hwaddr; }
 	LVAP* lvaps() { return &_lvaps; }
 	VAP* vaps() { return &_vaps; }
+
+	InfoBssid* info_bssids() {
+		InfoBssid * _info_bssids = new InfoBssid();
+		for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
+			if (!it.value()._set_mask) {
+				continue;
+			}
+			if (!it.value()._authentication_status) {
+				continue;
+			}
+			if (!it.value()._association_status) {
+				continue;
+			}
+			if (_info_bssids->find(it.value()._lvap_bssid) == _info_bssids->end()) {
+				EmpowerInfoBssid info;
+				info._bssid = it.value()._lvap_bssid;
+				info._iface_id = it.value()._iface_id;
+				_info_bssids->set(it.value()._lvap_bssid, info);
+			}
+			EmpowerInfoBssid *eib = _info_bssids->get_pointer(
+					it.value()._lvap_bssid);
+			eib->_stas.push_back(it.value()._sta);
+		}
+		return _info_bssids;
+	}
+
 	Ports* ports() { return &_ports; }
 	uint32_t get_next_seq() { return ++_seq; }
 
 	const IfTable & elements() { return _elements_to_ifaces; }
 
-	int element_to_iface(uint8_t channel, empower_bands_types band) {
-		return _elements_to_ifaces.find(ResourceElement(channel, band)).value();
+	int element_to_iface(EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
+		return _elements_to_ifaces.find(ResourceElement(hwaddr, channel, band)).value();
 	}
 
-	ResourceElement* iface_to_element(int iface) { return _ifaces_to_elements.get_pointer(iface); }
+	ResourceElement* iface_to_element(int iface) {
+		return _ifaces_to_elements.get_pointer(iface);
+	}
 
 	Vector<Minstrel *> * rcs() { return &_rcs; }
 
@@ -301,7 +348,6 @@ private:
 	LVAP _lvaps;
 	Ports _ports;
 	VAP _vaps;
-	Vector<EtherAddress> _hwaddrs;
 	Vector<EtherAddress> _masks;
 	Vector<Minstrel *> _rcs;
 	Vector<String> _debugfs_strings;
