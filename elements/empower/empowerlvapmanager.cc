@@ -950,27 +950,14 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 		return 0;
 	}
 
-	bool no_ack = q->flag(EMPOWER_STATUS_PORT_NOACK);
-	int rts_cts = q->rts_cts();
-
-	if (_debug) {
-	    StringAccum sa;
-		click_chatter("%{element} :: %s :: sta %s rts/cts %u %s ",
-				      this,
-				      __func__,
-				      sta.unparse_colon().c_str(),
-					  rts_cts,
-				      no_ack ? "NO ACK" : "");
-	}
-
-	ess->_no_ack = no_ack;
-	ess->_rts_cts = rts_cts;
+	ess->_no_ack = q->flag(EMPOWER_STATUS_PORT_NOACK);
+	ess->_rts_cts = q->rts_cts();
+	ess->_mcs.clear();
 
 	uint8_t *ptr = (uint8_t *) q;
 	ptr += sizeof(struct empower_set_port);
 	uint8_t *end = ptr + (q->length() - sizeof(struct empower_set_port));
 
-	ess->_mcs.clear();
 	while (ptr != end) {
 		assert (ptr <= end);
 		ess->_mcs.push_back(*ptr);
