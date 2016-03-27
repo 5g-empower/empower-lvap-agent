@@ -170,11 +170,7 @@ void EmpowerOpenAuthResponder::push(int, Packet *p) {
 
 		}
 
-		ess->_authentication_status = true;
-		ess->_association_status = false;
-
-		send_auth_response(src, bssid, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
-
+		send_auth_response(src, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
 		p->kill();
 		return;
 
@@ -195,7 +191,14 @@ void EmpowerOpenAuthResponder::push(int, Packet *p) {
 
 }
 
-void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, EtherAddress bssid, uint16_t seq, uint16_t status, int iface_id) {
+void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, uint16_t seq, uint16_t status, int iface_id) {
+
+    EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
+
+	ess->_authentication_status = true;
+	ess->_association_status = false;
+
+	EtherAddress bssid = ess->_lvap_bssid;
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: authentication %s bssid %s sequence number %u status %u",

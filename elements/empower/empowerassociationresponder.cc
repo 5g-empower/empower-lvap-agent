@@ -337,10 +337,6 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 
 		sa << " Rx Highest TP: " << max_tp;
 
-		for (int i = 0; i < 16; i++) {
-			click_chatter("rx_supported_mcs[%u]=%u", i, ht->rx_supported_mcs[i]);
-		}
-
 		if ((ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_MCS_SET_DEFINED) && !(ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_RX_MCS_SET_NOT_EQUAL)) {
 			sa << " TX " << ht_rates.size() / 8 << "SS";
 		}
@@ -372,52 +368,59 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 				      sa.take_string().c_str());
 	}
 
-	//If the bssid does not match, ignore
-	if (ess->_lvap_bssid != bssid) {
-		click_chatter("%{element} :: %s :: BSSID does not match, expected %s received %s",
-				      this,
-				      __func__,
-				      ess->_lvap_bssid.unparse().c_str(),
-				      bssid.unparse().c_str());
+	//If not authenticated, then ignore
+	if (!ess->_authentication_status) {
 		p->kill();
 		return;
 	}
 
-	Vector<String>::const_iterator it = ess->_ssids.begin();
+	//If the bssid does matches and ssid is available, then just reply
+	if (ess->_lvap_bssid == bssid) {
 
-	while (it != ess->_ssids.end()) {
-		if (*it == ssid && ess->_lvap_bssid ==  bssid) {
-			break;
-		}
-		it++;
-	}
+		Vector<String>::const_iterator it = ess->_ssids.begin();
 
-	if (it == ess->_ssids.end()) {
-
-		VAPIter vit = _el->vaps()->begin();
-
-		while (vit != _el->vaps()->end()) {
-			if (vit.value()._ssid == ssid && vit.value()._net_bssid == bssid) {
+		while (it != ess->_ssids.end()) {
+			if (*it == ssid) {
+				ess->_ssid = ssid;
 				break;
 			}
-			vit++;
+			it++;
 		}
 
-		if (vit == _el->vaps()->end()) {
+		if (it == ess->_ssids.end()) {
 
-			click_chatter("%{element} :: %s :: Invalid SSID %s from %s",
-						  this,
-						  __func__,
-						  ssid.c_str(),
-						  src.unparse().c_str());
-			p->kill();
-			return;
+			VAPIter vit = _el->vaps()->begin();
+
+			while (vit != _el->vaps()->end()) {
+				if (vit.value()._ssid == ssid && vit.value()._net_bssid == bssid) {
+					ess->_ssid = ssid;
+					break;
+				}
+				vit++;
+			}
+
+			if (vit == _el->vaps()->end()) {
+
+				click_chatter("%{element} :: %s :: Invalid SSID/BSSID combination %s/%s from %s",
+							  this,
+							  __func__,
+							  ssid.c_str(),
+							  bssid.unparse().c_str(),
+							  src.unparse().c_str());
+
+				_el->send_association_request(src, bssid, ssid);
+				p->kill();
+				return;
+
+			}
 
 		}
+
 	}
 
-	_el->send_association_request(src, bssid, ssid);
+	send_association_response(ess->_sta, WIFI_STATUS_SUCCESS, ess->_iface_id);
 	p->kill();
+	return;
 
 }
 

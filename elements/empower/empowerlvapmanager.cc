@@ -1096,7 +1096,7 @@ int EmpowerLVAPManager::handle_auth_response(Packet *p, uint32_t offset) {
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
 	ess->_authentication_status = true;
 	ess->_association_status = false;
-	_eauthr->send_auth_response(ess->_sta, ess->_lvap_bssid, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
+	_eauthr->send_auth_response(ess->_sta, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
 	return 0;
 }
 

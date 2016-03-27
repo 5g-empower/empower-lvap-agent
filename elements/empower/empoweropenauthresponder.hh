@@ -47,7 +47,7 @@ public:
 
 	int configure(Vector<String> &, ErrorHandler *);
 	void add_handlers();
-	void send_auth_response(EtherAddress, EtherAddress, uint16_t, uint16_t, int);
+	void send_auth_response(EtherAddress, uint16_t, uint16_t, int);
 	void push(int, Packet *);
 
 private:
