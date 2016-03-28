@@ -368,57 +368,14 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 				      sa.take_string().c_str());
 	}
 
-	//If not authenticated, then ignore
-	if (!ess->_authentication_status) {
+	// if authenticated with the requested bssid then send request to the
+	// controller, otherwise ignore the message
+	if (ess->_authentication_status && ess->_lvap_bssid == bssid) {
+		_el->send_association_request(src, bssid, ssid);
 		p->kill();
 		return;
 	}
 
-	//If the bssid does matches and ssid is available, then just reply
-	if (ess->_lvap_bssid == bssid) {
-
-		Vector<String>::const_iterator it = ess->_ssids.begin();
-
-		while (it != ess->_ssids.end()) {
-			if (*it == ssid) {
-				ess->_ssid = ssid;
-				break;
-			}
-			it++;
-		}
-
-		if (it == ess->_ssids.end()) {
-
-			VAPIter vit = _el->vaps()->begin();
-
-			while (vit != _el->vaps()->end()) {
-				if (vit.value()._ssid == ssid && vit.value()._net_bssid == bssid) {
-					ess->_ssid = ssid;
-					break;
-				}
-				vit++;
-			}
-
-			if (vit == _el->vaps()->end()) {
-
-				click_chatter("%{element} :: %s :: Invalid SSID/BSSID combination %s/%s from %s",
-							  this,
-							  __func__,
-							  ssid.c_str(),
-							  bssid.unparse().c_str(),
-							  src.unparse().c_str());
-
-				_el->send_association_request(src, bssid, ssid);
-				p->kill();
-				return;
-
-			}
-
-		}
-
-	}
-
-	send_association_response(ess->_sta, WIFI_STATUS_SUCCESS, ess->_iface_id);
 	p->kill();
 	return;
 

@@ -196,7 +196,15 @@ void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, uint16_t seq
     EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
 
 	ess->_authentication_status = true;
+
+	if (_debug) {
+		click_chatter("%{element} :: %s :: resetting assoc status", this, __func__);
+	}
+
+	// transition lvap to disassoc state
 	ess->_association_status = false;
+	ess->_assoc_id = 0;
+	ess->_ssid = '\0';
 
 	EtherAddress bssid = ess->_lvap_bssid;
 

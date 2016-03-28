@@ -104,11 +104,31 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 		return;
 	}
 
+	EtherAddress dst = EtherAddress(w->i_addr1);
 	EtherAddress bssid = EtherAddress(w->i_addr3);
+
+	if (dst != bssid) {
+		click_chatter("%{element} :: %s :: Strange dst/bssid combination %s/%s, ignoring",
+				      this,
+				      __func__,
+				      dst.unparse().c_str(),
+					  bssid.unparse().c_str());
+		p->kill();
+		return;
+	}
+
+	if (_debug) {
+		click_chatter("%{element} :: %s :: src %s dst %s bssid %s",
+				      this,
+				      __func__,
+				      src.unparse().c_str(),
+					  dst.unparse().c_str(),
+					  bssid.unparse().c_str());
+	}
 
 	//If the bssid does not match, ignore
 	if (ess->_lvap_bssid != bssid) {
-		click_chatter("%{element} :: %s :: BSSID does not match, expected %s received %s",
+		click_chatter("%{element} :: %s :: BSSIDs do not match, expected %s received %s",
 				      this,
 				      __func__,
 				      ess->_lvap_bssid.unparse().c_str(),
