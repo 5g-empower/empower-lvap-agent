@@ -697,12 +697,8 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 void EmpowerLVAPManager::send_caps_response() {
 
 	int len = sizeof(empower_caps_response);
-
-	len += elements().size() * sizeof(struct resource_elements_entry);
-
-	for (PortsIter iter = _ports.begin(); iter.live(); iter++) {
-		len += sizeof(struct port_elements_entry);
-	}
+	len += _elements_to_ifaces.size() * sizeof(struct resource_elements_entry);
+	len += _ports.size() * sizeof(struct port_elements_entry);
 
 	WritablePacket *p = Packet::make(len);
 
