@@ -1069,13 +1069,16 @@ int EmpowerLVAPManager::handle_probe_response(Packet *p, uint32_t offset) {
 
 	// reply with lvap's ssdis
 	for (int i = 0; i < ess->_ssids.size(); i++) {
-		_ebs->send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i], ess->_channel, ess->_iface_id, true);
+		_ebs->send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i],
+				ess->_channel, ess->_iface_id, true);
 	}
 
 	// reply also with all vaps
 	for (VAPIter it = _vaps.begin(); it.live(); it++) {
-		_ebs->send_beacon(EtherAddress::make_broadcast(), it.value()._net_bssid, it.value()._ssid, it.value()._channel, it.value()._iface_id, true);
+		_ebs->send_beacon(ess->_sta, it.value()._net_bssid, it.value()._ssid,
+				it.value()._channel, it.value()._iface_id, true);
 	}
+
 	return 0;
 
 }
