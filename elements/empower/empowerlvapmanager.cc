@@ -723,7 +723,7 @@ void EmpowerLVAPManager::send_caps_response() {
 	caps->set_type(EMPOWER_PT_CAPS_RESPONSE);
 	caps->set_seq(get_next_seq());
 	caps->set_wtp(_wtp);
-	caps->set_nb_resources_elements(elements().size());
+	caps->set_nb_resources_elements(_elements_to_ifaces.size());
 	caps->set_nb_ports_elements(_ports.size());
 
 	uint8_t *ptr = (uint8_t *) caps;
