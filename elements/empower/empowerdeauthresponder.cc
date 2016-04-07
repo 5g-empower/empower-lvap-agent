@@ -156,6 +156,59 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 
 }
 
+void EmpowerDeAuthResponder:: send_deauth_request(EtherAddress dst, uint16_t reason, int iface_id)
+{
+	EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
+
+	if (_debug) {
+		click_chatter("%{element} :: %s :: sending deauthentication request to %s",
+					  this,
+					  __func__,
+					  dst.unparse().c_str());
+	}
+
+	int max_len = sizeof(struct click_wifi) + 2 + /* reason_code */ +
+											  0;
+	WritablePacket *p = Packet::make(max_len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	struct click_wifi *w = (struct click_wifi *) p->data();
+
+	w->i_fc[0] = WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_MGT | WIFI_FC0_SUBTYPE_DEAUTH;
+	w->i_fc[1] = WIFI_FC1_DIR_NODS;
+
+	memcpy(w->i_addr1, dst.data(), 6);
+	memcpy(w->i_addr2, ess->_lvap_bssid.data(), 6);
+	memcpy(w->i_addr3, ess->_lvap_bssid.data(), 6);
+
+	w->i_dur = 0;
+	w->i_seq = 0;
+
+	uint8_t *ptr;
+
+	ptr = (uint8_t *) p->data() + sizeof(struct click_wifi);
+
+	*(uint16_t *) ptr = cpu_to_le16(reason);
+	ptr += 2;
+
+	click_chatter("%{element} :: %s :: Sending deauth message to sta %s bssid %s",
+                  this,
+				  __func__,
+				  dst.unparse_colon().c_str(),
+				  ess->_lvap_bssid.unparse_colon().c_str());
+
+	SET_PAINT_ANNO(p, iface_id);
+	output(0).push(p);
+
+	return;
+}
+
 enum {
 	H_DEBUG
 };

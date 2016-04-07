@@ -47,6 +47,12 @@ An EmpowerPowerSaveBuffer element
 =item PERIOD
 Interval between hello messages to the Access Controller (in msec), default is 5000
 
+=item EDEAUTHR
+An EmpowerDeAuthResponder element
+
+=item EDISASSOR
+An EmpowerDisassocResponder element
+
 =item DEBUG
 Turn debug on/off
 
@@ -339,6 +345,7 @@ private:
 	class EmpowerBeaconSource *_ebs;
 	class EmpowerOpenAuthResponder *_eauthr;
 	class EmpowerAssociationResponder *_eassor;
+	class EmpowerDeAuthResponder *_edeauthr;
 	class EmpowerRXStats *_ers;
 	class Counter *_uplink;
 	class Counter *_downlink;

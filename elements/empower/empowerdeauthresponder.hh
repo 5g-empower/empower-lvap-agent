@@ -45,6 +45,7 @@ public:
 	int configure(Vector<String> &, ErrorHandler *);
 	void add_handlers();
 	void push(int, Packet *);
+	void send_deauth_request (EtherAddress, uint16_t, int);
 
 private:
 

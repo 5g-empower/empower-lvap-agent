@@ -29,12 +29,15 @@
 #include "empowerbeaconsource.hh"
 #include "empoweropenauthresponder.hh"
 #include "empowerassociationresponder.hh"
+#include "empowerdeauthresponder.hh"
+#include "empowerdisassocresponder.hh"
 #include "empowerrxstats.hh"
 CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
-	_ebs(0), _eauthr(0), _eassor(0), _ers(0), _uplink(0), _downlink(0),
-	_timer(this), _seq(0), _period(5000), _debug(false) {
+		_ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0),
+		_uplink(0), _downlink(0), _timer(this), _seq(0), _period(5000),
+		_debug(false) {
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
@@ -80,6 +83,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 						        .read_m("EBS", ElementCastArg("EmpowerBeaconSource"), _ebs)
 			                    .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
 			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
+								.read_m("EDEAUTHR", ElementCastArg("EmpowerDeAuthResponder"), _edeauthr)
 			                    .read_m("DEBUGFS", debugfs_strings)
 			                    .read_m("RCS", rcs_strings)
 			                    .read_m("RES", res_strings)
@@ -1034,6 +1038,13 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 				      __func__);
 
 		return -1;
+	}
+
+	EmpowerStationState * ess = _lvaps.get_pointer(sta);
+
+	// If the bssids are different, this is a shared lvap and a deauth message should be sent before removing the lvap
+	if (ess->_lvap_bssid != ess->_net_bssid) {
+		_edeauthr->send_deauth_request(sta, 0x0001, ess->_iface_id);
 	}
 
 	_lvaps.erase(_lvaps.find(sta));
