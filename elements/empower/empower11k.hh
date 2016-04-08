@@ -44,6 +44,7 @@ public:
 	int configure(Vector<String> &, ErrorHandler *);
 	void add_handlers();
 	void send_neighbor_report_request(EtherAddress, uint8_t);
+	void send_link_measurement_request(EtherAddress, uint8_t);
 	void push(int, Packet *);
 
 private:

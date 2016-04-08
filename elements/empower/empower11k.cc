@@ -146,6 +146,8 @@ void Empower11k::send_neighbor_report_request(EtherAddress sta, uint8_t token) {
 		1 + /* category */
 		1 + /* action */
 		1 + /* dialog token */
+		1 + /* subelement id */
+		1 + /* subelement id len */
 		0;
 
 	WritablePacket *p = Packet::make(len);
@@ -180,7 +182,80 @@ void Empower11k::send_neighbor_report_request(EtherAddress sta, uint8_t token) {
 	ptr += 1;
 
 	*(uint8_t *) ptr = token; /* dialog token */
+	ptr += 1;
 
+	*(uint8_t *) ptr = 0; /* subelement id (SSID) */
+	ptr += 1;
+
+	*(uint8_t *) ptr = 0; /* subelement length (broadcast) */
+	ptr += 1;
+
+	SET_PAINT_ANNO(p, ess->_iface_id);
+	output(0).push(p);
+
+}
+
+void Empower11k::send_link_measurement_request(EtherAddress sta, uint8_t token) {
+
+    EmpowerStationState *ess = _el->lvaps()->get_pointer(sta);
+
+	if (_debug) {
+		click_chatter("%{element} :: %s :: sending neighbor report request to %s token %u",
+				      this,
+				      __func__,
+				      sta.unparse().c_str(),
+				      token);
+	}
+
+	int len = sizeof(struct click_wifi) +
+		1 + /* category */
+		1 + /* action */
+		1 + /* dialog token */
+		1 + /* tx power */
+		1 + /* max tx power */
+		0;
+
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+				      this,
+				      __func__);
+		return;
+	}
+
+	struct click_wifi *w = (struct click_wifi *) p->data();
+
+	w->i_fc[0] = WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_MGT | WIFI_FC0_SUBTYPE_ACTION;
+	w->i_fc[1] = WIFI_FC1_DIR_NODS;
+
+	memcpy(w->i_addr1, sta.data(), 6);
+	memcpy(w->i_addr2, ess->_lvap_bssid.data(), 6);
+	memcpy(w->i_addr3, ess->_lvap_bssid.data(), 6);
+
+	w->i_dur = 0;
+	w->i_seq = 0;
+
+	uint8_t *ptr;
+
+	ptr = (uint8_t *) p->data() + sizeof(struct click_wifi);
+
+	*(uint8_t *) ptr = 5; /* radio measurement */
+	ptr += 1;
+
+	*(uint8_t *) ptr = 2; /* neighbor request */
+	ptr += 1;
+
+	*(uint8_t *) ptr = token; /* dialog token */
+	ptr += 1;
+
+	*(uint8_t *) ptr = 30; /* tx power */
+	ptr += 1;
+
+	*(uint8_t *) ptr = 30; /* max tx power */
+	ptr += 1;
+
+	SET_PAINT_ANNO(p, ess->_iface_id);
 	output(0).push(p);
 
 }
@@ -188,6 +263,7 @@ void Empower11k::send_neighbor_report_request(EtherAddress sta, uint8_t token) {
 enum {
 	H_DEBUG,
 	H_NEIGHBOR_REPORT_REQUEST,
+	H_LINK_MEASUREMENT_REQUEST
 };
 
 String Empower11k::read_handler(Element *e, void *thunk) {
@@ -238,6 +314,30 @@ int Empower11k::write_handler(const String &in_s, Element *e,
 		break;
 
 	}
+	case H_LINK_MEASUREMENT_REQUEST: {
+
+		Vector<String> tokens;
+		cp_spacevec(s, tokens);
+
+		if (tokens.size() != 2)
+			return errh->error("ports send_neighbor_report_request 2 parameters");
+
+		EtherAddress sta;
+		uint8_t token;
+
+		if (!EtherAddressArg().parse(tokens[0], sta)) {
+			return errh->error("error param %s: must start with an Ethernet address", tokens[0].c_str());
+		}
+
+		if (!IntArg().parse(tokens[1], token)) {
+			return errh->error("error param %s: must start with an int", tokens[1].c_str());
+		}
+
+		f->send_link_measurement_request(sta, token);
+
+		break;
+
+	}
 	}
 	return 0;
 }
@@ -246,6 +346,7 @@ void Empower11k::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
 	add_write_handler("send_neighbor_report_request", write_handler, (void *) H_NEIGHBOR_REPORT_REQUEST);
+	add_write_handler("send_link_measurement_request", write_handler, (void *) H_LINK_MEASUREMENT_REQUEST);
 }
 
 CLICK_ENDDECLS

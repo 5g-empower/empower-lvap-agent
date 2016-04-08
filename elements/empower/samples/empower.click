@@ -83,18 +83,18 @@ FromHost(empower0)
   -> wifi_encap :: EmpowerWifiEncap(EL el, DEBUG false)
   -> switch_data;
 
-ctrl :: Socket(TCP, 10.8.0.10, 4433, CLIENT true, VERBOSE true, RECONNECT_CALL el.reconnect)
+ctrl :: Socket(TCP, 192.168.100.158, 4433, CLIENT true, VERBOSE true, RECONNECT_CALL el.reconnect)
     -> downlink :: Counter()
 
 
     -> el :: EmpowerLVAPManager(EMPOWER_IFACE empower0,
-                                WTP 00:0D:B9:2F:5B:A8,
+                                WTP 00:0D:B9:2F:56:5C,
                                 EBS ebs,
                                 EAUTHR eauthr,
                                 EASSOR eassor,
                                 EDEAUTHR edeauthr,
 				E11K e11k,
-                                RES " 04:F0:21:09:F9:9A/36/20 D4:CA:6D:14:C1:78/6/20",
+                                RES " 04:F0:21:09:F9:9F/36/20 D4:CA:6D:14:C1:C2/6/20",
                                 RCS " rc_0/rate_control rc_1/rate_control",
                                 PERIOD 5000,
                                 DEBUGFS " /sys/kernel/debug/ieee80211/phy0/ath9k/bssid_extra /sys/kernel/debug/ieee80211/phy1/ath9k/bssid_extra",
