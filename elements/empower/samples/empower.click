@@ -23,8 +23,9 @@ ers -> wifi_cl;
 switch_mngt :: PaintSwitch();
 switch_data :: PaintSwitch();
 
-rates_0 :: AvailableRates(DEFAULT 2 4 11 22 12 18 24 36 48 72 96 108);
+rates_0 :: AvailableRates(DEFAULT 12 18 24 36 48 72 96 108);
 rates_ht_0 :: AvailableRates();
+
 rc_0 :: RateControl(rates_0, rates_ht_0);
 
 FromDevice(moni0, PROMISC false, OUTBOUND true, SNIFFER false)
@@ -52,6 +53,7 @@ switch_data[0]
 
 rates_1 :: AvailableRates(DEFAULT 2 4 11 22 12 18 24 36 48 72 96 108);
 rates_ht_1 :: AvailableRates();
+
 rc_1 :: RateControl(rates_1, rates_ht_1);
 
 FromDevice(moni1, PROMISC false, OUTBOUND true, SNIFFER false)
@@ -81,15 +83,18 @@ FromHost(empower0)
   -> wifi_encap :: EmpowerWifiEncap(EL el, DEBUG false)
   -> switch_data;
 
-ctrl :: Socket(TCP, 127.0.0.1, 4433, CLIENT true, VERBOSE true, RECONNECT_CALL el.reconnect)
+ctrl :: Socket(TCP, 10.8.0.10, 4433, CLIENT true, VERBOSE true, RECONNECT_CALL el.reconnect)
     -> downlink :: Counter()
+
+
     -> el :: EmpowerLVAPManager(EMPOWER_IFACE empower0,
-                                HWADDRS " 04:F0:21:09:F9:92 D4:CA:6D:14:C1:F8",
-                                WTP 00:0D:B9:2F:57:8C,
+                                WTP 00:0D:B9:2F:5B:A8,
                                 EBS ebs,
                                 EAUTHR eauthr,
                                 EASSOR eassor,
-				RES " 36/20 6/20",
+                                EDEAUTHR edeauthr,
+				E11K e11k,
+                                RES " 04:F0:21:09:F9:9A/36/20 D4:CA:6D:14:C1:78/6/20",
                                 RCS " rc_0/rate_control rc_1/rate_control",
                                 PERIOD 5000,
                                 DEBUGFS " /sys/kernel/debug/ieee80211/phy0/ath9k/bssid_extra /sys/kernel/debug/ieee80211/phy1/ath9k/bssid_extra",
@@ -112,13 +117,11 @@ ctrl :: Socket(TCP, 127.0.0.1, 4433, CLIENT true, VERBOSE true, RECONNECT_CALL e
                             0/00%f0,  // assoc req
                             0/20%f0,  // reassoc req
                             0/c0%f0,  // deauth
-                            0/a0%f0); // disassoc
+                            0/a0%f0,  // disassoc
+                            0/d0%f0); // action
 
   mgt_cl [0]
-    -> ebs :: EmpowerBeaconSource(
-                                  EL el,
-                                  PERIOD 100, 
-                                  DEBUG false)
+    -> ebs :: EmpowerBeaconSource(EL el, PERIOD 100, DEBUG false)
     -> switch_mngt;
 
   mgt_cl [1]
@@ -126,19 +129,22 @@ ctrl :: Socket(TCP, 127.0.0.1, 4433, CLIENT true, VERBOSE true, RECONNECT_CALL e
     -> switch_mngt;
 
   mgt_cl [2]
-    -> eassor :: EmpowerAssociationResponder(
-                                             EL el,
-                                             DEBUG false)
+    -> eassor :: EmpowerAssociationResponder(EL el, DEBUG false)
     -> switch_mngt;
 
   mgt_cl [3]
     -> eassor;
 
   mgt_cl [4]
-    -> EmpowerDeAuthResponder(EL el, DEBUG false)
-    -> Discard();
+    -> edeauthr :: EmpowerDeAuthResponder(EL el, DEBUG false)
+    -> switch_mngt;
 
   mgt_cl [5]
-    ->  EmpowerDisassocResponder(EL el, DEBUG false)
-    ->Discard();
+    -> EmpowerDisassocResponder(EL el, DEBUG false)
+    -> Discard();
+
+  mgt_cl [6]
+    -> e11k :: Empower11k(EL el, DEBUG false)
+    -> switch_mngt;
+
 
