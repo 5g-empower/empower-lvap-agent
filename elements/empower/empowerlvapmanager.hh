@@ -342,6 +342,7 @@ private:
 
 	void compute_bssid_mask();
 
+	class Empower11k *_e11k;
 	class EmpowerBeaconSource *_ebs;
 	class EmpowerOpenAuthResponder *_eauthr;
 	class EmpowerAssociationResponder *_eassor;

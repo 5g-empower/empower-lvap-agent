@@ -52,7 +52,6 @@ int Empower11k::configure(Vector<String> &conf, ErrorHandler *errh) {
 
 void Empower11k::push(int, Packet *p) {
 
-
 	if (p->length() < sizeof(struct click_wifi)) {
 		click_chatter("%{element} :: %s :: Packet too small: %d Vs. %d",
 				      this,

@@ -35,7 +35,7 @@
 CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
-		_ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0),
+		_e11k(0), _ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0),
 		_uplink(0), _downlink(0), _timer(this), _seq(0), _period(5000),
 		_debug(false) {
 }
@@ -80,6 +80,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 
 	res = Args(conf, this, errh).read_m("EMPOWER_IFACE", _empower_iface)
 								.read_m("WTP", _wtp)
+						        .read_m("E11K", ElementCastArg("Empower11k"), _e11k)
 						        .read_m("EBS", ElementCastArg("EmpowerBeaconSource"), _ebs)
 			                    .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
 			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
