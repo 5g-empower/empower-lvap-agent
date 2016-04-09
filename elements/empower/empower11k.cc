@@ -117,13 +117,10 @@ void Empower11k::push(int, Packet *p) {
 		return;
 	}
 
-	EtherAddress bssid = EtherAddress(w->i_addr3);
-
-	click_chatter("%{element} :: %s :: %s management action from %s bssd %s",
+	click_chatter("%{element} :: %s :: %s management action from %s",
 			      this,
 			      __func__,
-			      src.unparse().c_str(),
-				  bssid.unparse().c_str());
+			      src.unparse().c_str());
 
 	p->kill();
 	return;
