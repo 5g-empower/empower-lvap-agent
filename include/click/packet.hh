@@ -639,9 +639,11 @@ class Packet { public:
 	*reinterpret_cast<click_aliasable_void_pointer_t *>(xanno()->c + i) = const_cast<void *>(x);
     }
 
+#if !CLICK_LINUXMODULE
     inline Packet* data_packet() {
         return _data_packet;
     }
+#endif
 
     inline void clear_annotations(bool all = true);
     inline void copy_annotations(const Packet *);
