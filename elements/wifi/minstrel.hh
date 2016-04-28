@@ -6,7 +6,7 @@
 #include <click/glue.hh>
 #include <click/timer.hh>
 #include <elements/wifi/bitrate.hh>
-#include <elements/wifi/availablerates.hh>
+#include <elements/wifi/transmissionpolicies.hh>
 CLICK_DECLS
 
 /*
@@ -107,14 +107,12 @@ class Minstrel : public Element { public:
 	void process_feedback(Packet *);
 
 	MinstrelNeighborTable * neighbors() { return &_neighbors; }
-	AvailableRates * rtable() { return _rtable; }
-	AvailableRates * rtable_ht() { return _rtable_ht; }
+	TransmissionPolicies * tx_table() { return _tx_table; }
 
 private:
 
 	MinstrelNeighborTable _neighbors;
-	AvailableRates *_rtable;
-	AvailableRates *_rtable_ht;
+	TransmissionPolicies *_tx_table;
 	Timer _timer;
 
 	unsigned _lookaround_rate;

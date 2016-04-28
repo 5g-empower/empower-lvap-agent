@@ -444,9 +444,9 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 	/* rates */
 
 	Minstrel * rc = _el->rcs()->at(iface_id);
-	AvailableRates * rtable = rc->rtable();
+	TransmissionPolicies * tx_table = rc->tx_table();
 
-	Vector<int> rates = rtable->lookup(ess->_sta);
+	Vector<int> rates = tx_table->lookup(ess->_sta)->_mcs;
 	ptr[0] = WIFI_ELEMID_RATES;
 	ptr[1] = WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 	for (int x = 0; x < WIFI_MIN(WIFI_RATE_SIZE, rates.size()); x++) {

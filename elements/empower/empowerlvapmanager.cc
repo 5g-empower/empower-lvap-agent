@@ -595,12 +595,7 @@ void EmpowerLVAPManager::send_link_stats_response(EtherAddress sta, uint32_t lin
 		MinstrelDstInfo *nfo = &iter.value();
 		for (int i = 0; i < nfo->rates.size(); i++) {
 			uint8_t prob = nfo->cur_prob[i] / 180;
-			uint8_t rate;
-			if (rc->rtable()) {
-				rate = nfo->rates[i];
-			} else {
-				rate = nfo->rates[i] / 2;
-			}
+			uint8_t rate = nfo->rates[i] / 2;
 			rates.push_back(Rate(nfo->eth, rate, prob));
 		}
 	}

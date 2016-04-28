@@ -154,9 +154,9 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 
 	/* rates */
 	Minstrel * rc = _el->rcs()->at(iface_id);
-	AvailableRates * rtable = rc->rtable();
+	TransmissionPolicies * tx_table = rc->tx_table();
 
-	Vector<int> rates = rtable->lookup(bssid);
+	Vector<int> rates = tx_table->lookup(bssid)->_mcs;
 	ptr[0] = WIFI_ELEMID_RATES;
 	ptr[1] = WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 	for (int x = 0; x < WIFI_MIN(WIFI_RATE_SIZE, rates.size()); x++) {
@@ -327,9 +327,9 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 	}
 
 	Minstrel * rc = _el->rcs()->at(iface_id);
-	AvailableRates * rtable = rc->rtable();
+	TransmissionPolicies * tx_table = rc->tx_table();
 
-	rtable->insert(src, rates);
+	tx_table->insert(src, rates);
 
 	sa << " }";
 
@@ -467,9 +467,6 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 
 		sa << " ]";
 	}
-
-	AvailableRates * rtable_ht = rc->rtable_ht();
-	rtable_ht->insert(src, ht_rates);
 
 	/* print rates information */
 	if (_debug) {

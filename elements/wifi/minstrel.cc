@@ -29,7 +29,7 @@
 CLICK_DECLS
 
 Minstrel::Minstrel() 
-  : _rtable(0), _rtable_ht(0), _timer(this), _lookaround_rate(20), _offset(0), 
+  : _tx_table(0), _timer(this), _lookaround_rate(20), _offset(0),
 	_active(true), _period(500), _ewma_level(75), _debug(false) {
 }
 
@@ -112,8 +112,7 @@ int Minstrel::configure(Vector<String> &conf, ErrorHandler *errh)
 
 	int ret = Args(conf, this, errh)
 		      .read("OFFSET", _offset)
-		      .read_m("RT", ElementCastArg("AvailableRates"), _rtable)
-              .read_m("RT_HT", ElementCastArg("AvailableRates"), _rtable_ht)
+		      .read_m("TP", ElementCastArg("TransmissionPolicies"), _tx_table)
 		      .read("LOOKAROUND_RATE", _lookaround_rate)
 		      .read("EWMA_LEVEL", _ewma_level)
 		      .read("PERIOD", _period)
@@ -166,7 +165,7 @@ void Minstrel::assign_rate(Packet *p_in)
 	memset((void*)ceh, 0, sizeof(struct click_wifi_extra));
 
 	if (dst.is_group() || !dst) {
-		Vector<int> rates = _rtable->lookup(EtherAddress::make_broadcast());
+		Vector<int> rates = _tx_table->lookup(EtherAddress::make_broadcast())->_mcs;
 		ceh->rate = (rates.size()) ? rates[0] : 2;
 		ceh->max_tries = WIFI_MAX_RETRIES + 1;
 		return;
@@ -179,12 +178,12 @@ void Minstrel::assign_rate(Packet *p_in)
 
 	if (type == WIFI_FC0_TYPE_MGT) {
 		if (subtype == WIFI_FC0_SUBTYPE_BEACON) {
-			Vector<int> rates = _rtable->lookup(EtherAddress::make_broadcast());
+			Vector<int> rates = _tx_table->lookup(EtherAddress::make_broadcast())->_mcs;
 			ceh->rate = (rates.size()) ? rates[0] : 2;
 			ceh->flags |= WIFI_EXTRA_TX_NOACK;
 			return;
 		} else {
-			Vector<int> rates = _rtable->lookup(EtherAddress::make_broadcast());
+			Vector<int> rates = _tx_table->lookup(EtherAddress::make_broadcast())->_mcs;
 			ceh->rate = (rates.size()) ? rates[0] : 2;
 			ceh->max_tries = WIFI_MAX_RETRIES + 1;
 			return;
@@ -200,7 +199,7 @@ void Minstrel::assign_rate(Packet *p_in)
 					dst.unparse().c_str());
 		}
 		Vector<int> rates;
-		rates = _rtable->supported(dst);
+		rates = _tx_table->supported(dst)->_mcs;
 		if (rates.size() == 0) {
 			if (_debug) {
 				click_chatter("%{element} :: %s :: rate info not found for %s",
@@ -208,7 +207,7 @@ void Minstrel::assign_rate(Packet *p_in)
 						__func__,
 						dst.unparse().c_str());
 			}
-			Vector<int> rates = _rtable->lookup(EtherAddress::make_broadcast());
+			Vector<int> rates = _tx_table->lookup(EtherAddress::make_broadcast())->_mcs;
 			ceh->rate = (rates.size()) ? rates[0] : ceh->rate = 12;
 			ceh->max_tries = WIFI_MAX_RETRIES + 1;
 			return;
