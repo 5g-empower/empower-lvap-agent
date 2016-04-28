@@ -36,22 +36,22 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 	bool no_ack = false;
 	int rts_cts = 2436;
 	String mcs_string;
-	String mcs_select_string = "BR";
-	tp_mcs_selec_types mcs_select;
+	String tx_policy_string = "BR";
+	tx_policy_type tx_policy;
 	Vector<int> mcs;
 
 	res = Args(conf, this, errh).read_m("MCS", mcs_string)
 								.read("NO_ACK", no_ack)
-								.read("MCS_SELECT", mcs_select_string)
+								.read("MCS_SELECT", tx_policy_string)
 								.read("RTS_CTS", rts_cts)
 			                    .complete();
 
-	if (mcs_select_string == "BR") {
-		mcs_select = TP_BR;
-	} else if (mcs_select_string == "BP") {
-		mcs_select = TP_BP;
-	} else if (mcs_select_string == "LR") {
-		mcs_select = TP_LR;
+	if (tx_policy_string == "BR") {
+		tx_policy = TX_POLICY_BR;
+	} else if (tx_policy_string == "BP") {
+		tx_policy = TX_POLICY_BP;
+	} else if (tx_policy_string == "LR") {
+		tx_policy = TX_POLICY_LR;
 	} else {
 		return errh->error("error param MCS_SELECT: must be in the form BR/BP/LR");
 	}
@@ -65,7 +65,7 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 		mcs.push_back(r);
 	}
 
-	_tx_policy = TxPolicyInfo(mcs, no_ack, mcs_select, rts_cts);
+	_tx_policy = TxPolicyInfo(mcs, no_ack, tx_policy, rts_cts);
 	return res;
 
 }

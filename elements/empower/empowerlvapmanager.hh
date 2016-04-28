@@ -136,18 +136,15 @@ public:
 	EtherAddress _lvap_bssid;
 	EtherAddress _encap;
 	Vector<String> _ssids;
-	Vector<int> _mcs;
 	String _ssid;
 	int _assoc_id;
 	EtherAddress _hwaddr;
 	int _channel;
-	int _band;
+	empower_bands_types _band;
 	int _iface_id;
 	bool _set_mask;
 	bool _authentication_status;
 	bool _association_status;
-	bool _no_ack;
-	int _rts_cts;
 	CBytes _rx;
 	CBytes _tx;
 	void update_tx(uint16_t len) {
@@ -281,7 +278,7 @@ public:
 	void send_association_request(EtherAddress, EtherAddress, String);
 	void send_status_lvap(EtherAddress);
 	void send_status_vap(EtherAddress);
-	void send_status_port(EtherAddress);
+	void send_status_port(EtherAddress, EtherAddress, int, empower_bands_types);
 	void send_counters_response(EtherAddress, uint32_t);
 	void send_img_response(NeighborTable *, int, EtherAddress, uint32_t, EtherAddress, uint8_t, empower_bands_types);
 	void send_caps_response();

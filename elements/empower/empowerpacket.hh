@@ -3,6 +3,7 @@
 #define CLICK_EMPOWERPACKET_HH
 #include <click/config.h>
 #include <clicknet/wifi.h>
+#include <elements/wifi/transmissionpolicy.hh>
 CLICK_DECLS
 
 /* protocol version */
@@ -424,15 +425,23 @@ public:
 struct empower_set_port : public empower_header {
 private:
 	uint16_t _flags;
+	uint8_t	_hwaddr[6];
+	uint8_t _channel;
+    uint8_t _band;
 	uint8_t	_sta[6];
 	uint16_t _rts_cts;
+	tx_policy_type _tx_policy;
 	uint8_t _nb_mcs;
 	uint8_t *mcs[];
 public:
-	bool flag(int f)                          { return ntohs(_flags) & f;  }
-	EtherAddress sta()					      { return EtherAddress(_sta); }
-	uint16_t rts_cts()					      { return ntohs(_rts_cts); }
-	uint8_t nb_mcs()					      { return _nb_mcs; }
+	bool flag(int f)            { return ntohs(_flags) & f;  }
+	uint8_t band()	        	{ return _band; }
+	uint8_t channel()	    	{ return _channel; }
+	EtherAddress hwaddr()		{ return EtherAddress(_hwaddr); }
+	EtherAddress addr()			{ return EtherAddress(_sta); }
+	uint16_t rts_cts()			{ return ntohs(_rts_cts); }
+	tx_policy_type tx_policy()	{ return _tx_policy; }
+	uint8_t nb_mcs()			{ return _nb_mcs; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap status packet format */
@@ -445,17 +454,19 @@ private:
     uint8_t _channel;
     uint8_t _band;
 	uint16_t _rts_cts;
+	uint8_t _tx_policy;
 	uint8_t _nb_mcs;
 	uint8_t *mcs[];
 public:
-	void set_band(uint8_t band)	        { _band = band; }
-	void set_channel(uint8_t channel)	{ _channel = channel; }
-	void      set_flag(uint16_t f)          { _flags = htons(ntohs(_flags) | f); }
-	void      set_hwaddr(EtherAddress hwaddr)		{ memcpy(_hwaddr, hwaddr.data(), 6); }
-	void      set_wtp(EtherAddress wtp)		{ memcpy(_wtp, wtp.data(), 6); }
-	void      set_sta(EtherAddress sta)		{ memcpy(_sta, sta.data(), 6); }
-	void      set_rts_cts(uint16_t rts_cts) { _rts_cts = htons(rts_cts); }
-	void      set_nb_mcs(uint8_t nb_mcs)    { _nb_mcs = nb_mcs; }
+	void set_band(uint8_t band)	        	{ _band = band; }
+	void set_channel(uint8_t channel)		{ _channel = channel; }
+	void set_flag(uint16_t f)          		{ _flags = htons(ntohs(_flags) | f); }
+	void set_hwaddr(EtherAddress hwaddr)	{ memcpy(_hwaddr, hwaddr.data(), 6); }
+	void set_wtp(EtherAddress wtp)			{ memcpy(_wtp, wtp.data(), 6); }
+	void set_sta(EtherAddress sta)			{ memcpy(_sta, sta.data(), 6); }
+	void set_rts_cts(uint16_t rts_cts) 		{ _rts_cts = htons(rts_cts); }
+	void set_tx_policy(uint8_t tx_policy)	{ _tx_policy = tx_policy; }
+	void set_nb_mcs(uint8_t nb_mcs)    		{ _nb_mcs = nb_mcs; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* add rssi trigger packet format */

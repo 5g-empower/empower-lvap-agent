@@ -25,6 +25,7 @@
 #include <clicknet/ether.h>
 #include <elements/standard/counter.hh>
 #include <elements/wifi/minstrel.hh>
+#include <elements/wifi/transmissionpolicy.hh>
 #include "empowerpacket.hh"
 #include "empowerbeaconsource.hh"
 #include "empoweropenauthresponder.hh"
@@ -403,13 +404,12 @@ void EmpowerLVAPManager::send_status_vap(EtherAddress bssid) {
 
 }
 
-void EmpowerLVAPManager::send_status_port(EtherAddress sta) {
+void EmpowerLVAPManager::send_status_port(EtherAddress sta, EtherAddress hwaddr, int channel, empower_bands_types band) {
 
-	Vector<String> ssids;
+	int iface = element_to_iface(hwaddr, channel, band);
+	TxPolicyInfo * tx_policy = _rcs[iface]->tx_table()->tx_table()->find(sta);
 
-	EmpowerStationState ess = _lvaps.get(sta);
-
-	int len = sizeof(empower_status_port) + ess._mcs.size();
+	int len = sizeof(empower_status_port) + tx_policy->_mcs.size();
 
 	WritablePacket *p = Packet::make(len);
 
@@ -427,23 +427,24 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta) {
 	status->set_length(len);
 	status->set_type(EMPOWER_PT_STATUS_PORT);
 	status->set_seq(get_next_seq());
-	if (ess._no_ack)
+	if (tx_policy->_no_ack)
 		status->set_flag(EMPOWER_STATUS_PORT_NOACK);
-	status->set_rts_cts(ess._rts_cts);
+	status->set_rts_cts(tx_policy->_rts_cts);
 	status->set_wtp(_wtp);
-	status->set_sta(ess._sta);
-	status->set_nb_mcs(ess._mcs.size());
-	status->set_hwaddr(ess._hwaddr);
-	status->set_channel(ess._channel);
-	status->set_band(ess._band);
+	status->set_sta(sta);
+	status->set_tx_policy(tx_policy->_tx_policy);
+	status->set_nb_mcs(tx_policy->_mcs.size());
+	status->set_hwaddr(hwaddr);
+	status->set_channel(channel);
+	status->set_band(band);
 
 	uint8_t *ptr = (uint8_t *) status;
 	ptr += sizeof(struct empower_status_port);
 	uint8_t *end = ptr + (len - sizeof(struct empower_status_port));
 
-	for (int i = 0; i < ess._mcs.size(); i++) {
+	for (int i = 0; i < tx_policy->_mcs.size(); i++) {
 		assert (ptr <= end);
-		*ptr = (uint8_t) ess._mcs[i];
+		*ptr = (uint8_t) tx_policy->_mcs[i];
 		ptr++;
 	}
 
@@ -899,8 +900,6 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._hwaddr = hwaddr;
 		state._channel = channel;
 		state._band = band;
-		state._no_ack = false;
-		state._rts_cts = 2346;
 		state._set_mask = set_mask;
 		state._authentication_status = authentication_state;
 		state._association_status = association_state;
@@ -934,21 +933,15 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 
 	struct empower_set_port *q = (struct empower_set_port *) (p->data() + offset);
 
-	EtherAddress sta = q->sta();
+	EtherAddress addr = q->addr();
+	EtherAddress hwaddr = q->hwaddr();
+	int channel = q->channel();
+	empower_bands_types band = (empower_bands_types) q->band();
 
-	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-
-	if (!ess) {
-		click_chatter("%{element} :: %s :: unknown LVAP %s ignoring",
-				      this,
-				      __func__,
-				      sta.unparse_colon().c_str());
-		return 0;
-	}
-
-	ess->_no_ack = q->flag(EMPOWER_STATUS_PORT_NOACK);
-	ess->_rts_cts = q->rts_cts();
-	ess->_mcs.clear();
+	bool no_ack = q->flag(EMPOWER_STATUS_PORT_NOACK);
+	uint8_t rts_cts = q->rts_cts();
+	tx_policy_type tx_policy = q->tx_policy();
+	Vector<int> mcs;
 
 	uint8_t *ptr = (uint8_t *) q;
 	ptr += sizeof(struct empower_set_port);
@@ -956,11 +949,14 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 
 	while (ptr != end) {
 		assert (ptr <= end);
-		ess->_mcs.push_back(*ptr);
+		mcs.push_back(*ptr);
 		ptr++;
 	}
 
-	assert(ess->_mcs.size() == q->nb_mcs());
+	assert(mcs.size() == q->nb_mcs());
+
+	int iface = element_to_iface(hwaddr, channel, band);
+	_rcs[iface]->tx_table()->insert(addr, mcs, no_ack, tx_policy, rts_cts);
 
 	return 0;
 
@@ -1440,19 +1436,6 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 			sa << it.value()._band;
 			sa << " iface_id ";
 			sa << it.value()._iface_id;
-			sa << " mcs [";
-			if (it.value()._mcs.size() > 0) {
-				sa << it.value()._mcs[0];
-				for (int i = 1; i < it.value()._mcs.size(); i++) {
-					sa << ", " << it.value()._mcs[i];
-				}
-		    }
-			sa << "]";
-		    sa << " rts/cts ";
-			sa << it.value()._rts_cts;
-		    if (it.value()._no_ack) {
-		    	sa << " NO_ACK";
-		    }
 		    sa << "\n";
 		}
 		return sa.take_string();
@@ -1599,7 +1582,7 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		for (LVAPIter it = f->_lvaps.begin(); it.live(); it++) {
 			f->send_status_lvap(it.key());
 			if (it.value()._set_mask) {
-				f->send_status_port(it.key());
+				f->send_status_port(it.key(), it.value()._hwaddr, it.value()._channel, it.value()._band);
 			}
 		}
 		// send VAP status update messages

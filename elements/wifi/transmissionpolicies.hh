@@ -54,7 +54,7 @@ class TransmissionPolicies : public Element { public:
   TxPolicyInfo * lookup(EtherAddress eth);
   TxPolicyInfo * supported(EtherAddress eth);
 
-  int insert(EtherAddress, Vector<int>, bool, tp_mcs_selec_types, int);
+  int insert(EtherAddress, Vector<int>, bool, tx_policy_type, int);
   int insert(EtherAddress, Vector<int>);
   int remove(EtherAddress);
 
