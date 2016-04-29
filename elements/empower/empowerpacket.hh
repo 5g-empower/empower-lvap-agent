@@ -431,8 +431,8 @@ private:
 	uint8_t	_sta[6];
 	uint16_t _rts_cts;
 	uint8_t _tx_mcast;
-	uint8_t _nb_mcs;
 	uint8_t _ur_mcast_count;
+	uint8_t _nb_mcs;
 	uint8_t *mcs[];
 public:
 	bool flag(int f)            { return ntohs(_flags) & f;  }

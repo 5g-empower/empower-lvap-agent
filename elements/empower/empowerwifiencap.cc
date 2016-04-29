@@ -108,7 +108,8 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	for (IBIter iter = _el->info_bssids()->begin(); iter.live(); iter++) {
 
 		int iface = iter.value()._iface_id;
-		TxPolicyInfo * tx_policy = _el->rcs()->at(iface)->tx_table()->tx_table()->find(dst);
+		Minstrel * rc = _el->rcs()->at(iface);
+		TxPolicyInfo * tx_policy = rc->tx_table()->lookup(dst);
 
 		if (tx_policy->_tx_mcast == TX_MCAST_DMS) {
 
