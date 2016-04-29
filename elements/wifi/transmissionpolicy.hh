@@ -1,9 +1,11 @@
 #ifndef CLICK_TRANSMISSIONPOLICY_HH
 #define CLICK_TRANSMISSIONPOLICY_HH
+#include <click/config.h>
 #include <click/element.hh>
 #include <click/ipaddress.hh>
 #include <click/etheraddress.hh>
 #include <click/bighashmap.hh>
+#include <click/straccum.hh>
 #include <click/glue.hh>
 CLICK_DECLS
 

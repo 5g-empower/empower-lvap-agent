@@ -27,6 +27,7 @@
 #include <clicknet/llc.h>
 #include <elements/wifi/wirelessinfo.hh>
 #include <elements/wifi/transmissionpolicy.hh>
+#include <elements/wifi/minstrel.hh>
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 
@@ -106,11 +107,10 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	// to the fact that we can have the same bssid for multiple LVAPs
 	for (IBIter iter = _el->info_bssids()->begin(); iter.live(); iter++) {
 
-		Vector<Minstrel *> rcs = _el->rcs();
 		int iface = iter.value()._iface_id;
-		TxPolicyInfo tx_policy = rcs[iface]->tx_table()->tx_table()->find(dst);
+		TxPolicyInfo * tx_policy = _el->rcs()->at(iface)->tx_table()->tx_table()->find(dst);
 
-		if (tx_policy._tx_mcast == TX_MCAST_DMS) {
+		if (tx_policy->_tx_mcast == TX_MCAST_DMS) {
 
 			// dms mcast policy, duplicate the frame for each station in
 			// this bssid and use unicast destination addresses
@@ -130,7 +130,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 				output(0).push(p_out);
 			}
 
-		} else if (tx_policy._tx_mcast == TX_MCAST_UR) {
+		} else if (tx_policy->_tx_mcast == TX_MCAST_UR) {
 
 			// TODO: implement
 

@@ -1,4 +1,3 @@
-// -*- mode: c++; c-basic-offset: 2 -*-
 #ifndef CLICK_EMPOWERLVAPMANAGER_HH
 #define CLICK_EMPOWERLVAPMANAGER_HH
 #include <click/config.h>
