@@ -164,7 +164,14 @@ void Minstrel::assign_rate(Packet *p_in)
 
 	memset((void*)ceh, 0, sizeof(struct click_wifi_extra));
 
-	if (dst.is_group() || !dst) {
+	if (dst.is_group()) {
+		Vector<int> rates = _tx_table->lookup(dst)->_mcs;
+		ceh->rate = (rates.size()) ? rates[0] : -1;
+		ceh->max_tries = WIFI_MAX_RETRIES + 1;
+		return;
+	}
+
+	if (!dst) {
 		Vector<int> rates = _tx_table->lookup(EtherAddress::make_broadcast())->_mcs;
 		ceh->rate = (rates.size()) ? rates[0] : 2;
 		ceh->max_tries = WIFI_MAX_RETRIES + 1;
