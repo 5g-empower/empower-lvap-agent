@@ -36,24 +36,26 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 	bool no_ack = false;
 	int rts_cts = 2436;
 	String mcs_string;
-	String tx_policy_string = "BR";
-	tx_policy_type tx_policy;
+	String tx_mcast_string = "LEGACY";
+	tx_mcast_type tx_mcast;
+	int ur_mcast_count;
 	Vector<int> mcs;
 
 	res = Args(conf, this, errh).read_m("MCS", mcs_string)
 								.read("NO_ACK", no_ack)
-								.read("MCS_SELECT", tx_policy_string)
+								.read("TX_MCAST", tx_mcast_string)
+								.read("UR_MCAST_COUNT", ur_mcast_count)
 								.read("RTS_CTS", rts_cts)
 			                    .complete();
 
-	if (tx_policy_string == "BR") {
-		tx_policy = TX_POLICY_BR;
-	} else if (tx_policy_string == "BP") {
-		tx_policy = TX_POLICY_BP;
-	} else if (tx_policy_string == "LR") {
-		tx_policy = TX_POLICY_LR;
+	if (tx_mcast_string == "LEGACY") {
+		tx_mcast = TX_MCAST_LEGACY;
+	} else if (tx_mcast_string == "DMS") {
+		tx_mcast = TX_MCAST_DMS;
+	} else if (tx_mcast_string == "UR") {
+		tx_mcast = TX_MCAST_UR;
 	} else {
-		return errh->error("error param MCS_SELECT: must be in the form BR/BP/LR");
+		return errh->error("error param TX_MCAST: must be in the form LEGACY/DMS/UR");
 	}
 
 	Vector<String> args;
@@ -65,7 +67,7 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 		mcs.push_back(r);
 	}
 
-	_tx_policy = TxPolicyInfo(mcs, no_ack, tx_policy, rts_cts);
+	_tx_policy = TxPolicyInfo(mcs, no_ack, tx_mcast, ur_mcast_count, rts_cts);
 	return res;
 
 }

@@ -310,8 +310,7 @@ public:
 				info._iface_id = it.value()._iface_id;
 				_info_bssids->set(it.value()._lvap_bssid, info);
 			}
-			EmpowerInfoBssid *eib = _info_bssids->get_pointer(
-					it.value()._lvap_bssid);
+			EmpowerInfoBssid *eib = _info_bssids->get_pointer(it.value()._lvap_bssid);
 			eib->_stas.push_back(it.value()._sta);
 		}
 		return _info_bssids;

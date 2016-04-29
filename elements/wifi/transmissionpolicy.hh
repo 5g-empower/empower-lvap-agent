@@ -23,34 +23,37 @@ Tracks a list of bitrates other stations are capable of.
 =a BeaconScanner
  */
 
-
-enum tx_policy_type {
-	TX_POLICY_BR = 0x0,
-	TX_POLICY_BP = 0x1,
-	TX_POLICY_LR = 0x2,
+enum tx_mcast_type {
+	TX_MCAST_LEGACY = 0x0,
+	TX_MCAST_DMS = 0x1,
+	TX_MCAST_UR = 0x2,
 };
-
 
 class TxPolicyInfo {
 public:
 
 	Vector<int> _mcs;
 	bool _no_ack;
-	tx_policy_type _tx_policy;
+	tx_mcast_type _tx_mcast;
+	int _ur_mcast_count;
 	int _rts_cts;
 
 	TxPolicyInfo() {
 		_mcs = Vector<int>();
 		_no_ack = false;
-		_tx_policy = TX_POLICY_BR;
+		_tx_mcast = TX_MCAST_DMS;
 		_rts_cts = 2436;
+		_ur_mcast_count = 3;
 	}
 
-	TxPolicyInfo(Vector<int> mcs, bool no_ack, tx_policy_type tx_policy, int rts_cts) {
+	TxPolicyInfo(Vector<int> mcs, bool no_ack, tx_mcast_type tx_mcast,
+			int ur_mcast_count, int rts_cts) {
+
 		_mcs = mcs;
 		_no_ack = no_ack;
-		_tx_policy = tx_policy;
+		_tx_mcast = tx_mcast;
 		_rts_cts = rts_cts;
+		_ur_mcast_count = ur_mcast_count;
 	}
 
 	String unparse() {
@@ -60,16 +63,17 @@ public:
 			sa << " " << _mcs[i] << " ";
 		}
 		sa << "]";
-		sa << " no_ack " << _no_ack << " mcs_select ";
-		if (_tx_policy == TX_POLICY_BR) {
-			sa << "best rate";
-		} else if (_tx_policy == TX_POLICY_BP) {
-			sa << "best prob.";
-		} else if (_tx_policy == TX_POLICY_LR) {
-			sa << "lowest rate";
+		sa << " no_ack " << _no_ack << " mcast ";
+		if (_tx_mcast == TX_MCAST_LEGACY) {
+			sa << "legacy";
+		} else if (_tx_mcast == TX_MCAST_DMS) {
+			sa << "dms";
+		} else if (_tx_mcast == TX_MCAST_UR) {
+			sa << "ur";
 		} else {
 			sa << "unknown";
 		}
+		sa << " ur_mcast_count " << _ur_mcast_count;
 		sa << " rts_cts " << _rts_cts;
 		return sa.take_string();
 	}

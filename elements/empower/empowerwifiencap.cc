@@ -26,6 +26,7 @@
 #include <click/packet_anno.hh>
 #include <clicknet/llc.h>
 #include <elements/wifi/wirelessinfo.hh>
+#include <elements/wifi/transmissionpolicy.hh>
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 
@@ -104,20 +105,57 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	// note, we need to transmit one frame for each unique bssid. this is due
 	// to the fact that we can have the same bssid for multiple LVAPs
 	for (IBIter iter = _el->info_bssids()->begin(); iter.live(); iter++) {
-		Packet *q = p->clone();
-		if (!q) {
-			continue;
-		}
-		for (int i = 0; i < iter.value()._stas.size(); i++) {
-			EmpowerStationState *ess = _el->lvaps()->get_pointer(iter.value()._stas[i]);
-			if (!ess) {
+
+		Vector<Minstrel *> rcs = _el->rcs();
+		int iface = iter.value()._iface_id;
+		TxPolicyInfo tx_policy = rcs[iface]->tx_table()->tx_table()->find(dst);
+
+		if (tx_policy._tx_mcast == TX_MCAST_DMS) {
+
+			// dms mcast policy, duplicate the frame for each station in
+			// this bssid and use unicast destination addresses
+
+			for (int i = 0; i < iter.value()._stas.size(); i++) {
+				Packet *q = p->clone();
+				if (!q) {
+					continue;
+				}
+				EmpowerStationState *ess = _el->lvaps()->get_pointer(iter.value()._stas[i]);
+				if (!ess) {
+					continue;
+				}
+				ess->update_tx(q->length());
+				Packet * p_out = wifi_encap(q, ess->_sta, src, iter.key());
+				SET_PAINT_ANNO(p_out, iter.value()._iface_id);
+				output(0).push(p_out);
+			}
+
+		} else if (tx_policy._tx_mcast == TX_MCAST_UR) {
+
+			// TODO: implement
+
+		} else {
+
+			// legacy mcast policy, just send the frame as it is, minstrel will
+			// pick the rate from the transmission policies table
+
+			Packet *q = p->clone();
+			if (!q) {
 				continue;
 			}
-			ess->update_tx(q->length());
+			for (int i = 0; i < iter.value()._stas.size(); i++) {
+				EmpowerStationState *ess = _el->lvaps()->get_pointer(iter.value()._stas[i]);
+				if (!ess) {
+					continue;
+				}
+				ess->update_tx(q->length());
+			}
+			Packet * p_out = wifi_encap(q, dst, src, iter.key());
+			SET_PAINT_ANNO(p_out, iter.value()._iface_id);
+			output(0).push(p_out);
+
 		}
-		Packet * p_out = wifi_encap(q, dst, src, iter.key());
-		SET_PAINT_ANNO(p_out, iter.value()._iface_id);
-		output(0).push(p_out);
+
 	}
 
 	p->kill();

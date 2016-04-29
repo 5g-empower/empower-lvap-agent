@@ -118,10 +118,11 @@ TransmissionPolicies::supported(EtherAddress eth) {
 }
 
 int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs) {
-	return insert(eth, mcs, false, TX_POLICY_BR, 2436);
+	return insert(eth, mcs, false, TX_MCAST_LEGACY, 3, 2436);
 }
 
-int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, bool no_ack, tx_policy_type tx_policy, int rts_cts) {
+int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, bool no_ack,
+		tx_mcast_type tx_mcast, int ur_mcast_count, int rts_cts) {
 
 	if (!(eth)) {
 		click_chatter("TransmissionPolicies %s: You fool, you tried to insert %s\n",
@@ -139,7 +140,8 @@ int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, bool no_ack,
 
 	dst->_mcs.clear();
 	dst->_no_ack = no_ack;
-	dst->_tx_policy = tx_policy;
+	dst->_tx_mcast = tx_mcast;
+	dst->_ur_mcast_count = ur_mcast_count;
 	dst->_rts_cts = rts_cts;
 
 	if (_default_tx_policy->_mcs.size()) {
@@ -219,7 +221,8 @@ int TransmissionPolicies::write_handler(const String &in_s, Element *e,
 		bool no_ack = false;
 		int rts_cts = 2436;
 		String mcs_string;
-		tx_policy_type tx_policy = TX_POLICY_BR;
+		tx_mcast_type tx_mcast = TX_MCAST_LEGACY;
+		int ur = 3;
 		Vector<int> mcs;
 
 		if (!EtherAddressArg().parse(tokens[0], dst)) {
@@ -232,7 +235,7 @@ int TransmissionPolicies::write_handler(const String &in_s, Element *e,
 			mcs.push_back(r);
 		}
 
-		f->insert(dst, mcs, no_ack, tx_policy, rts_cts);
+		f->insert(dst, mcs, no_ack, tx_mcast, ur, rts_cts);
 
 		break;
 
