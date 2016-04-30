@@ -108,6 +108,7 @@ class Minstrel : public Element { public:
 
 	MinstrelNeighborTable * neighbors() { return &_neighbors; }
 	TransmissionPolicies * tx_table() { return _tx_table; }
+	bool forget_station(EtherAddress addr) { return _neighbors.erase(addr); }
 
 private:
 

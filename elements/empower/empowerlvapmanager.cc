@@ -437,6 +437,7 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta, EtherAddress hwaddr,
 	status->set_hwaddr(hwaddr);
 	status->set_channel(channel);
 	status->set_band(band);
+	status->set_ur_mcast_count(tx_policy->_ur_mcast_count);
 
 	uint8_t *ptr = (uint8_t *) status;
 	ptr += sizeof(struct empower_status_port);
@@ -939,7 +940,7 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 	empower_bands_types band = (empower_bands_types) q->band();
 
 	bool no_ack = q->flag(EMPOWER_STATUS_PORT_NOACK);
-	uint8_t rts_cts = q->rts_cts();
+	uint16_t rts_cts = q->rts_cts();
 	tx_mcast_type tx_mcast = q->tx_mcast();
 	uint8_t ur = q->ur_mcast_count();
 	Vector<int> mcs;
@@ -958,6 +959,9 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 
 	int iface = element_to_iface(hwaddr, channel, band);
 	_rcs[iface]->tx_table()->insert(addr, mcs, no_ack, tx_mcast, ur, rts_cts);
+	_rcs[iface]->forget_station(addr);
+
+	send_status_port(addr, hwaddr, channel, band);
 
 	return 0;
 

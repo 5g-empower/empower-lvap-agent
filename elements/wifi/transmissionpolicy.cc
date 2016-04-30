@@ -38,7 +38,7 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 	String mcs_string;
 	String tx_mcast_string = "LEGACY";
 	tx_mcast_type tx_mcast;
-	int ur_mcast_count;
+	int ur_mcast_count = 3;
 	Vector<int> mcs;
 
 	res = Args(conf, this, errh).read_m("MCS", mcs_string)

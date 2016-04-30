@@ -470,6 +470,7 @@ public:
 	void set_rts_cts(uint16_t rts_cts) 				{ _rts_cts = htons(rts_cts); }
 	void set_tx_mcast(tx_mcast_type tx_mcast)		{ _tx_mcast = uint8_t(tx_mcast); }
 	void set_nb_mcs(uint8_t nb_mcs)    				{ _nb_mcs = nb_mcs; }
+	void set_ur_mcast_count(uint8_t ur_mcast_count) { _ur_mcast_count = ur_mcast_count; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* add rssi trigger packet format */

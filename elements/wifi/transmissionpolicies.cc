@@ -73,6 +73,11 @@ int TransmissionPolicies::configure(Vector<String> &conf, ErrorHandler *errh) {
 
 	}
 
+	if (!_default_tx_policy) {
+		_default_tx_policy = new TxPolicyInfo();
+		_default_tx_policy->_mcs.push_back(2);
+	}
+
 	return res;
 
 }
@@ -91,11 +96,7 @@ TransmissionPolicies::lookup(EtherAddress eth) {
 		return dst;
 	}
 
-	if (_default_tx_policy) {
-		return _default_tx_policy;
-	}
-
-	return new TxPolicyInfo();
+	return _default_tx_policy;
 
 }
 
@@ -113,7 +114,7 @@ TransmissionPolicies::supported(EtherAddress eth) {
 		return dst;
 	}
 
-	return new TxPolicyInfo();
+	return 0;
 
 }
 

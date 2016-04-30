@@ -166,7 +166,7 @@ void Minstrel::assign_rate(Packet *p_in)
 
 	if (dst.is_group()) {
 		Vector<int> rates = _tx_table->lookup(dst)->_mcs;
-		ceh->rate = (rates.size()) ? rates[0] : -1;
+		ceh->rate = (rates.size()) ? rates[0] : 2;
 		ceh->max_tries = WIFI_MAX_RETRIES + 1;
 		return;
 	}
@@ -187,6 +187,7 @@ void Minstrel::assign_rate(Packet *p_in)
 		if (subtype == WIFI_FC0_SUBTYPE_BEACON) {
 			Vector<int> rates = _tx_table->lookup(EtherAddress::make_broadcast())->_mcs;
 			ceh->rate = (rates.size()) ? rates[0] : 2;
+			ceh->max_tries = 1;
 			ceh->flags |= WIFI_EXTRA_TX_NOACK;
 			return;
 		} else {
@@ -205,9 +206,8 @@ void Minstrel::assign_rate(Packet *p_in)
 					__func__,
 					dst.unparse().c_str());
 		}
-		Vector<int> rates;
-		rates = _tx_table->supported(dst)->_mcs;
-		if (rates.size() == 0) {
+		TxPolicyInfo * tx_policy = _tx_table->supported(dst);
+		if (!tx_policy) {
 			if (_debug) {
 				click_chatter("%{element} :: %s :: rate info not found for %s",
 						this, 
@@ -215,11 +215,11 @@ void Minstrel::assign_rate(Packet *p_in)
 						dst.unparse().c_str());
 			}
 			Vector<int> rates = _tx_table->lookup(EtherAddress::make_broadcast())->_mcs;
-			ceh->rate = (rates.size()) ? rates[0] : ceh->rate = 12;
+			ceh->rate = (rates.size()) ? rates[0] : ceh->rate = 2;
 			ceh->max_tries = WIFI_MAX_RETRIES + 1;
 			return;
 		}
-		_neighbors.insert(dst, MinstrelDstInfo(dst, rates));
+		_neighbors.insert(dst, MinstrelDstInfo(dst, tx_policy->_mcs));
 		nfo = _neighbors.findp(dst);
 	}
 
