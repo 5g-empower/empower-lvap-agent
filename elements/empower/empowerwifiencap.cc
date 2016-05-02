@@ -109,7 +109,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 
 		int iface = iter.value()._iface_id;
 		Minstrel * rc = _el->rcs()->at(iface);
-		TxPolicyInfo * tx_policy = rc->tx_table()->lookup(dst);
+		TxPolicyInfo * tx_policy = rc->tx_policies()->lookup(dst);
 
 		if (tx_policy->_tx_mcast == TX_MCAST_DMS) {
 

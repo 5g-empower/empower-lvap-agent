@@ -404,11 +404,25 @@ void EmpowerLVAPManager::send_status_vap(EtherAddress bssid) {
 
 }
 
+void EmpowerLVAPManager::send_status_port(EtherAddress sta, int iface) {
+
+	ResourceElement* el = iface_to_element(iface);
+	send_status_port(sta, iface, el->_hwaddr, el->_channel, el->_band);
+
+}
+
 void EmpowerLVAPManager::send_status_port(EtherAddress sta, EtherAddress hwaddr,
 		int channel, empower_bands_types band) {
 
 	int iface = element_to_iface(hwaddr, channel, band);
-	TxPolicyInfo * tx_policy = _rcs[iface]->tx_table()->tx_table()->find(sta);
+	send_status_port(sta, iface, hwaddr, channel, band);
+
+}
+
+void EmpowerLVAPManager::send_status_port(EtherAddress sta, int iface, EtherAddress hwaddr,
+		int channel, empower_bands_types band) {
+
+	TxPolicyInfo * tx_policy = _rcs[iface]->tx_policies()->tx_table()->find(sta);
 
 	int len = sizeof(empower_status_port) + tx_policy->_mcs.size();
 
@@ -958,10 +972,8 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 	assert(mcs.size() == q->nb_mcs());
 
 	int iface = element_to_iface(hwaddr, channel, band);
-	_rcs[iface]->tx_table()->insert(addr, mcs, no_ack, tx_mcast, ur, rts_cts);
+	_rcs[iface]->tx_policies()->insert(addr, mcs, no_ack, tx_mcast, ur, rts_cts);
 	_rcs[iface]->forget_station(addr);
-
-	send_status_port(addr, hwaddr, channel, band);
 
 	return 0;
 
@@ -1586,13 +1598,19 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		// send LVAP status update messages
 		for (LVAPIter it = f->_lvaps.begin(); it.live(); it++) {
 			f->send_status_lvap(it.key());
-			if (it.value()._set_mask) {
-				f->send_status_port(it.key(), it.value()._hwaddr, it.value()._channel, it.value()._band);
-			}
 		}
 		// send VAP status update messages
 		for (VAPIter it = f->_vaps.begin(); it.live(); it++) {
 			f->send_status_vap(it.key());
+		}
+		// send tx policies
+		for (REIter it_re = f->_ifaces_to_elements.begin(); it_re.live(); it_re++) {
+			int iface = it_re.key();
+			TransmissionPolicies * _tx_policies = f->rcs()->at(iface)->tx_policies();
+			for (TxTableIter it_txp = _tx_policies->tx_table()->begin(); it_txp.live(); it_txp++) {
+				EtherAddress sta = it_txp.key();
+				f->send_status_port(sta, iface);
+			}
 		}
 		break;
 	}

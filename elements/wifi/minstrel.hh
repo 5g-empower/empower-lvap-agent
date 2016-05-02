@@ -107,13 +107,13 @@ class Minstrel : public Element { public:
 	void process_feedback(Packet *);
 
 	MinstrelNeighborTable * neighbors() { return &_neighbors; }
-	TransmissionPolicies * tx_table() { return _tx_table; }
+	TransmissionPolicies * tx_policies() { return _tx_policies; }
 	bool forget_station(EtherAddress addr) { return _neighbors.erase(addr); }
 
 private:
 
 	MinstrelNeighborTable _neighbors;
-	TransmissionPolicies *_tx_table;
+	TransmissionPolicies * _tx_policies;
 	Timer _timer;
 
 	unsigned _lookaround_rate;
