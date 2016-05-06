@@ -167,12 +167,11 @@ void Minstrel::assign_rate(Packet *p_in)
 	if (dst.is_group()) {
 		Vector<int> rates = _tx_policies->lookup(dst)->_mcs;
 		ceh->rate = (rates.size()) ? rates[0] : 2;
-		ceh->max_tries = WIFI_MAX_RETRIES + 1;
 		return;
 	}
 
 	if (!dst) {
-		Vector<int> rates = _tx_policies->lookup(EtherAddress::make_broadcast())->_mcs;
+		Vector<int> rates = _tx_policies->default_tx_policy()->_mcs;
 		ceh->rate = (rates.size()) ? rates[0] : 2;
 		ceh->max_tries = WIFI_MAX_RETRIES + 1;
 		return;
@@ -188,7 +187,6 @@ void Minstrel::assign_rate(Packet *p_in)
 			Vector<int> rates = _tx_policies->lookup(EtherAddress::make_broadcast())->_mcs;
 			ceh->rate = (rates.size()) ? rates[0] : 2;
 			ceh->max_tries = 1;
-			ceh->flags |= WIFI_EXTRA_TX_NOACK;
 			return;
 		} else {
 			Vector<int> rates = _tx_policies->lookup(EtherAddress::make_broadcast())->_mcs;

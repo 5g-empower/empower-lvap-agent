@@ -254,6 +254,14 @@ void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, uint8
 
 	const ResourceElement *re = iface_to_element(iface_id);
 
+	if (!re) {
+		click_chatter("%{element} :: %s :: invalid iface id %u!",
+					  this,
+					  __func__,
+					  iface_id);
+		return;
+	}
+
 	empower_probe_request *request = (struct empower_probe_request *) (p->data());
 	request->set_version(_empower_version);
 	request->set_length(sizeof(empower_probe_request) + ssid.length());
@@ -406,8 +414,17 @@ void EmpowerLVAPManager::send_status_vap(EtherAddress bssid) {
 
 void EmpowerLVAPManager::send_status_port(EtherAddress sta, int iface) {
 
-	ResourceElement* el = iface_to_element(iface);
-	send_status_port(sta, iface, el->_hwaddr, el->_channel, el->_band);
+	ResourceElement* re = iface_to_element(iface);
+
+	if (!re) {
+		click_chatter("%{element} :: %s :: invalid iface id %u!",
+					  this,
+					  __func__,
+					  iface);
+		return;
+	}
+
+	send_status_port(sta, iface, re->_hwaddr, re->_channel, re->_band);
 
 }
 
@@ -415,6 +432,17 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta, EtherAddress hwaddr,
 		int channel, empower_bands_types band) {
 
 	int iface = element_to_iface(hwaddr, channel, band);
+
+	if (iface == -1) {
+		click_chatter("%{element} :: %s :: invalid resource element (%s, %u, %u)!",
+					  this,
+					  __func__,
+					  hwaddr.unparse().c_str(),
+					  channel,
+					  band);
+		return;
+	}
+
 	send_status_port(sta, iface, hwaddr, channel, band);
 
 }
@@ -484,6 +512,16 @@ void EmpowerLVAPManager::send_img_response(NeighborTable *table, int type,
 	// Select only measurements for the specified rates
 
 	int iface_id = element_to_iface(hwaddr, channel, band);
+
+	if (iface_id == -1) {
+		click_chatter("%{element} :: %s :: invalid resource element (%s, %u, %u)!",
+					  this,
+					  __func__,
+					  hwaddr.unparse().c_str(),
+					  channel,
+					  band);
+		return;
+	}
 
 	for (NTIter iter = table->begin(); iter.live(); iter++) {
 		if (iter.value()._iface_id != iface_id) {
@@ -779,6 +817,18 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 	int channel = add_vap->channel();
 	empower_bands_types band = (empower_bands_types) add_vap->band();
 
+	int iface = element_to_iface(hwaddr, channel, band);
+
+	if (iface == -1) {
+		   click_chatter("%{element} :: %s :: invalid resource element (%s, %u, %u)!",
+									 this,
+									 __func__,
+									 hwaddr.unparse().c_str(),
+									 channel,
+									 band);
+		   return 0;
+	}
+
 	if (_debug) {
 		click_chatter("%{element} :: %s :: bssid %s ssid %s ",
 				      this,
@@ -795,7 +845,7 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		state._hwaddr= hwaddr;
 		state._band = band;
 		state._ssid = ssid;
-		state._iface_id = element_to_iface(hwaddr, channel, band);
+		state._iface_id = iface;
 		_vaps.set(net_bssid, state);
 
 		/* Regenerate the BSSID mask */
@@ -842,7 +892,6 @@ int EmpowerLVAPManager::handle_del_vap(Packet *p, uint32_t offset) {
 
 int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
-
 	struct empower_add_lvap *add_lvap = (struct empower_add_lvap *) (p->data() + offset);
 
 	EtherAddress sta = add_lvap->sta();
@@ -880,6 +929,18 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	bool association_state = add_lvap->flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
 	bool set_mask = add_lvap->flag(EMPOWER_STATUS_SET_MASK);
 	EtherAddress encap = add_lvap->encap();
+
+    int iface = element_to_iface(hwaddr, channel, band);
+
+	if (iface == -1) {
+		   click_chatter("%{element} :: %s :: invalid resource element (%s, %u, %u)!",
+									 this,
+									 __func__,
+									 hwaddr.unparse().c_str(),
+									 channel,
+									 band);
+		   return 0;
+	}
 
 	if (_debug) {
 	    StringAccum sa;
@@ -920,7 +981,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._association_status = association_state;
 		state._set_mask = set_mask;
 		state._ssid = ssid;
-		state._iface_id = element_to_iface(hwaddr, channel, band);
+		state._iface_id = iface;
 		_lvaps.set(sta, state);
 
 		/* Regenerate the BSSID mask */
@@ -972,6 +1033,17 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 	assert(mcs.size() == q->nb_mcs());
 
 	int iface = element_to_iface(hwaddr, channel, band);
+
+	if (iface == -1) {
+		   click_chatter("%{element} :: %s :: invalid resource element (%s, %u, %u)!",
+									 this,
+									 __func__,
+									 hwaddr.unparse().c_str(),
+									 channel,
+									 band);
+		   return 0;
+	}
+
 	_rcs[iface]->tx_policies()->insert(addr, mcs, no_ack, tx_mcast, ur, rts_cts);
 	_rcs[iface]->forget_station(addr);
 

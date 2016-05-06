@@ -325,7 +325,11 @@ public:
 	const IfTable & elements() { return _elements_to_ifaces; }
 
 	int element_to_iface(EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
-		return _elements_to_ifaces.find(ResourceElement(hwaddr, channel, band)).value();
+		IfIter iter = _elements_to_ifaces.find(ResourceElement(hwaddr, channel, band));
+		if (iter == _elements_to_ifaces.end()) {
+			return -1;
+		}
+		return iter.value();
 	}
 
 	ResourceElement* iface_to_element(int iface) {

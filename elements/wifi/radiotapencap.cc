@@ -28,7 +28,6 @@ CLICK_DECLS
 
 #define CLICK_RADIOTAP_PRESENT (			          \
 	(1 << IEEE80211_RADIOTAP_RATE)			        | \
-	(1 << IEEE80211_RADIOTAP_CHANNEL)		        | \
 	(1 << IEEE80211_RADIOTAP_TX_FLAGS)    		    | \
 	(1 << IEEE80211_RADIOTAP_DATA_RETRIES)		    | \
 	(1 << IEEE80211_RADIOTAP_RADIOTAP_NAMESPACE)	| \
@@ -36,7 +35,6 @@ CLICK_DECLS
 	0)
 
 #define CLICK_RADIOTAP_PRESENT_HT (			          \
-	(1 << IEEE80211_RADIOTAP_CHANNEL)		        | \
 	(1 << IEEE80211_RADIOTAP_TX_FLAGS)    		    | \
 	(1 << IEEE80211_RADIOTAP_DATA_RETRIES)		    | \
 	(1 << IEEE80211_RADIOTAP_MCS)			        | \
@@ -52,8 +50,6 @@ struct click_radiotap_header {
 
 	u_int8_t	wt_rate;
 	u_int8_t	wt_pad;
-	u_int16_t	wt_channel_frequency;
-	u_int16_t	wt_channel_type;
 	u_int16_t	wt_tx_flags;
 	u_int8_t	wt_data_retries;
 
@@ -74,8 +70,6 @@ struct click_radiotap_header_ht {
 	u_int32_t	it_present2;
 	u_int32_t	it_present3;
 
-	u_int16_t	wt_channel_frequency;
-	u_int16_t	wt_channel_type;
 	u_int16_t	wt_tx_flags;
 	u_int8_t	wt_data_retries;
 	u_int8_t	wt_known;
@@ -98,7 +92,7 @@ struct click_radiotap_header_ht {
 	u_int8_t	wt_mcs3;
 } __attribute__((__packed__));
 
-RadiotapEncap::RadiotapEncap() {
+RadiotapEncap::RadiotapEncap() : _debug(false) {
 }
 
 RadiotapEncap::~RadiotapEncap() {
@@ -151,8 +145,6 @@ RadiotapEncap::encap_ht(Packet *p) {
 		crh->wt_flags |= IEEE80211_RADIOTAP_MCS_BW_40;
 	}
 
-	crh->wt_channel_frequency = cpu_to_le16(ceh->channel);
-	crh->wt_channel_type |= (ceh->channel < 3000) ? IEEE80211_CHAN_2GHZ : IEEE80211_CHAN_5GHZ;
 	crh->wt_mcs = ceh->rate;
 	crh->wt_data_retries = (ceh->max_tries > 0) ? ceh->max_tries - 1 : WIFI_MAX_RETRIES;
 
@@ -246,8 +238,6 @@ RadiotapEncap::encap(Packet *p) {
 	crh->wt_ihdr.it_present = cpu_to_le32(CLICK_RADIOTAP_PRESENT);
 
 	crh->wt_rate = ceh->rate;
-	crh->wt_channel_frequency = cpu_to_le16(ceh->channel);
-	crh->wt_channel_type |= (ceh->channel < 3000) ? IEEE80211_CHAN_2GHZ : IEEE80211_CHAN_5GHZ;
 	crh->wt_data_retries = (ceh->max_tries > 0) ? ceh->max_tries - 1 : WIFI_MAX_RETRIES;
 
 	if (ceh->flags & WIFI_EXTRA_TX_NOACK) {

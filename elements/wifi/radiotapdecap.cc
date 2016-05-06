@@ -29,7 +29,7 @@ extern "C" {
 }
 CLICK_DECLS
 
-RadiotapDecap::RadiotapDecap()
+RadiotapDecap::RadiotapDecap() : _debug(false)
 {
 }
 
@@ -79,9 +79,9 @@ RadiotapDecap::simple_action(Packet *p) {
 		case IEEE80211_RADIOTAP_DATA_RETRIES:
 			ceh->max_tries = *iter.this_arg + 1;
 			break;
-		case IEEE80211_RADIOTAP_CHANNEL:
+		/*case IEEE80211_RADIOTAP_CHANNEL:
 			ceh->channel = le16_to_cpu(*(uint16_t *)iter.this_arg);
-			break;
+			break;*/
 		case IEEE80211_RADIOTAP_DBM_ANTSIGNAL:
 			ceh->rssi = *iter.this_arg;
 			break;
