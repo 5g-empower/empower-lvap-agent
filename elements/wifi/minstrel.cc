@@ -130,12 +130,12 @@ void Minstrel::process_feedback(Packet *p_in) {
 	}
 	uint8_t *dst_ptr = (uint8_t *) p_in->data() + _offset;
 	EtherAddress dst = EtherAddress(dst_ptr);
-	struct click_wifi_extra *ceh = WIFI_EXTRA_ANNO(p_in);
-	int success = !(ceh->flags & WIFI_EXTRA_TX_FAIL);
 	/* don't record info for bcast packets */
-	if (dst == EtherAddress::make_broadcast()) {
+	if (dst.is_group()) {
 		return;
 	}
+	struct click_wifi_extra *ceh = WIFI_EXTRA_ANNO(p_in);
+	int success = !(ceh->flags & WIFI_EXTRA_TX_FAIL);
 	MinstrelDstInfo *nfo = _neighbors.findp(dst);
 	/* rate wasn't set */
 	if (!nfo) {
