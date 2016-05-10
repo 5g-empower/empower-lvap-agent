@@ -304,7 +304,7 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 	    int max_len =  WIFI_MIN((int)rates_l[1], WIFI_RATES_MAXSIZE);
 		for (int x = 0; x < max_len; x++) {
 			uint8_t rate = rates_l[x + 2];
-			rates.push_front(rate);
+			rates.push_back((int)(rate & WIFI_RATE_VAL));
 			if (rate & WIFI_RATE_BASIC ) {
 				sa << " *" << (int) (rate ^ WIFI_RATE_BASIC);
 			}else {
@@ -313,11 +313,13 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 		}
 	}
 
+	sa << " }";
+
 	if (rates_x) {
 	    int len = rates_x[1];
 		for (int x = 0; x < len; x++) {
 			uint8_t rate = rates_x[x + 2];
-			rates.push_front(rate);
+			rates.push_back((int)(rate & WIFI_RATE_VAL));
 			if (rate & WIFI_RATE_BASIC ) {
 				sa << " *" << (int) (rate ^ WIFI_RATE_BASIC);
 			}else {
@@ -330,8 +332,6 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 	TransmissionPolicies * tx_table = rc->tx_policies();
 	tx_table->insert(src, rates);
 	_el->send_status_port(src, iface_id);
-
-	sa << " }";
 
 	if (htcaps) {
 		struct click_wifi_ht_caps *ht = (struct click_wifi_ht_caps *) htcaps;
