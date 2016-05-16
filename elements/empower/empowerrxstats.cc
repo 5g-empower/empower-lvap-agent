@@ -44,18 +44,12 @@ void send_summary_trigger_callback(Timer *timer, void *data) {
 void send_rssi_trigger_callback(Timer *timer, void *data) {
 	// process triggers
 	RssiTrigger *rssi = (RssiTrigger *) data;
-	for (NTIter iter = rssi->_ers->stas()->begin(); iter.live(); iter++) {
-		DstInfo *nfo = &iter.value();
-		if ( rssi->_eth != nfo->_eth ) {
-			continue;
-		}
-		if (rssi->matches(nfo)) {
-			if (!rssi->_dispatched) {
-				if (rssi->_el) {
-					rssi->_el->send_rssi_trigger(rssi->_eth, rssi->_trigger_id, rssi->_rel, rssi->_val, nfo->_ewma_rssi->avg());
-				}
-				rssi->_dispatched = true;
-			}
+	EmpowerRXStats *ers = rssi->_ers;
+	DstInfo *nfo = ers->stas()->get_pointer(rssi->_eth);
+	if (nfo) {
+		if (rssi->matches(nfo) && !rssi->_dispatched) {
+			rssi->_el->send_rssi_trigger(rssi->_eth, rssi->_trigger_id, rssi->_rel, rssi->_val, nfo->_ewma_rssi->avg());
+			rssi->_dispatched = true;
 		} else if (!rssi->matches(nfo) && rssi->_dispatched) {
 			rssi->_dispatched = false;
 		}
@@ -227,12 +221,10 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 	nfo->add_rssi_sample(rssi);
 
-	if (station) {
-		for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
-			if ((*qi)->_eth == nfo->_eth) {
-				Frame frame = Frame(ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), dur);
-				(*qi)->_frames.push_back(frame);
-			}
+	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
+		if ((*qi)->_eth == nfo->_eth || (*qi)->_eth.is_broadcast()) {
+			Frame frame = Frame(ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), dur);
+			(*qi)->_frames.push_back(frame);
 		}
 	}
 
