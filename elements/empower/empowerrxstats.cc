@@ -34,7 +34,7 @@ void send_summary_trigger_callback(Timer *timer, void *data) {
 	summary->_el->send_summary_trigger(summary);
 	summary->_sent++;
 	if (summary->_sent >= (uint32_t) summary->_limit) {
-		summary->_ers->del_summary_trigger(summary->_eth, summary->_trigger_id, summary->_limit, summary->_period);
+		summary->_ers->del_summary_trigger(summary->_trigger_id);
 		return;
 	}
 	// re-schedule the timer
@@ -212,18 +212,11 @@ EmpowerRXStats::simple_action(Packet *p) {
 	int8_t rssi;
 	memcpy(&rssi, &ceh->rssi, 1);
 
-	uint32_t dur;
-	if (ceh->flags & WIFI_EXTRA_MCS) {
-		dur = calc_transmit_time_ht(ceh->rate, p->length());
-	} else {
-		dur = calc_transmit_time(ceh->rate, p->length());
-	}
-
 	nfo->add_rssi_sample(rssi);
 
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
 		if ((*qi)->_eth == nfo->_eth || (*qi)->_eth.is_broadcast()) {
-			Frame frame = Frame(ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), dur);
+			Frame frame = Frame(ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length());
 			(*qi)->_frames.push_back(frame);
 		}
 	}
@@ -303,10 +296,9 @@ void EmpowerRXStats::add_summary_trigger(EtherAddress eth, uint32_t summary_id, 
 	_summary_triggers.push_back(summary);
 }
 
-void EmpowerRXStats::del_summary_trigger(EtherAddress eth, uint32_t summary_id, int16_t limit, uint16_t period) {
-	SummaryTrigger summary = SummaryTrigger(eth, summary_id, limit, period, _el, this);
+void EmpowerRXStats::del_summary_trigger(uint32_t summary_id) {
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
-		if (summary == **qi) {
+		if ((*qi)->_trigger_id == summary_id) {
 			(*qi)->_trigger_timer->clear();
 			_summary_triggers.erase(qi);
 			delete *qi;

@@ -607,7 +607,6 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 	request->set_seq(get_next_seq());
 	request->set_trigger_id(summary->_trigger_id);
 	request->set_wtp(_wtp);
-	request->set_sta(summary->_eth);
 	request->set_nb_frames(frames.size());
 
 	uint8_t *ptr = (uint8_t *) request;
@@ -625,7 +624,6 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 		entry->set_length(frames[i]._length);
 		entry->set_type(frames[i]._type);
 		entry->set_subtype(frames[i]._subtype);
-		entry->set_dur(frames[i]._dur);
 		ptr += sizeof(struct summary_entry);
 	}
 
@@ -1083,7 +1081,7 @@ int EmpowerLVAPManager::handle_add_summary_trigger(Packet *p, uint32_t offset) {
 		return 0;
 	}
 	struct empower_add_summary_trigger *q = (struct empower_add_summary_trigger *) (p->data() + offset);
-	_ers->add_summary_trigger(q->sta(), q->trigger_id(), q->limit(), q->period());
+	_ers->add_summary_trigger(q->addrs(), q->trigger_id(), q->limit(), q->period());
 	return 0;
 }
 
@@ -1095,7 +1093,7 @@ int EmpowerLVAPManager::handle_del_summary_trigger(Packet *p, uint32_t offset) {
 		return 0;
 	}
 	struct empower_del_summary_trigger *q = (struct empower_del_summary_trigger *) (p->data() + offset);
-	_ers->del_summary_trigger(q->sta(), q->trigger_id(), q->limit(), q->period());
+	_ers->del_summary_trigger(q->trigger_id());
 	return 0;
 }
 

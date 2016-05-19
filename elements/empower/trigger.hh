@@ -42,7 +42,7 @@ public:
 	}
 
 	inline bool operator==(const Trigger &b) {
-		return _eth== b._eth;
+		return _eth == b._eth;
 	}
 
 };

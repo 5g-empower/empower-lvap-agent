@@ -17,22 +17,20 @@ public:
 	uint8_t _type;
 	uint8_t _subtype;
 	uint32_t _length;
-	uint32_t _dur;
 	Frame() :
 			_eth(EtherAddress()), _tsft(0), _seq(0), _rssi(0), _rate(0), _type(
-					0), _subtype(0), _length(0), _dur(0) {
+					0), _subtype(0), _length(0) {
 	}
 	Frame(EtherAddress eth, uint64_t tsft, uint16_t seq, int8_t rssi,
-			uint8_t rate, uint8_t type, uint8_t subtype, uint32_t length,
-			uint32_t dur) :
+			uint8_t rate, uint8_t type, uint8_t subtype, uint32_t length) :
 			_eth(eth), _tsft(tsft), _seq(seq), _rssi(rssi), _rate(rate),
-			_type(type), _subtype(subtype), _length(length), _dur(dur) {
+			_type(type), _subtype(subtype), _length(length) {
 	}
 	String unparse() {
 		StringAccum sa;
 		sa << _eth.unparse() << ' ' << ' ' << _tsft << ' ' << _seq << ' '
 				<< _rssi << ' ' << _rate << ' ' << _type << ' ' << _subtype
-				<< ' ' << _length << ' ' << _dur;
+				<< ' ' << _length;
 		return sa.take_string();
 	}
 };
@@ -54,7 +52,7 @@ public:
 	String unparse();
 
 	inline bool operator==(const SummaryTrigger &b) {
-		return _eth== b._eth && _limit == b._limit && _period == b._period;
+		return _eth == b._eth && _limit == b._limit && _period == b._period;
 	}
 
 };

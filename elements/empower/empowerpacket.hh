@@ -523,14 +523,20 @@ public:
 struct empower_add_summary_trigger: public empower_header {
 private:
 	uint32_t _trigger_id;
+	uint8_t	_addrs[6];
+	uint8_t _hwaddr[6];
+	uint8_t _channel;
+    uint8_t _band;
 	int16_t _limit;
 	uint16_t _period;
-	uint8_t	_sta[6];
 public:
+    EtherAddress hwaddr() 		             { return EtherAddress(_hwaddr); }
+	uint8_t channel() 		                 { return _channel; }
+	uint8_t band() 		                     { return _band; }
     uint32_t trigger_id()                    { return ntohl(_trigger_id); }
     int16_t limit()                          { return ntohs(_limit); }
     uint16_t period()                        { return ntohs(_period); }
-	EtherAddress sta()					     { return EtherAddress(_sta); }
+	EtherAddress addrs()					 { return EtherAddress(_addrs); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* summary packet format */
@@ -538,13 +544,11 @@ struct empower_summary_trigger: public empower_header {
 private:
 	uint32_t _trigger_id;
 	uint8_t	_wtp[6];
-	uint8_t	_sta[6];
     uint16_t _nb_frames;
 public:
 	void set_trigger_id(uint32_t trigger_id) { _trigger_id = htonl(trigger_id); }
-	void set_wtp(EtherAddress wtp)	       { memcpy(_wtp, wtp.data(), 6); }
-	void set_sta(EtherAddress sta)	       { memcpy(_sta, sta.data(), 6); }
-	void set_nb_frames(uint16_t nb_frames) { _nb_frames = htons(nb_frames); }
+	void set_wtp(EtherAddress wtp)	         { memcpy(_wtp, wtp.data(), 6); }
+	void set_nb_frames(uint16_t nb_frames)   { _nb_frames = htons(nb_frames); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* summary entry format */
@@ -558,7 +562,6 @@ struct summary_entry {
 	uint8_t _type;
 	uint8_t _subtype;
 	uint32_t _length;
-	uint32_t _dur;
   public:
 	void set_tsft(uint64_t tsft) 		              { _tsft = htobe64(tsft); }
 	void set_seq(int16_t seq) 		                  { _seq = htons(seq); }
@@ -567,7 +570,6 @@ struct summary_entry {
 	void set_type(uint8_t type) 		              { _type = type; }
 	void set_subtype(uint8_t subtype) 		          { _subtype = subtype; }
 	void set_length(uint32_t length) 		          { _length= htonl(length); }
-	void set_dur(uint32_t dur) 		                  { _dur = htonl(dur); }
 	void set_sta(EtherAddress sta)		              { memcpy(_sta, sta.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
@@ -575,14 +577,8 @@ struct summary_entry {
 struct empower_del_summary_trigger: public empower_header {
 private:
 	uint32_t _trigger_id;
-	int16_t _limit;
-	uint16_t _period;
-	uint8_t	_sta[6];
 public:
-    uint32_t trigger_id()                    { return ntohl(_trigger_id); }
-    int16_t limit()                          { return ntohs(_limit); }
-    uint16_t period()                        { return ntohs(_period); }
-	EtherAddress sta()					     { return EtherAddress(_sta); }
+    uint32_t trigger_id() { return ntohl(_trigger_id); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* add vap packet format */
