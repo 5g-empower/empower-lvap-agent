@@ -1218,7 +1218,7 @@ int EmpowerLVAPManager::handle_uimg_request(Packet *p, uint32_t offset) {
 		return 0;
 	}
 	struct empower_cqm_request *q = (struct empower_cqm_request *) (p->data() + offset);
-	EtherAddress sta = q->addr();
+	EtherAddress sta = q->addrs();
 	EtherAddress hwaddr = q->hwaddr();
 	empower_bands_types band = (empower_bands_types) q->band();
 	uint8_t channel = q->channel();
@@ -1247,7 +1247,7 @@ int EmpowerLVAPManager::handle_nimg_request(Packet *p, uint32_t offset) {
 		return 0;
 	}
 	struct empower_cqm_request *q = (struct empower_cqm_request *) (p->data() + offset);
-	EtherAddress ap = q->addr();
+	EtherAddress ap = q->addrs();
 	EtherAddress hwaddr = q->hwaddr();
 	empower_bands_types band = (empower_bands_types) q->band();
 	uint8_t channel = q->channel();

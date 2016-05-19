@@ -102,8 +102,8 @@ struct empower_header {
 /* hello packet format */
 struct empower_hello : public empower_header {
   private:
-	uint32_t _period;           /* Hello period */
 	uint8_t	_wtp[6];            /* EtherAddress */
+	uint32_t _period;           /* Hello period */
 	uint32_t _uplink_bytes;     /* number bytes (uplink) */
 	uint32_t _downlink_bytes;   /* number bytes (downlink) */
   public:
@@ -185,6 +185,19 @@ struct empower_assoc_response : public empower_header {
 struct empower_caps_request : public empower_header {
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
+/* caps response packet format */
+struct empower_caps_response : public empower_header {
+private:
+  uint8_t	_wtp[6];
+  uint8_t	_nb_resources_elements;
+  uint8_t	_nb_ports_elements;
+public:
+	void set_wtp(EtherAddress wtp)		          						{ memcpy(_wtp, wtp.data(), 6); }
+	void set_nb_resources_elements(uint8_t nb_resources_elements)	  	{ _nb_resources_elements = nb_resources_elements; }
+	void set_nb_ports_elements(uint8_t nb_ports_elements)				{ _nb_ports_elements = nb_ports_elements; }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+
 /* link stats request packet format */
 struct empower_link_stats_request : public empower_header {
 private:
@@ -225,7 +238,7 @@ CLICK_PACKED_STRUCTURE(
 struct empower_cqm_request : public empower_header {,
 private:
   uint32_t _graph_id;
-  uint8_t _addr[6];
+  uint8_t _addrs[6];
   uint8_t _hwaddr[6];
   uint8_t _channel;
   uint8_t _band;
@@ -233,7 +246,7 @@ public:
 	uint32_t graph_id() 		        { return ntohl(_graph_id); }
 	uint8_t channel() 		            { return _channel; }
 	uint8_t band() 		                { return _band; }
-	EtherAddress addr()				    { return EtherAddress(_addr); }
+	EtherAddress addrs()				{ return EtherAddress(_addrs); }
 	EtherAddress hwaddr()				{ return EtherAddress(_hwaddr); }
 });
 
@@ -299,18 +312,6 @@ struct port_elements_entry {
 	void set_hwaddr(EtherAddress hwaddr)	{ memcpy(_hwaddr, hwaddr.data(), 6); }
 	void set_port_id(uint16_t port_id)	    { _port_id = htons(port_id); }
 	void set_iface(String iface)			{ memset(_iface, 0, 10); memcpy(&_iface, iface.data(), iface.length()); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* caps response packet format */
-struct empower_caps_response : public empower_header {
-private:
-  uint8_t	_wtp[6];
-  uint8_t	_nb_resources_elements;
-  uint8_t	_nb_ports_elements;
-public:
-	void set_wtp(EtherAddress wtp)		          						{ memcpy(_wtp, wtp.data(), 6); }
-	void set_nb_resources_elements(uint8_t nb_resources_elements)	  	{ _nb_resources_elements = nb_resources_elements; }
-	void set_nb_ports_elements(uint8_t nb_ports_elements)				{ _nb_ports_elements = nb_ports_elements; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* counters entryformat */
