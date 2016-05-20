@@ -1057,7 +1057,11 @@ int EmpowerLVAPManager::handle_add_rssi_trigger(Packet *p, uint32_t offset) {
 		return 0;
 	}
 	struct empower_add_rssi_trigger *q = (struct empower_add_rssi_trigger *) (p->data() + offset);
-	_ers->add_rssi_trigger(q->sta(), q->trigger_id(), static_cast<relation_t>(q->relation()), q->value());
+	EtherAddress hwaddr = q->hwaddr();
+	empower_bands_types band = (empower_bands_types) q->band();
+	uint8_t channel = q->channel();
+	int iface = element_to_iface(hwaddr, channel, band);
+	_ers->add_rssi_trigger(iface, q->sta(), q->trigger_id(), static_cast<relation_t>(q->relation()), q->value());
 	return 0;
 }
 
@@ -1069,7 +1073,7 @@ int EmpowerLVAPManager::handle_del_rssi_trigger(Packet *p, uint32_t offset) {
 		return 0;
 	}
 	struct empower_del_rssi_trigger *q = (struct empower_del_rssi_trigger *) (p->data() + offset);
-	_ers->del_rssi_trigger(q->sta(), q->trigger_id(), static_cast<relation_t>(q->relation()), q->value());
+	_ers->del_rssi_trigger(q->trigger_id());
 	return 0;
 }
 
@@ -1081,7 +1085,11 @@ int EmpowerLVAPManager::handle_add_summary_trigger(Packet *p, uint32_t offset) {
 		return 0;
 	}
 	struct empower_add_summary_trigger *q = (struct empower_add_summary_trigger *) (p->data() + offset);
-	_ers->add_summary_trigger(q->addrs(), q->trigger_id(), q->limit(), q->period());
+	EtherAddress hwaddr = q->hwaddr();
+	empower_bands_types band = (empower_bands_types) q->band();
+	uint8_t channel = q->channel();
+	int iface = element_to_iface(hwaddr, channel, band);
+	_ers->add_summary_trigger(iface, q->addrs(), q->trigger_id(), q->limit(), q->period());
 	return 0;
 }
 

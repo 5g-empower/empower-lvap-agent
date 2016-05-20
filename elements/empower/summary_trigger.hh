@@ -46,13 +46,13 @@ public:
 	int16_t _limit;
 	FramesList _frames;
 
-	SummaryTrigger(EtherAddress, uint32_t, int16_t, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
+	SummaryTrigger(int, EtherAddress, uint32_t, int16_t, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
 	~SummaryTrigger();
 
 	String unparse();
 
 	inline bool operator==(const SummaryTrigger &b) {
-		return _eth == b._eth && _limit == b._limit && _period == b._period;
+		return _eth == b._eth;
 	}
 
 };

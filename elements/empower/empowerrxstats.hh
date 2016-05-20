@@ -68,10 +68,10 @@ public:
 
 	void add_handlers();
 
-	void add_rssi_trigger(EtherAddress, uint32_t, relation_t, int);
-	void del_rssi_trigger(EtherAddress, uint32_t, relation_t, int);
+	void add_rssi_trigger(int, EtherAddress, uint32_t, relation_t, int);
+	void del_rssi_trigger(uint32_t);
 
-	void add_summary_trigger(EtherAddress, uint32_t, int16_t, uint16_t);
+	void add_summary_trigger(int, EtherAddress, uint32_t, int16_t, uint16_t);
 	void del_summary_trigger(uint32_t);
 
 	void clear_triggers();

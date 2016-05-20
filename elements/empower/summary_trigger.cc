@@ -21,9 +21,9 @@
 #include "trigger.hh"
 CLICK_DECLS
 
-SummaryTrigger::SummaryTrigger(EtherAddress eth, uint32_t trigger_id, int16_t limit,
+SummaryTrigger::SummaryTrigger(int iface, EtherAddress eth, uint32_t trigger_id, int16_t limit,
 		uint16_t period, EmpowerLVAPManager * el, EmpowerRXStats * ers) :
-		Trigger(eth, trigger_id, period, el, ers), _sent(0), _limit(limit) {
+		Trigger(iface, eth, trigger_id, period, el, ers), _sent(0), _limit(limit) {
 
 }
 

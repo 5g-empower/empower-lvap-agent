@@ -46,7 +46,7 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 	RssiTrigger *rssi = (RssiTrigger *) data;
 	EmpowerRXStats *ers = rssi->_ers;
 	DstInfo *nfo = ers->stas()->get_pointer(rssi->_eth);
-	if (nfo) {
+	if (nfo && nfo->_iface_id == rssi->_iface) {
 		if (rssi->matches(nfo) && !rssi->_dispatched) {
 			rssi->_el->send_rssi_trigger(rssi->_eth, rssi->_trigger_id, rssi->_rel, rssi->_val, nfo->_ewma_rssi->avg());
 			rssi->_dispatched = true;
@@ -215,6 +215,9 @@ EmpowerRXStats::simple_action(Packet *p) {
 	nfo->add_rssi_sample(rssi);
 
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
+		if ((*qi)->_iface != iface_id) {
+			continue;
+		}
 		if ((*qi)->_eth == nfo->_eth || (*qi)->_eth.is_broadcast()) {
 			Frame frame = Frame(ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length());
 			(*qi)->_frames.push_back(frame);
@@ -236,8 +239,8 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 }
 
-void EmpowerRXStats::add_rssi_trigger(EtherAddress eth, uint32_t trigger_id, relation_t rel, int val) {
-	RssiTrigger * rssi = new RssiTrigger(eth, trigger_id, rel, val, false, _period, _el, this);
+void EmpowerRXStats::add_rssi_trigger(int iface, EtherAddress eth, uint32_t trigger_id, relation_t rel, int val) {
+	RssiTrigger * rssi = new RssiTrigger(iface, eth, trigger_id, rel, val, false, _period, _el, this);
 	for (RTIter qi = _rssi_triggers.begin(); qi != _rssi_triggers.end(); qi++) {
 		if (*rssi== **qi) {
 			click_chatter("%{element} :: %s :: trigger already defined (%s), setting sent to false",
@@ -254,10 +257,9 @@ void EmpowerRXStats::add_rssi_trigger(EtherAddress eth, uint32_t trigger_id, rel
 	_rssi_triggers.push_back(rssi);
 }
 
-void EmpowerRXStats::del_rssi_trigger(EtherAddress eth, uint32_t trigger_id, relation_t rel, int val) {
-	RssiTrigger * rssi = new RssiTrigger(eth, trigger_id, rel, val, false, _period, _el, this);
+void EmpowerRXStats::del_rssi_trigger(uint32_t trigger_id) {
 	for (RTIter qi = _rssi_triggers.begin(); qi != _rssi_triggers.end(); qi++) {
-		if (*rssi== **qi) {
+		if ((*qi)->_trigger_id == trigger_id) {
 			(*qi)->_trigger_timer->clear();
 			_rssi_triggers.erase(qi);
 			break;
@@ -279,8 +281,8 @@ void EmpowerRXStats::clear_triggers() {
 	_summary_triggers.clear();
 }
 
-void EmpowerRXStats::add_summary_trigger(EtherAddress eth, uint32_t summary_id, int16_t limit, uint16_t period) {
-	SummaryTrigger * summary = new SummaryTrigger(eth, summary_id, limit, period, _el, this);
+void EmpowerRXStats::add_summary_trigger(int iface, EtherAddress eth, uint32_t summary_id, int16_t limit, uint16_t period) {
+	SummaryTrigger * summary = new SummaryTrigger(iface, eth, summary_id, limit, period, _el, this);
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
 		if (*summary == **qi) {
 			click_chatter("%{element} :: %s :: summary already defined (%s), ignoring",

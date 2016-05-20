@@ -479,9 +479,15 @@ struct empower_add_rssi_trigger: public empower_header {
 private:
 	uint32_t _trigger_id;
 	uint8_t	_sta[6];
+	uint8_t _hwaddr[6];
+	uint8_t _channel;
+    uint8_t _band;
 	uint8_t _relation;
 	int8_t _value;
 public:
+    EtherAddress hwaddr() 		             { return EtherAddress(_hwaddr); }
+	uint8_t channel() 		                 { return _channel; }
+	uint8_t band() 		                     { return _band; }
     uint32_t trigger_id()                    { return ntohl(_trigger_id); }
 	EtherAddress sta()					     { return EtherAddress(_sta); }
     uint8_t relation()                       { return _relation; }
@@ -492,14 +498,8 @@ public:
 struct empower_del_rssi_trigger: public empower_header {
 private:
 	uint32_t _trigger_id;
-	uint8_t	_sta[6];
-	uint8_t _relation;
-	int8_t _value;
 public:
     uint32_t trigger_id()                    { return ntohl(_trigger_id); }
-	EtherAddress sta()					     { return EtherAddress(_sta); }
-    uint8_t relation()                       { return _relation; }
-    int8_t value()                           { return _value; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* rssi trigger packet format */

@@ -23,7 +23,7 @@ public:
 	int _val;
 	bool _dispatched;
 
-	RssiTrigger(EtherAddress, uint32_t, relation_t, int, bool, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
+	RssiTrigger(int, EtherAddress, uint32_t, relation_t, int, bool, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
 	~RssiTrigger();
 
 	String unparse();
