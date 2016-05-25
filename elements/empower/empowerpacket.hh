@@ -14,25 +14,24 @@ enum empower_packet_types {
 
 	// Internal messages
 	EMPOWER_PT_WTP_BYE = 0x00,          // ac -> ac
-	EMPOWER_PT_LVAP_JOIN = 0x01,        // ac -> ac
-	EMPOWER_PT_LVAP_LEAVE = 0x02,       // ac -> ac
-	EMPOWER_PT_WTP_REGISTER = 0xFF,     // ac -> ac
+	EMPOWER_PT_WTP_REGISTER = 0x01,     // ac -> ac
+	EMPOWER_PT_LVAP_JOIN = 0x02,        // ac -> ac
+	EMPOWER_PT_LVAP_LEAVE = 0x03,       // ac -> ac
 
 	// LVAP messages
-	EMPOWER_PT_HELLO = 0x03,            // wtp -> ac
-	EMPOWER_PT_PROBE_REQUEST = 0x04,    // wtp -> ac
-	EMPOWER_PT_PROBE_RESPONSE = 0x05,   // ac -> wtp
-	EMPOWER_PT_AUTH_REQUEST = 0x06,     // wtp -> ac
-	EMPOWER_PT_AUTH_RESPONSE = 0x07,    // ac -> wtp
-	EMPOWER_PT_ASSOC_REQUEST = 0x08,    // wtp -> ac
-	EMPOWER_PT_ASSOC_RESPONSE = 0x09,   // ac -> wtp
-	EMPOWER_PT_ADD_LVAP = 0x10,         // ac -> wtp
-	EMPOWER_PT_DEL_LVAP = 0x11,         // ac -> wtp
-	EMPOWER_PT_STATUS_LVAP = 0x12,      // wtp -> ac
-	EMPOWER_PT_SET_PORT= 0x13,          // ac -> wtp
-	EMPOWER_PT_STATUS_PORT = 0x14,      // wtp -> ac
-	EMPOWER_PT_CAPS_REQUEST = 0x15,     // ac -> wtp
-	EMPOWER_PT_CAPS_RESPONSE = 0x16,    // wtp -> ac
+	EMPOWER_PT_HELLO = 0x04,            // wtp -> ac
+	EMPOWER_PT_PROBE_REQUEST = 0x05,    // wtp -> ac
+	EMPOWER_PT_PROBE_RESPONSE = 0x06,   // ac -> wtp
+	EMPOWER_PT_AUTH_REQUEST = 0x07,     // wtp -> ac
+	EMPOWER_PT_AUTH_RESPONSE = 0x08,    // ac -> wtp
+	EMPOWER_PT_ASSOC_REQUEST = 0x09,    // wtp -> ac
+	EMPOWER_PT_ASSOC_RESPONSE = 0x10,   // ac -> wtp
+	EMPOWER_PT_ADD_LVAP = 0x11,         // ac -> wtp
+	EMPOWER_PT_DEL_LVAP = 0x12,         // ac -> wtp
+	EMPOWER_PT_STATUS_LVAP = 0x13,      // wtp -> ac
+	EMPOWER_PT_SET_PORT= 0x14,          // ac -> wtp
+	EMPOWER_PT_STATUS_PORT = 0x15,      // wtp -> ac
+	EMPOWER_PT_CAPS = 0x16,             // wtp -> ac
 
 	// Packet/Bytes counters
 	EMPOWER_PT_COUNTERS_REQUEST = 0x17, // ac -> wtp
@@ -181,12 +180,8 @@ struct empower_assoc_response : public empower_header {
 	EtherAddress sta()							  { return EtherAddress(_sta); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* caps request packet format */
-struct empower_caps_request : public empower_header {
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* caps response packet format */
-struct empower_caps_response : public empower_header {
+/* caps packet format */
+struct empower_caps : public empower_header {
 private:
   uint8_t	_wtp[6];
   uint8_t	_nb_resources_elements;

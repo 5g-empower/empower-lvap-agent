@@ -746,9 +746,9 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 
 }
 
-void EmpowerLVAPManager::send_caps_response() {
+void EmpowerLVAPManager::send_caps() {
 
-	int len = sizeof(empower_caps_response);
+	int len = sizeof(empower_caps);
 	len += _elements_to_ifaces.size() * sizeof(struct resource_elements_entry);
 	len += _ports.size() * sizeof(struct port_elements_entry);
 
@@ -769,19 +769,19 @@ void EmpowerLVAPManager::send_caps_response() {
 
 	memset(p->data(), 0, p->length());
 
-	empower_caps_response *caps = (struct empower_caps_response *) (p->data());
+	empower_caps *caps = (struct empower_caps *) (p->data());
 	caps->set_version(_empower_version);
 	caps->set_length(len);
-	caps->set_type(EMPOWER_PT_CAPS_RESPONSE);
+	caps->set_type(EMPOWER_PT_CAPS);
 	caps->set_seq(get_next_seq());
 	caps->set_wtp(_wtp);
 	caps->set_nb_resources_elements(_elements_to_ifaces.size());
 	caps->set_nb_ports_elements(_ports.size());
 
 	uint8_t *ptr = (uint8_t *) caps;
-	ptr += sizeof(struct empower_caps_response);
+	ptr += sizeof(struct empower_caps);
 
-	uint8_t *end = ptr + (len - sizeof(struct empower_caps_response));
+	uint8_t *end = ptr + (len - sizeof(struct empower_caps));
 
 	for (IfIter iter = elements().begin(); iter.live(); iter++) {
 		assert (ptr <= end);
@@ -1263,11 +1263,6 @@ int EmpowerLVAPManager::handle_nimg_request(Packet *p, uint32_t offset) {
 	return 0;
 }
 
-int EmpowerLVAPManager::handle_caps_request(Packet *, uint32_t) {
-	send_caps_response();
-	return 0;
-}
-
 void EmpowerLVAPManager::push(int, Packet *p) {
 
 	/* This is a control packet coming from a Socket
@@ -1312,9 +1307,6 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_COUNTERS_REQUEST:
 			handle_counters_request(p, offset);
-			break;
-		case EMPOWER_PT_CAPS_REQUEST:
-			handle_caps_request(p, offset);
 			break;
 		case EMPOWER_PT_ADD_RSSI_TRIGGER:
 			handle_add_rssi_trigger(p, offset);
@@ -1659,7 +1651,7 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 			f->_empower_hwaddr = hwaddr;
 		}
 
-		f->send_caps_response();
+		f->send_caps();
 
 		break;
 
@@ -1671,8 +1663,8 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		}
 		// send hello
 		f->send_hello();
-		// send caps response
-		f->send_caps_response();
+		// send caps
+		f->send_caps();
 		// send LVAP status update messages
 		for (LVAPIter it = f->_lvaps.begin(); it.live(); it++) {
 			f->send_status_lvap(it.key());
