@@ -61,8 +61,6 @@ String RssiTrigger::unparse() {
 }
 
 bool RssiTrigger::matches(const DstInfo* nfo) {
-	if (_eth != nfo->_eth)
-		return false;
 	bool match = false;
 	switch (_rel) {
 	case EQ:

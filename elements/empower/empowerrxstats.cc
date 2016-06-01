@@ -45,14 +45,28 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 	// process triggers
 	RssiTrigger *rssi = (RssiTrigger *) data;
 	EmpowerRXStats *ers = rssi->_ers;
-	DstInfo *nfo = ers->stas()->get_pointer(rssi->_eth);
-	if (nfo && nfo->_iface_id == rssi->_iface) {
+	for (NTIter iter = ers->stas()->begin(); iter.live();) {
+		DstInfo *nfo = &iter.value();
+		// not on the same interface
+		if (nfo->_iface_id != rssi->_iface) {
+			continue;
+		}
+		// not matching the address
+		if (nfo->_eth != rssi->_eth && !rssi->_eth.is_broadcast()) {
+			continue;
+		}
+		// check if condition matches
 		if (rssi->matches(nfo) && !rssi->_dispatched) {
-			rssi->_el->send_rssi_trigger(rssi->_eth, rssi->_trigger_id, rssi->_rel, rssi->_val, nfo->_ewma_rssi->avg());
+			rssi->_el->send_rssi_trigger(nfo->_eth, rssi->_trigger_id, nfo->_ewma_rssi->avg());
 			rssi->_dispatched = true;
 		} else if (!rssi->matches(nfo) && rssi->_dispatched) {
 			rssi->_dispatched = false;
 		}
+	}
+
+	DstInfo *nfo = ers->stas()->get_pointer(rssi->_eth);
+	if (nfo && nfo->_iface_id == rssi->_iface) {
+
 	}
 	// re-schedule the timer
 	timer->schedule_after_msec(rssi->_period);

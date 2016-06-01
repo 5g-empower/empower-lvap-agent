@@ -284,7 +284,7 @@ public:
 	void send_counters_response(EtherAddress, uint32_t);
 	void send_img_response(NeighborTable *, int, EtherAddress, uint32_t, EtherAddress, uint8_t, empower_bands_types);
 	void send_caps();
-	void send_rssi_trigger(EtherAddress, uint32_t, uint8_t, uint8_t, uint8_t);
+	void send_rssi_trigger(EtherAddress, uint32_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);
 	void send_summary(EtherAddress, uint32_t, const Vector<Frame> &);
 	void send_link_stats_response(EtherAddress, uint32_t);

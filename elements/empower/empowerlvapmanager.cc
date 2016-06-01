@@ -157,7 +157,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 
 }
 
-void EmpowerLVAPManager::send_rssi_trigger(EtherAddress sta, uint32_t trigger_id, uint8_t rel, uint8_t val, uint8_t current) {
+void EmpowerLVAPManager::send_rssi_trigger(EtherAddress sta, uint32_t trigger_id, uint8_t current) {
 
 	WritablePacket *p = Packet::make(sizeof(empower_rssi_trigger));
 
@@ -178,8 +178,6 @@ void EmpowerLVAPManager::send_rssi_trigger(EtherAddress sta, uint32_t trigger_id
 	request->set_trigger_id(trigger_id);
 	request->set_wtp(_wtp);
 	request->set_sta(sta);
-	request->set_relation(rel);
-	request->set_value(val);
 	request->set_current(current);
 
 	output(0).push(p);

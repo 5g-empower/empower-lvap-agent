@@ -26,13 +26,6 @@ public:
 			_eth(eth), _tsft(tsft), _seq(seq), _rssi(rssi), _rate(rate),
 			_type(type), _subtype(subtype), _length(length) {
 	}
-	String unparse() {
-		StringAccum sa;
-		sa << _eth.unparse() << ' ' << ' ' << _tsft << ' ' << _seq << ' '
-				<< _rssi << ' ' << _rate << ' ' << _type << ' ' << _subtype
-				<< ' ' << _length;
-		return sa.take_string();
-	}
 };
 
 typedef Vector<Frame> FramesList;

@@ -503,14 +503,10 @@ private:
 	uint32_t _trigger_id;
 	uint8_t	_wtp[6];
 	uint8_t	_sta[6];
-	uint8_t _relation;
-	int8_t _value;
 	int8_t _current;
 public:
 	void      set_wtp(EtherAddress wtp)	     { memcpy(_wtp, wtp.data(), 6); }
 	void      set_sta(EtherAddress sta)	     { memcpy(_sta, sta.data(), 6); }
-	void      set_relation(uint8_t relation) { _relation = relation; }
-	void      set_value(int8_t value)        { _value = value; }
 	void      set_current(int8_t current)    { _current = current; }
 	void      set_trigger_id(int32_t trigger_id) { _trigger_id = htonl(trigger_id); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
