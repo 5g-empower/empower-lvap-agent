@@ -493,21 +493,9 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta, int iface, EtherAddr
 
 }
 
-void EmpowerLVAPManager::send_img_response(NeighborTable *table, int type,
-		EtherAddress, uint32_t graph_id, EtherAddress hwaddr, uint8_t channel,
+void EmpowerLVAPManager::send_img_response(int type, EtherAddress,
+		uint32_t graph_id, EtherAddress hwaddr, uint8_t channel,
 		empower_bands_types band) {
-
-	if (!_ers) {
-		click_chatter("%{element} :: %s :: RXStats Element not available!",
-					  this,
-					  __func__);
-		return;
-	}
-
-	Vector<DstInfo> neighbors;
-
-	// Select stations active on the specified resource element (iface_id)
-	// Select only measurements for the specified rates
 
 	int iface_id = element_to_iface(hwaddr, channel, band);
 
@@ -521,15 +509,30 @@ void EmpowerLVAPManager::send_img_response(NeighborTable *table, int type,
 		return;
 	}
 
-	for (NTIter iter = table->begin(); iter.live(); iter++) {
-		if (iter.value()._iface_id != iface_id) {
-			continue;
+	// Select stations active on the specified resource element (iface_id)
+
+	Vector<DstInfo> neighbors;
+	_ers->_lock.acquire_read();
+
+	if (type == EMPOWER_PT_UCQM_RESPONSE) {
+		for (NTIter iter = _ers->stas.begin(); iter.live(); iter++) {
+			if (iter.value()._iface_id != iface_id) {
+				continue;
+			}
+			neighbors.push_back(iter.value());
 		}
-		neighbors.push_back(iter.value());
+	} else {
+		for (NTIter iter = _ers->aps.begin(); iter.live(); iter++) {
+			if (iter.value()._iface_id != iface_id) {
+				continue;
+			}
+			neighbors.push_back(iter.value());
+		}
 	}
 
-	int len = sizeof(empower_cqm_response) + neighbors.size() * sizeof(cqm_entry);
+	_ers->_lock.release_read();
 
+	int len = sizeof(empower_cqm_response) + neighbors.size() * sizeof(cqm_entry);
 	WritablePacket *p = Packet::make(len);
 
 	if (!p) {
@@ -577,16 +580,8 @@ void EmpowerLVAPManager::send_img_response(NeighborTable *table, int type,
 
 void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
-	Vector<Frame> frames;
-
-	for (FIter fi = summary->_frames.begin(); fi != summary->_frames.end(); fi++) {
-		frames.push_back(*fi);
-	}
-
-	summary->_frames.clear();
-
-	int len = sizeof(empower_summary_trigger) + frames.size() * sizeof(summary_entry);
-
+	summary->_lock.acquire_write();
+	int len = sizeof(empower_summary_trigger) + summary->_frames.size() * sizeof(summary_entry);
 	WritablePacket *p = Packet::make(len);
 
 	if (!p) {
@@ -605,25 +600,28 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 	request->set_seq(get_next_seq());
 	request->set_trigger_id(summary->_trigger_id);
 	request->set_wtp(_wtp);
-	request->set_nb_frames(frames.size());
+	request->set_nb_frames(summary->_frames.size());
 
 	uint8_t *ptr = (uint8_t *) request;
 	ptr += sizeof(struct empower_summary_trigger);
 	uint8_t *end = ptr + (len - sizeof(struct empower_summary_trigger));
 
-	for (int i = 0; i < frames.size(); i++) {
+	for (int i = 0; i < summary->_frames.size(); i++) {
 		assert (ptr <= end);
 		summary_entry *entry = (summary_entry *) ptr;
-		entry->set_sta(frames[i]._eth);
-		entry->set_tsft(frames[i]._tsft);
-		entry->set_seq(frames[i]._seq);
-		entry->set_rssi(frames[i]._rssi);
-		entry->set_rate(frames[i]._rate);
-		entry->set_length(frames[i]._length);
-		entry->set_type(frames[i]._type);
-		entry->set_subtype(frames[i]._subtype);
+		entry->set_sta(summary->_frames[i]._eth);
+		entry->set_tsft(summary->_frames[i]._tsft);
+		entry->set_seq(summary->_frames[i]._seq);
+		entry->set_rssi(summary->_frames[i]._rssi);
+		entry->set_rate(summary->_frames[i]._rate);
+		entry->set_length(summary->_frames[i]._length);
+		entry->set_type(summary->_frames[i]._type);
+		entry->set_subtype(summary->_frames[i]._subtype);
 		ptr += sizeof(struct summary_entry);
 	}
+
+	summary->_frames.clear();
+	summary->_lock.release_write();
 
 	output(0).push(p);
 
@@ -1228,7 +1226,7 @@ int EmpowerLVAPManager::handle_uimg_request(Packet *p, uint32_t offset) {
 	EtherAddress hwaddr = q->hwaddr();
 	empower_bands_types band = (empower_bands_types) q->band();
 	uint8_t channel = q->channel();
-	send_img_response(_ers->stas(), EMPOWER_PT_UCQM_RESPONSE, sta, q->graph_id(), hwaddr, channel, band);
+	send_img_response(EMPOWER_PT_UCQM_RESPONSE, sta, q->graph_id(), hwaddr, channel, band);
 	return 0;
 }
 
@@ -1257,7 +1255,7 @@ int EmpowerLVAPManager::handle_nimg_request(Packet *p, uint32_t offset) {
 	EtherAddress hwaddr = q->hwaddr();
 	empower_bands_types band = (empower_bands_types) q->band();
 	uint8_t channel = q->channel();
-	send_img_response(_ers->aps(), EMPOWER_PT_NCQM_RESPONSE, ap, q->graph_id(), hwaddr, channel, band);
+	send_img_response(EMPOWER_PT_NCQM_RESPONSE, ap, q->graph_id(), hwaddr, channel, band);
 	return 0;
 }
 

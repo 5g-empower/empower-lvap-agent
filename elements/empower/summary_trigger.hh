@@ -4,6 +4,7 @@
 #include <click/hashcode.hh>
 #include <click/timer.hh>
 #include <click/vector.hh>
+#include <click/sync.hh>
 #include "trigger.hh"
 CLICK_DECLS
 
@@ -18,8 +19,8 @@ public:
 	uint8_t _subtype;
 	uint32_t _length;
 	Frame() :
-			_eth(EtherAddress()), _tsft(0), _seq(0), _rssi(0), _rate(0), _type(
-					0), _subtype(0), _length(0) {
+			_eth(EtherAddress()), _tsft(0), _seq(0), _rssi(0), _rate(0),
+			_type(0), _subtype(0), _length(0) {
 	}
 	Frame(EtherAddress eth, uint64_t tsft, uint16_t seq, int8_t rssi,
 			uint8_t rate, uint8_t type, uint8_t subtype, uint32_t length) :
@@ -38,6 +39,7 @@ public:
 	uint32_t _sent;
 	int16_t _limit;
 	FramesList _frames;
+	ReadWriteLock _lock;
 
 	SummaryTrigger(int, EtherAddress, uint32_t, int16_t, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
 	~SummaryTrigger();

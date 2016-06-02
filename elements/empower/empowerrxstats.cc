@@ -44,8 +44,8 @@ void send_summary_trigger_callback(Timer *timer, void *data) {
 void send_rssi_trigger_callback(Timer *timer, void *data) {
 	// process triggers
 	RssiTrigger *rssi = (RssiTrigger *) data;
-	EmpowerRXStats *ers = rssi->_ers;
-	for (NTIter iter = ers->stas()->begin(); iter.live();) {
+	rssi->_ers->_lock.acquire_read();
+	for (NTIter iter = rssi->_ers->stas.begin(); iter.live();) {
 		DstInfo *nfo = &iter.value();
 		// not on the same interface
 		if (nfo->_iface_id != rssi->_iface) {
@@ -63,11 +63,7 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 			rssi->_dispatched = false;
 		}
 	}
-
-	DstInfo *nfo = ers->stas()->get_pointer(rssi->_eth);
-	if (nfo && nfo->_iface_id == rssi->_iface) {
-
-	}
+	rssi->_ers->_lock.release_read();
 	// re-schedule the timer
 	timer->schedule_after_msec(rssi->_period);
 }
@@ -107,33 +103,31 @@ int EmpowerRXStats::configure(Vector<String> &conf, ErrorHandler *errh) {
 void EmpowerRXStats::run_timer(Timer *)
 {
 	// process stations
-	_stas_lock.acquire_write();
-	for (NTIter iter = _stas.begin(); iter.live();) {
+	_lock.acquire_write();
+	for (NTIter iter = stas.begin(); iter.live();) {
 		// Update stats
 		DstInfo *nfo = &iter.value();
 		nfo->update();
 		// Delete entries with RSSI lower than -90
 		if (nfo->_last_packets == 0 && nfo->_ewma_rssi->avg() <= _aging_th && nfo->_sma_rssi->avg() <= _aging_th) {
-			iter = _stas.erase(iter);
+			iter = stas.erase(iter);
 		} else {
 			++iter;
 		}
 	}
-	_stas_lock.release_write();
 	// process access points
-	_aps_lock.acquire_write();
-	for (NTIter iter = _aps.begin(); iter.live();) {
+	for (NTIter iter = aps.begin(); iter.live();) {
 		// Update aps
 		DstInfo *nfo = &iter.value();
 		nfo->update();
 		// Delete entries with RSSI lower than -90
 		if (nfo->_last_packets == 0 && nfo->_ewma_rssi->avg() <= _aging_th && nfo->_sma_rssi->avg() <= _aging_th) {
-			iter = _aps.erase(iter);
+			iter = aps.erase(iter);
 		} else {
 			++iter;
 		}
 	}
-	_aps_lock.release_write();
+	_lock.release_write();
 	// rescheduler
 	_timer.schedule_after_msec(_period);
 }
@@ -212,22 +206,21 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 	int iface_id = PAINT_ANNO(p);
 
-	_stas_lock.acquire_write();
-	_aps_lock.acquire_write();
+	_lock.acquire_write();
 
 	if (station) {
-		nfo = _stas.get_pointer(ta);
+		nfo = stas.get_pointer(ta);
 	} else {
-		nfo = _aps.get_pointer(ta);
+		nfo = aps.get_pointer(ta);
 	}
 
 	if (!nfo) {
 		if (station) {
-			_stas[ta] = DstInfo(ta, _ewma_level, _sma_period, _aging);
-			nfo = _stas.get_pointer(ta);
+			stas[ta] = DstInfo(ta, _ewma_level, _sma_period, _aging);
+			nfo = stas.get_pointer(ta);
 		} else {
-			_aps[ta] = DstInfo(ta, _ewma_level, _sma_period, _aging);
-			nfo = _aps.get_pointer(ta);
+			aps[ta] = DstInfo(ta, _ewma_level, _sma_period, _aging);
+			nfo = aps.get_pointer(ta);
 		}
 	}
 
@@ -243,13 +236,14 @@ EmpowerRXStats::simple_action(Packet *p) {
 			continue;
 		}
 		if ((*qi)->_eth == nfo->_eth || (*qi)->_eth.is_broadcast()) {
+			(*qi)->_lock.acquire_write();
 			Frame frame = Frame(ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length());
 			(*qi)->_frames.push_back(frame);
+			(*qi)->_lock.release_write();
 		}
 	}
 
-	_stas_lock.release_write();
-	_aps_lock.release_write();
+	_lock.release_write();
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: src %s dir %u rssi %d length %d rate %u",
@@ -354,7 +348,7 @@ String EmpowerRXStats::read_handler(Element *e, void *thunk) {
 	case H_MATCHES: {
 		StringAccum sa;
 		for (RTIter qi = td->_rssi_triggers.begin(); qi != td->_rssi_triggers.end(); qi++) {
-			for (NTIter iter = td->_stas.begin(); iter.live(); iter++) {
+			for (NTIter iter = td->stas.begin(); iter.live(); iter++) {
 				DstInfo *nfo = &iter.value();
 				if (!nfo)
 					continue;
@@ -383,18 +377,14 @@ String EmpowerRXStats::read_handler(Element *e, void *thunk) {
 	}
 	case H_STATS: {
 		StringAccum sa;
-		td->_stas_lock.acquire_read();
-		for (NTIter iter = td->_stas.begin(); iter.live(); iter++) {
+		for (NTIter iter = td->stas.begin(); iter.live(); iter++) {
 			DstInfo *nfo = &iter.value();
 			sa << nfo->unparse(true);
 		}
-		td->_stas_lock.release_read();
-		td->_aps_lock.acquire_read();
-		for (NTIter iter = td->_aps.begin(); iter.live(); iter++) {
+		for (NTIter iter = td->aps.begin(); iter.live(); iter++) {
 			DstInfo *nfo = &iter.value();
 			sa << nfo->unparse(false);
 		}
-		td->_aps_lock.release_read();
 		return sa.take_string();
 	}
 	case H_SIGNAL_OFFSET:
@@ -414,8 +404,8 @@ int EmpowerRXStats::write_handler(const String &in_s, Element *e, void *vparam,
 
 	switch ((intptr_t) vparam) {
 	case H_RESET: {
-		f->_stas.clear();
-		f->_aps.clear();
+		f->stas.clear();
+		f->aps.clear();
 		break;
 	}
 	case H_SIGNAL_OFFSET: {

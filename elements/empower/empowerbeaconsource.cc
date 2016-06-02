@@ -29,7 +29,7 @@
 CLICK_DECLS
 
 EmpowerBeaconSource::EmpowerBeaconSource() :
-		_el(0), _period(100), _timer(this), _debug(false) {
+		_el(0), _period(2000), _timer(this), _debug(false) {
 }
 
 EmpowerBeaconSource::~EmpowerBeaconSource() {

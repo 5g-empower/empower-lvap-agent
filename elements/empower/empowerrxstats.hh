@@ -77,23 +77,20 @@ public:
 
 	void clear_triggers();
 
-	NeighborTable * aps() { return &_aps; }
-	NeighborTable * stas() { return &_stas; }
-
 	void clear_stale_neighbors(Timer *timer);
 
-private:
+	ReadWriteLock _lock;
 
-	ReadWriteLock _aps_lock;
-	ReadWriteLock _stas_lock;
+	NeighborTable aps;
+	NeighborTable stas;
+
+private:
 
 	EmpowerLVAPManager *_el;
 	Timer _timer;
 
 	RssiTriggersList _rssi_triggers;
 	SummaryTriggersList _summary_triggers;
-	NeighborTable _aps;
-	NeighborTable _stas;
 
 	int _signal_offset;
 	int _aging;
