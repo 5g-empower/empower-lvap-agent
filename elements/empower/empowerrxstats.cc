@@ -107,6 +107,7 @@ int EmpowerRXStats::configure(Vector<String> &conf, ErrorHandler *errh) {
 void EmpowerRXStats::run_timer(Timer *)
 {
 	// process stations
+	_stas_lock.acquire_write();
 	for (NTIter iter = _stas.begin(); iter.live();) {
 		// Update stats
 		DstInfo *nfo = &iter.value();
@@ -118,7 +119,9 @@ void EmpowerRXStats::run_timer(Timer *)
 			++iter;
 		}
 	}
+	_stas_lock.release_write();
 	// process access points
+	_aps_lock.acquire_write();
 	for (NTIter iter = _aps.begin(); iter.live();) {
 		// Update aps
 		DstInfo *nfo = &iter.value();
@@ -130,6 +133,7 @@ void EmpowerRXStats::run_timer(Timer *)
 			++iter;
 		}
 	}
+	_aps_lock.release_write();
 	// rescheduler
 	_timer.schedule_after_msec(_period);
 }
@@ -203,6 +207,14 @@ EmpowerRXStats::simple_action(Packet *p) {
 	EtherAddress ta = EtherAddress(w->i_addr2);;
 	DstInfo *nfo;
 
+	int8_t rssi;
+	memcpy(&rssi, &ceh->rssi, 1);
+
+	int iface_id = PAINT_ANNO(p);
+
+	_stas_lock.acquire_write();
+	_aps_lock.acquire_write();
+
 	if (station) {
 		nfo = _stas.get_pointer(ta);
 	} else {
@@ -220,14 +232,12 @@ EmpowerRXStats::simple_action(Packet *p) {
 	}
 
 	// Update iface id
-	int iface_id = PAINT_ANNO(p);
 	nfo->_iface_id = iface_id;
 
-	int8_t rssi;
-	memcpy(&rssi, &ceh->rssi, 1);
-
+	// add rssi sample
 	nfo->add_rssi_sample(rssi);
 
+	// check if frame meta-data should be saved
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
 		if ((*qi)->_iface != iface_id) {
 			continue;
@@ -237,6 +247,9 @@ EmpowerRXStats::simple_action(Packet *p) {
 			(*qi)->_frames.push_back(frame);
 		}
 	}
+
+	_stas_lock.release_write();
+	_aps_lock.release_write();
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: src %s dir %u rssi %d length %d rate %u",
@@ -370,14 +383,18 @@ String EmpowerRXStats::read_handler(Element *e, void *thunk) {
 	}
 	case H_STATS: {
 		StringAccum sa;
+		_stas_lock.acquire_read();
 		for (NTIter iter = td->_stas.begin(); iter.live(); iter++) {
 			DstInfo *nfo = &iter.value();
 			sa << nfo->unparse(true);
 		}
+		_stas_lock.release_read();
+		_aps_lock.acquire_read();
 		for (NTIter iter = td->_aps.begin(); iter.live(); iter++) {
 			DstInfo *nfo = &iter.value();
 			sa << nfo->unparse(false);
 		}
+		_aps_lock.release_read();
 		return sa.take_string();
 	}
 	case H_SIGNAL_OFFSET:

@@ -83,6 +83,9 @@ public:
 
 private:
 
+	ReadWriteLock _aps_lock;
+	ReadWriteLock _stas_lock;
+
 	EmpowerLVAPManager *_el;
 	Timer _timer;
 
