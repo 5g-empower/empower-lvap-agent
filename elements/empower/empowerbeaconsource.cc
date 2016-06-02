@@ -326,10 +326,6 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 		}
 	}
 
-	Minstrel * rc = _el->rcs()->at(iface_id);
-	TransmissionPolicies * tx_table = rc->tx_policies();
-	tx_table->insert(src, rates);
-
 	if (htcaps) {
 		struct click_wifi_ht_caps *ht = (struct click_wifi_ht_caps *) htcaps;
 

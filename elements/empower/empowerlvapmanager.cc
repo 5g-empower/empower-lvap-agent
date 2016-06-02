@@ -1040,14 +1040,8 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 		   return 0;
 	}
 
-	// insert new policy
 	_rcs[iface]->tx_policies()->insert(addr, mcs, no_ack, tx_mcast, ur, rts_cts);
-
-	// reset minstrel status
 	_rcs[iface]->forget_station(addr);
-
-	// send status message back to controller
-	send_status_port(addr, iface);
 
 	return 0;
 
