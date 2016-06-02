@@ -45,7 +45,7 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 	// process triggers
 	RssiTrigger *rssi = (RssiTrigger *) data;
 	rssi->_ers->_lock.acquire_read();
-	for (NTIter iter = rssi->_ers->stas.begin(); iter.live();) {
+	for (NTIter iter = rssi->_ers->stas.begin(); iter.live(); iter++) {
 		DstInfo *nfo = &iter.value();
 		// not on the same interface
 		if (nfo->_iface_id != rssi->_iface) {
