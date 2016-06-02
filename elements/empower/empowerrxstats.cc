@@ -383,18 +383,18 @@ String EmpowerRXStats::read_handler(Element *e, void *thunk) {
 	}
 	case H_STATS: {
 		StringAccum sa;
-		_stas_lock.acquire_read();
+		td->_stas_lock.acquire_read();
 		for (NTIter iter = td->_stas.begin(); iter.live(); iter++) {
 			DstInfo *nfo = &iter.value();
 			sa << nfo->unparse(true);
 		}
-		_stas_lock.release_read();
-		_aps_lock.acquire_read();
+		td->_stas_lock.release_read();
+		td->_aps_lock.acquire_read();
 		for (NTIter iter = td->_aps.begin(); iter.live(); iter++) {
 			DstInfo *nfo = &iter.value();
 			sa << nfo->unparse(false);
 		}
-		_aps_lock.release_read();
+		td->_aps_lock.release_read();
 		return sa.take_string();
 	}
 	case H_SIGNAL_OFFSET:

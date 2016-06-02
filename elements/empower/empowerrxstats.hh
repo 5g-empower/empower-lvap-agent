@@ -8,6 +8,7 @@
 #include <click/timer.hh>
 #include <click/straccum.hh>
 #include <clicknet/wifi.h>
+#include <click/sync.hh>
 #include "summary_trigger.hh"
 #include "rssi_trigger.hh"
 #include "dstinfo.hh"
