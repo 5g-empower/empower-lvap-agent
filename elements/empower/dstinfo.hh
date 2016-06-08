@@ -7,33 +7,6 @@
 #include <click/vector.hh>
 CLICK_DECLS
 
-class EWMA {
-public:
-
-	EWMA() : internal(0), weight(75) {
-	}
-
-	EWMA(unsigned long weight) : internal(0), weight(weight) {
-	}
-
-	~EWMA() {
-	}
-
-	void add(int val) {
-		internal = (internal != 0) ? (val * (100 - weight) + internal * weight) / 100 : val;
-	}
-
-	double avg() const {
-		return internal;
-	}
-
-private:
-
-	double internal;
-	long weight;
-
-};
-
 class SMA {
 public:
 	SMA(unsigned int period) :
@@ -118,8 +91,6 @@ public:
 	SMA *_sma_rssi;
 	int _sma_period;
 	int _aging;
-	EWMA * _ewma_rssi;
-	int _ewma_level;
 	int _hist_rssi;
 	int _hist_packets;
 	int _iface_id;
@@ -129,12 +100,10 @@ public:
 		_eth = EtherAddress();
 		_sma_period = 101;
 		_sma_rssi = new SMA(_sma_period);
-		_ewma_level = 80;
 		_accum_rssi = 0;
 		_squares_rssi = 0;
 		_aging = -95;
 		_packets = 0;
-		_ewma_rssi = new EWMA(_ewma_level);
 		_last_rssi = 0;
 		_last_std= 0;
 		_last_packets= 0;
@@ -143,16 +112,14 @@ public:
 		_iface_id = -1;
 	}
 
-	DstInfo(EtherAddress eth, int ewma_level, int sma_period, int aging) {
+	DstInfo(EtherAddress eth, int sma_period, int aging) {
 		_eth = eth;
 		_sma_period = sma_period;
 		_sma_rssi = new SMA(_sma_period);
-		_ewma_level = ewma_level;
 		_aging = aging;
 		_accum_rssi = 0;
 		_squares_rssi = 0;
 		_packets = 0;
-		_ewma_rssi = new EWMA(_ewma_level);
 		_last_rssi = 0;
 		_last_std = 0;
 		_last_packets= 0;
@@ -164,7 +131,6 @@ public:
 	void update() {
 		// Implement simple aging mechanism
 		if (_packets == 0) {
-			_ewma_rssi->add(_aging);
 			_sma_rssi->add(_aging);
 		}
 		// Update stats
@@ -182,7 +148,6 @@ public:
 		_packets++;
 		_accum_rssi += rssi;
 		_squares_rssi += rssi * rssi;
-		_ewma_rssi->add(rssi);
 		_sma_rssi->add(rssi);
 		_last_received.assign_now();
 	}
@@ -194,7 +159,6 @@ public:
 		sa << _eth.unparse();
 		sa << (station ? " STA" : " AP");
 		sa << " sma_rssi " << _sma_rssi->avg();
-		sa << " ewma_rssi " << _ewma_rssi->avg();
 		sa << " last_rssi_avg " << _last_rssi;
 		sa << " last_rssi_std " << _last_std;
 		sa << " last_packets " << _last_packets;

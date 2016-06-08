@@ -37,8 +37,7 @@ CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
 		_e11k(0), _ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0),
-		_uplink(0), _downlink(0), _timer(this), _seq(0), _period(5000),
-		_debug(false) {
+		_timer(this), _seq(0), _period(5000), _debug(false) {
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
@@ -90,8 +89,6 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read_m("RCS", rcs_strings)
 			                    .read_m("RES", res_strings)
 			                    .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
-			                    .read_m("UPLINK", ElementCastArg("Counter"), _uplink)
-			                    .read_m("DOWNLINK", ElementCastArg("Counter"), _downlink)
 								.read("PERIOD", _period)
 			                    .read("DEBUG", _debug)
 			                    .complete();
@@ -297,8 +294,6 @@ void EmpowerLVAPManager::send_hello() {
 	hello->set_seq(get_next_seq());
 	hello->set_period(_period);
 	hello->set_wtp(_wtp);
-	hello->set_downlink_bytes(_downlink->byte_count());
-	hello->set_uplink_bytes(_uplink->byte_count());
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: sending hello (%u)!",
@@ -551,9 +546,6 @@ void EmpowerLVAPManager::send_img_response(int type, EtherAddress,
 	imgs->set_seq(get_next_seq());
 	imgs->set_graph_id(graph_id);
 	imgs->set_wtp(_wtp);
-	imgs->set_hwaddr(hwaddr);
-	imgs->set_channel(channel);
-	imgs->set_band(band);
 	imgs->set_nb_neighbors(neighbors.size());
 
 	uint8_t *ptr = (uint8_t *) imgs;
@@ -565,12 +557,11 @@ void EmpowerLVAPManager::send_img_response(int type, EtherAddress,
 		assert (ptr <= end);
 		cqm_entry *entry = (cqm_entry *) ptr;
 		entry->set_sta(neighbors[i]._eth);
-		entry->set_ewma_rssi(neighbors[i]._ewma_rssi->avg());
 		entry->set_last_rssi(neighbors[i]._last_rssi);
 		entry->set_last_std(neighbors[i]._last_std);
 		entry->set_last_packets(neighbors[i]._last_packets);
 		entry->set_hist_packets(neighbors[i]._hist_packets);
-		entry->set_sma_rssi(neighbors[i]._sma_rssi->avg());
+		entry->set_mov_rssi(neighbors[i]._sma_rssi->avg());
 		ptr += sizeof(struct cqm_entry);
 	}
 
@@ -668,7 +659,6 @@ void EmpowerLVAPManager::send_link_stats_response(EtherAddress sta, uint32_t lin
 	link_stats->set_seq(get_next_seq());
 	link_stats->set_link_stats_id(link_stats_id);
 	link_stats->set_wtp(_wtp);
-	link_stats->set_sta(ess._sta);
 	link_stats->set_nb_link_stats(rates.size());
 
 	uint8_t *ptr = (uint8_t *) link_stats;
@@ -1238,8 +1228,8 @@ int EmpowerLVAPManager::handle_link_stats_request(Packet *p, uint32_t offset) {
 		return 0;
 	}
 	struct empower_link_stats_request *q = (struct empower_link_stats_request *) (p->data() + offset);
-	EtherAddress sta= q->sta();
-	send_link_stats_response(sta, q->link_stats_id());
+	EtherAddress lvap = q->lvap();
+	send_link_stats_response(lvap, q->link_stats_id());
 	return 0;
 }
 

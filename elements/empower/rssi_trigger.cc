@@ -64,19 +64,19 @@ bool RssiTrigger::matches(const DstInfo* nfo) {
 	bool match = false;
 	switch (_rel) {
 	case EQ:
-		match = (nfo->_ewma_rssi->avg() == _val);
+		match = (nfo->_sma_rssi->avg() == _val);
 		break;
 	case GT:
-		match = (nfo->_ewma_rssi->avg() > _val);
+		match = (nfo->_sma_rssi->avg() > _val);
 		break;
 	case LT:
-		match = (nfo->_ewma_rssi->avg() < _val);
+		match = (nfo->_sma_rssi->avg() < _val);
 		break;
 	case GE:
-		match = (nfo->_ewma_rssi->avg() >= _val);
+		match = (nfo->_sma_rssi->avg() >= _val);
 		break;
 	case LE:
-		match = (nfo->_ewma_rssi->avg() <= _val);
+		match = (nfo->_sma_rssi->avg() <= _val);
 		break;
 	}
 	return match;

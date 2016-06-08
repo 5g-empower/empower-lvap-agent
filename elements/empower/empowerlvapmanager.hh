@@ -350,8 +350,6 @@ private:
 	class EmpowerAssociationResponder *_eassor;
 	class EmpowerDeAuthResponder *_edeauthr;
 	class EmpowerRXStats *_ers;
-	class Counter *_uplink;
-	class Counter *_downlink;
 
 	String _empower_iface;
 	EtherAddress _empower_hwaddr;

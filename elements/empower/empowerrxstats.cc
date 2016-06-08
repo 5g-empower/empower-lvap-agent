@@ -57,7 +57,7 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 		}
 		// check if condition matches
 		if (rssi->matches(nfo) && !rssi->_dispatched) {
-			rssi->_el->send_rssi_trigger(nfo->_eth, rssi->_trigger_id, nfo->_ewma_rssi->avg());
+			rssi->_el->send_rssi_trigger(nfo->_eth, rssi->_trigger_id, nfo->_sma_rssi->avg());
 			rssi->_dispatched = true;
 		} else if (!rssi->matches(nfo) && rssi->_dispatched) {
 			rssi->_dispatched = false;
@@ -70,7 +70,7 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 
 EmpowerRXStats::EmpowerRXStats() :
 		_el(0), _timer(this), _signal_offset(0), _aging(-95), _aging_th(-94),
-		_period(1000), _ewma_level(80), _sma_period(13), _debug(false) {
+		_period(1000), _sma_period(13), _debug(false) {
 
 }
 
@@ -89,7 +89,6 @@ int EmpowerRXStats::configure(Vector<String> &conf, ErrorHandler *errh) {
 			.read("EL", ElementCastArg("EmpowerLVAPManager"), _el)
 			.read("AGING", _aging)
 			.read("AGING_TH", _aging_th)
-			.read("EWMA_LEVEL", _ewma_level)
 			.read("SMA_PERIOD", _sma_period)
 			.read("SIGNAL_OFFSET", _signal_offset)
 			.read("PERIOD", _period)
@@ -109,7 +108,7 @@ void EmpowerRXStats::run_timer(Timer *)
 		DstInfo *nfo = &iter.value();
 		nfo->update();
 		// Delete entries with RSSI lower than -90
-		if (nfo->_last_packets == 0 && nfo->_ewma_rssi->avg() <= _aging_th && nfo->_sma_rssi->avg() <= _aging_th) {
+		if (nfo->_last_packets == 0 && nfo->_sma_rssi->avg() <= _aging_th) {
 			iter = stas.erase(iter);
 		} else {
 			++iter;
@@ -121,7 +120,7 @@ void EmpowerRXStats::run_timer(Timer *)
 		DstInfo *nfo = &iter.value();
 		nfo->update();
 		// Delete entries with RSSI lower than -90
-		if (nfo->_last_packets == 0 && nfo->_ewma_rssi->avg() <= _aging_th && nfo->_sma_rssi->avg() <= _aging_th) {
+		if (nfo->_last_packets == 0 && nfo->_sma_rssi->avg() <= _aging_th) {
 			iter = aps.erase(iter);
 		} else {
 			++iter;
@@ -216,10 +215,10 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 	if (!nfo) {
 		if (station) {
-			stas[ta] = DstInfo(ta, _ewma_level, _sma_period, _aging);
+			stas[ta] = DstInfo(ta, _sma_period, _aging);
 			nfo = stas.get_pointer(ta);
 		} else {
-			aps[ta] = DstInfo(ta, _ewma_level, _sma_period, _aging);
+			aps[ta] = DstInfo(ta, _sma_period, _aging);
 			nfo = aps.get_pointer(ta);
 		}
 	}
@@ -354,7 +353,7 @@ String EmpowerRXStats::read_handler(Element *e, void *thunk) {
 					continue;
 				if ((*qi)->matches(nfo)) {
 					sa << (*qi)->unparse();
-					sa << " current " << nfo->_ewma_rssi->avg();
+					sa << " current " << nfo->_sma_rssi->avg();
 					sa << "\n";
 				}
 			}

@@ -96,7 +96,6 @@ private:
 	int _aging;
 	int _aging_th;
 	unsigned _period;
-	unsigned _ewma_level;
 	unsigned _sma_period;
 	bool _debug;
 
