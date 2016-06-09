@@ -618,7 +618,7 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
 }
 
-void EmpowerLVAPManager::send_link_stats_response(EtherAddress lvap, uint32_t link_stats_id) {
+void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lvap_stats_id) {
 
 	Vector<Rate> rates;
 
@@ -631,7 +631,7 @@ void EmpowerLVAPManager::send_link_stats_response(EtherAddress lvap, uint32_t li
 		rates.push_back(Rate(nfo->eth, rate, prob));
 	}
 
-	int len = sizeof(empower_link_stats_response) + rates.size() * sizeof(link_stats_entry);
+	int len = sizeof(empower_lvap_stats_response) + rates.size() * sizeof(lvap_stats_entry);
 	WritablePacket *p = Packet::make(len);
 
 	if (!p) {
@@ -643,25 +643,25 @@ void EmpowerLVAPManager::send_link_stats_response(EtherAddress lvap, uint32_t li
 
 	memset(p->data(), 0, p->length());
 
-	empower_link_stats_response *link_stats = (struct empower_link_stats_response *) (p->data());
-	link_stats->set_version(_empower_version);
-	link_stats->set_length(len);
-	link_stats->set_type(EMPOWER_PT_LINK_STATS_RESPONSE);
-	link_stats->set_seq(get_next_seq());
-	link_stats->set_link_stats_id(link_stats_id);
-	link_stats->set_wtp(_wtp);
-	link_stats->set_nb_link_stats(rates.size());
+	empower_lvap_stats_response *lvap_stats = (struct empower_lvap_stats_response *) (p->data());
+	lvap_stats->set_version(_empower_version);
+	lvap_stats->set_length(len);
+	lvap_stats->set_type(EMPOWER_PT_LVAP_STATS_RESPONSE);
+	lvap_stats->set_seq(get_next_seq());
+	lvap_stats->set_lvap_stats_id(lvap_stats_id);
+	lvap_stats->set_wtp(_wtp);
+	lvap_stats->set_nb_lvap_stats(rates.size());
 
-	uint8_t *ptr = (uint8_t *) link_stats;
-	ptr += sizeof(struct empower_link_stats_response);
-	uint8_t *end = ptr + (len - sizeof(struct empower_link_stats_response));
+	uint8_t *ptr = (uint8_t *) lvap_stats;
+	ptr += sizeof(struct empower_lvap_stats_response);
+	uint8_t *end = ptr + (len - sizeof(struct empower_lvap_stats_response));
 
 	for (int i = 0; i < rates.size(); i++) {
 		assert (ptr <= end);
-		link_stats_entry *entry = (link_stats_entry *) ptr;
+		lvap_stats_entry *entry = (lvap_stats_entry *) ptr;
 		entry->set_rate(rates[i]._rate);
 		entry->set_prob(rates[i]._prob);
-		ptr += sizeof(struct link_stats_entry);
+		ptr += sizeof(struct lvap_stats_entry);
 	}
 
 	output(0).push(p);
@@ -1211,16 +1211,16 @@ int EmpowerLVAPManager::handle_uimg_request(Packet *p, uint32_t offset) {
 	return 0;
 }
 
-int EmpowerLVAPManager::handle_link_stats_request(Packet *p, uint32_t offset) {
+int EmpowerLVAPManager::handle_lvap_stats_request(Packet *p, uint32_t offset) {
 	if (!_ers) {
 		click_chatter("%{element} :: %s :: RXStats Element not available!",
 					  this,
 					  __func__);
 		return 0;
 	}
-	struct empower_link_stats_request *q = (struct empower_link_stats_request *) (p->data() + offset);
+	struct empower_lvap_stats_request *q = (struct empower_lvap_stats_request *) (p->data() + offset);
 	EtherAddress lvap = q->lvap();
-	send_link_stats_response(lvap, q->link_stats_id());
+	send_lvap_stats_response(lvap, q->lvap_stats_id());
 	return 0;
 }
 
@@ -1306,8 +1306,8 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 		case EMPOWER_PT_SET_PORT:
 			handle_set_port(p, offset);
 			break;
-		case EMPOWER_PT_LINK_STATS_REQUEST:
-			handle_link_stats_request(p, offset);
+		case EMPOWER_PT_LVAP_STATS_REQUEST:
+			handle_lvap_stats_request(p, offset);
 			break;
 		default:
 			click_chatter("%{element} :: %s :: Unknown packet type: %d",

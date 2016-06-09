@@ -53,8 +53,8 @@ enum empower_packet_types {
     EMPOWER_PT_NCQM_RESPONSE = 0x28,    // wtp -> ac
 
     // Link Stats
-    EMPOWER_PT_LINK_STATS_REQUEST = 0x29,    // ac -> wtp
-    EMPOWER_PT_LINK_STATS_RESPONSE = 0x30,   // wtp -> ac
+    EMPOWER_PT_LVAP_STATS_REQUEST = 0x29,    // ac -> wtp
+    EMPOWER_PT_LVAP_STATS_RESPONSE = 0x30,   // wtp -> ac
 
     // VAPs
     EMPOWER_PT_ADD_VAP = 0x31,         // ac -> wtp
@@ -215,30 +215,30 @@ struct port_elements_entry {
 
 
 /* link stats request packet format */
-struct empower_link_stats_request : public empower_header {
+struct empower_lvap_stats_request : public empower_header {
 private:
-  uint32_t _link_stats_id;
+  uint32_t _lvap_stats_id;
   uint8_t  _lvap[6];
 
 public:
-    uint32_t     link_stats_id() { return ntohl(_link_stats_id); }
+    uint32_t     lvap_stats_id() { return ntohl(_lvap_stats_id); }
     EtherAddress lvap()          { return EtherAddress(_lvap); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* link stats response packet format */
-struct empower_link_stats_response : public empower_header {
+struct empower_lvap_stats_response : public empower_header {
 private:
-  uint32_t _link_stats_id;
+  uint32_t _lvap_stats_id;
   uint8_t  _wtp[6];
-  uint16_t _nb_link_stats;
+  uint16_t _nb_lvap_stats;
 public:
-  void set_link_stats_id(uint32_t link_stats_id) { _link_stats_id = htonl(link_stats_id); }
+  void set_lvap_stats_id(uint32_t lvap_stats_id) { _lvap_stats_id = htonl(lvap_stats_id); }
   void set_wtp(EtherAddress wtp)                 { memcpy(_wtp, wtp.data(), 6); }
-  void set_nb_link_stats(uint16_t nb_link_stats) { _nb_link_stats = htons(nb_link_stats); }
+  void set_nb_lvap_stats(uint16_t nb_lvap_stats) { _nb_lvap_stats = htons(nb_lvap_stats); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* link_stats entry format */
-struct link_stats_entry {
+/* lvap_stats entry format */
+struct lvap_stats_entry {
   private:
     uint8_t _rate;
     uint8_t _prob;

@@ -268,7 +268,7 @@ public:
 	int handle_nimg_request(Packet *, uint32_t);
 	int handle_set_port(Packet *, uint32_t);
 	int handle_frames_request(Packet *, uint32_t);
-	int handle_link_stats_request(Packet *, uint32_t);
+	int handle_lvap_stats_request(Packet *, uint32_t);
 
 	void send_hello();
 	void send_probe_request(EtherAddress, String, uint8_t);
@@ -287,7 +287,7 @@ public:
 	void send_rssi_trigger(EtherAddress, uint32_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);
 	void send_summary(EtherAddress, uint32_t, const Vector<Frame> &);
-	void send_link_stats_response(EtherAddress, uint32_t);
+	void send_lvap_stats_response(EtherAddress, uint32_t);
 
 	EtherAddress wtp() { return _wtp; }
 	EtherAddress empower_hwaddr() { return _empower_hwaddr; }
