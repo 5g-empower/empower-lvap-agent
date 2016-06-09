@@ -65,25 +65,6 @@ typedef CBytes::iterator CBytesIter;
 
 class Minstrel;
 
-class Rate {
-public:
-	EtherAddress _eth;
-	uint8_t _rate;
-	uint8_t _prob;
-	Rate() :
-			_eth(EtherAddress()), _rate(0), _prob(0) {
-	}
-	Rate(EtherAddress eth, uint8_t rate, uint8_t prob) :
-			_eth(eth), _rate(rate), _prob(prob) {
-	}
-	String unparse() {
-		StringAccum sa;
-		sa << _eth.unparse() << _rate << ' ' << _prob;
-		return sa.take_string();
-	}
-};
-
-
 class NetworkPort {
 public:
 	EtherAddress _hwaddr;

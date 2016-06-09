@@ -620,18 +620,11 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
 void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lvap_stats_id) {
 
-	Vector<Rate> rates;
 
 	EmpowerStationState ess = _lvaps.get(lvap);
 	MinstrelDstInfo *nfo = _rcs.at(ess._iface_id)->neighbors()->findp(lvap);
 
-	for (int i = 0; i < nfo->rates.size(); i++) {
-		uint8_t prob = nfo->cur_prob[i] / 180;
-		uint8_t rate = nfo->rates[i] / 2;
-		rates.push_back(Rate(nfo->eth, rate, prob));
-	}
-
-	int len = sizeof(empower_lvap_stats_response) + rates.size() * sizeof(lvap_stats_entry);
+	int len = sizeof(empower_lvap_stats_response) + nfo->rates.size() * sizeof(lvap_stats_entry);
 	WritablePacket *p = Packet::make(len);
 
 	if (!p) {
@@ -650,17 +643,17 @@ void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lv
 	lvap_stats->set_seq(get_next_seq());
 	lvap_stats->set_lvap_stats_id(lvap_stats_id);
 	lvap_stats->set_wtp(_wtp);
-	lvap_stats->set_nb_lvap_stats(rates.size());
+	lvap_stats->set_nb_lvap_stats(nfo->rates.size());
 
 	uint8_t *ptr = (uint8_t *) lvap_stats;
 	ptr += sizeof(struct empower_lvap_stats_response);
 	uint8_t *end = ptr + (len - sizeof(struct empower_lvap_stats_response));
 
-	for (int i = 0; i < rates.size(); i++) {
+	for (int i = 0; i < nfo->rates.size(); i++) {
 		assert (ptr <= end);
 		lvap_stats_entry *entry = (lvap_stats_entry *) ptr;
-		entry->set_rate(rates[i]._rate);
-		entry->set_prob(rates[i]._prob);
+		entry->set_rate(nfo->rates[i]);
+		entry->set_prob(nfo->cur_prob[i]);
 		ptr += sizeof(struct lvap_stats_entry);
 	}
 
