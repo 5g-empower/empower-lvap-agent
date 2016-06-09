@@ -618,29 +618,20 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
 }
 
-void EmpowerLVAPManager::send_link_stats_response(EtherAddress sta, uint32_t link_stats_id) {
+void EmpowerLVAPManager::send_link_stats_response(EtherAddress lvap, uint32_t link_stats_id) {
 
 	Vector<Rate> rates;
 
-	EmpowerStationState ess = _lvaps.get(sta);
+	EmpowerStationState ess = _lvaps.get(lvap);
+	MinstrelDstInfo *nfo = _rcs.at(ess._iface_id)->neighbors()->findp(lvap);
 
-	if (ess._iface_id >= _rcs.size()) {
-		return;
-	}
-
-	Minstrel *rc = _rcs.at(ess._iface_id);
-
-	for (MinstrelIter iter = rc->neighbors()->begin(); iter.live(); iter++) {
-		MinstrelDstInfo *nfo = &iter.value();
-		for (int i = 0; i < nfo->rates.size(); i++) {
-			uint8_t prob = nfo->cur_prob[i] / 180;
-			uint8_t rate = nfo->rates[i] / 2;
-			rates.push_back(Rate(nfo->eth, rate, prob));
-		}
+	for (int i = 0; i < nfo->rates.size(); i++) {
+		uint8_t prob = nfo->cur_prob[i] / 180;
+		uint8_t rate = nfo->rates[i] / 2;
+		rates.push_back(Rate(nfo->eth, rate, prob));
 	}
 
 	int len = sizeof(empower_link_stats_response) + rates.size() * sizeof(link_stats_entry);
-
 	WritablePacket *p = Packet::make(len);
 
 	if (!p) {
