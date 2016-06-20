@@ -305,7 +305,7 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 			rates.push_back((int)(rate & WIFI_RATE_VAL));
 			if (rate & WIFI_RATE_BASIC ) {
 				sa << " *" << (int) (rate ^ WIFI_RATE_BASIC);
-			}else {
+			} else {
 				sa << " " << (int) rate;
 			}
 		}
@@ -320,7 +320,7 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 			rates.push_back((int)(rate & WIFI_RATE_VAL));
 			if (rate & WIFI_RATE_BASIC ) {
 				sa << " *" << (int) (rate ^ WIFI_RATE_BASIC);
-			}else {
+			} else {
 				sa << " " << (int) rate;
 			}
 		}

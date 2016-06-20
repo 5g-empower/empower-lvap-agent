@@ -652,8 +652,13 @@ void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lv
 	for (int i = 0; i < nfo->rates.size(); i++) {
 		assert (ptr <= end);
 		lvap_stats_entry *entry = (lvap_stats_entry *) ptr;
-		entry->set_rate(nfo->rates[i]);
-		entry->set_prob(nfo->cur_prob[i]);
+		uint8_t prob = nfo->probability[i] / 180;
+		uint8_t rate = nfo->rates[i] / 2;
+		uint8_t tp = nfo->cur_tp[i] / ((18000 << 10) / 96);
+		tp = tp / 10;
+		entry->set_rate(rate);
+		entry->set_prob(prob);
+		entry->set_tp(tp);
 		ptr += sizeof(struct lvap_stats_entry);
 	}
 

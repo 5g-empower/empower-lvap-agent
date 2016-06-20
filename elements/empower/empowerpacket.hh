@@ -242,9 +242,11 @@ struct lvap_stats_entry {
   private:
     uint8_t _rate;
     uint8_t _prob;
+    uint8_t _tp;
   public:
     void set_rate(uint8_t rate) { _rate = rate; }
     void set_prob(uint8_t prob) { _prob = prob; }
+    void set_tp(uint8_t tp) 	{ _tp = tp; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* channel quality map request packet format */

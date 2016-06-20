@@ -143,15 +143,15 @@ public:
 
 // Cross structure mapping bssids to list of associated
 // station and to the interface id
-class EmpowerInfoBssid {
+class InfoBssid {
 public:
 	EtherAddress _bssid;
 	Vector<EtherAddress> _stas;
 	int _iface_id;
 };
 
-typedef HashTable<EtherAddress, EmpowerInfoBssid> InfoBssid;
-typedef InfoBssid::iterator IBIter;
+typedef HashTable<EtherAddress, InfoBssid> InfoBssids;
+typedef InfoBssids::iterator IBIter;
 
 typedef HashTable<EtherAddress, EmpowerVAPState> VAP;
 typedef VAP::iterator VAPIter;
@@ -275,8 +275,8 @@ public:
 	LVAP* lvaps() { return &_lvaps; }
 	VAP* vaps() { return &_vaps; }
 
-	InfoBssid* info_bssids() {
-		InfoBssid * _info_bssids = new InfoBssid();
+	InfoBssids* info_bssids() {
+		InfoBssids * _info_bssids = new InfoBssids();
 		for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
 			if (!it.value()._set_mask) {
 				continue;
@@ -288,12 +288,12 @@ public:
 				continue;
 			}
 			if (_info_bssids->find(it.value()._lvap_bssid) == _info_bssids->end()) {
-				EmpowerInfoBssid info;
+				InfoBssid info;
 				info._bssid = it.value()._lvap_bssid;
 				info._iface_id = it.value()._iface_id;
 				_info_bssids->set(it.value()._lvap_bssid, info);
 			}
-			EmpowerInfoBssid *eib = _info_bssids->get_pointer(it.value()._lvap_bssid);
+			InfoBssid *eib = _info_bssids->get_pointer(it.value()._lvap_bssid);
 			eib->_stas.push_back(it.value()._sta);
 		}
 		return _info_bssids;
