@@ -620,9 +620,16 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
 void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lvap_stats_id) {
 
-
 	EmpowerStationState ess = _lvaps.get(lvap);
 	MinstrelDstInfo *nfo = _rcs.at(ess._iface_id)->neighbors()->findp(lvap);
+
+	if (!nfo) {
+		click_chatter("%{element} :: %s :: no rate infor for %s",
+					  this,
+					  __func__,
+					  lvap.unparse().c_str());
+		return;
+	}
 
 	int len = sizeof(empower_lvap_stats_response) + nfo->rates.size() * sizeof(lvap_stats_entry);
 	WritablePacket *p = Packet::make(len);
@@ -1025,12 +1032,6 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 }
 
 int EmpowerLVAPManager::handle_add_rssi_trigger(Packet *p, uint32_t offset) {
-	if (!_ers) {
-		click_chatter("%{element} :: %s :: RXStats Element not available!",
-					  this,
-					  __func__);
-		return 0;
-	}
 	struct empower_add_rssi_trigger *q = (struct empower_add_rssi_trigger *) (p->data() + offset);
 	EtherAddress hwaddr = q->hwaddr();
 	empower_bands_types band = (empower_bands_types) q->band();
@@ -1041,24 +1042,12 @@ int EmpowerLVAPManager::handle_add_rssi_trigger(Packet *p, uint32_t offset) {
 }
 
 int EmpowerLVAPManager::handle_del_rssi_trigger(Packet *p, uint32_t offset) {
-	if (!_ers) {
-		click_chatter("%{element} :: %s :: RXStats Element not available!",
-					  this,
-					  __func__);
-		return 0;
-	}
 	struct empower_del_rssi_trigger *q = (struct empower_del_rssi_trigger *) (p->data() + offset);
 	_ers->del_rssi_trigger(q->trigger_id());
 	return 0;
 }
 
 int EmpowerLVAPManager::handle_add_summary_trigger(Packet *p, uint32_t offset) {
-	if (!_ers) {
-		click_chatter("%{element} :: %s :: RXStats Element not available!",
-					  this,
-					  __func__);
-		return 0;
-	}
 	struct empower_add_summary_trigger *q = (struct empower_add_summary_trigger *) (p->data() + offset);
 	EtherAddress hwaddr = q->hwaddr();
 	empower_bands_types band = (empower_bands_types) q->band();
@@ -1069,12 +1058,6 @@ int EmpowerLVAPManager::handle_add_summary_trigger(Packet *p, uint32_t offset) {
 }
 
 int EmpowerLVAPManager::handle_del_summary_trigger(Packet *p, uint32_t offset) {
-	if (!_ers) {
-		click_chatter("%{element} :: %s :: RXStats Element not available!",
-					  this,
-					  __func__);
-		return 0;
-	}
 	struct empower_del_summary_trigger *q = (struct empower_del_summary_trigger *) (p->data() + offset);
 	_ers->del_summary_trigger(q->trigger_id());
 	return 0;
@@ -1194,12 +1177,6 @@ int EmpowerLVAPManager::handle_counters_request(Packet *p, uint32_t offset) {
 }
 
 int EmpowerLVAPManager::handle_uimg_request(Packet *p, uint32_t offset) {
-	if (!_ers) {
-		click_chatter("%{element} :: %s :: RXStats Element not available!",
-					  this,
-					  __func__);
-		return 0;
-	}
 	struct empower_cqm_request *q = (struct empower_cqm_request *) (p->data() + offset);
 	EtherAddress sta = q->addrs();
 	EtherAddress hwaddr = q->hwaddr();
@@ -1210,12 +1187,6 @@ int EmpowerLVAPManager::handle_uimg_request(Packet *p, uint32_t offset) {
 }
 
 int EmpowerLVAPManager::handle_lvap_stats_request(Packet *p, uint32_t offset) {
-	if (!_ers) {
-		click_chatter("%{element} :: %s :: RXStats Element not available!",
-					  this,
-					  __func__);
-		return 0;
-	}
 	struct empower_lvap_stats_request *q = (struct empower_lvap_stats_request *) (p->data() + offset);
 	EtherAddress lvap = q->lvap();
 	send_lvap_stats_response(lvap, q->lvap_stats_id());
