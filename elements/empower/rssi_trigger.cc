@@ -34,6 +34,8 @@ RssiTrigger::~RssiTrigger() {
 
 String RssiTrigger::unparse() {
 	StringAccum sa;
+	sa << Trigger::unparse();
+	sa << " addr ";
 	sa << _eth.unparse();
 	sa << " rel ";
 	switch (_rel) {

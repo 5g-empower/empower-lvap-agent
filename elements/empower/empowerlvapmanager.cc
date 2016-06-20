@@ -571,7 +571,6 @@ void EmpowerLVAPManager::send_img_response(int type, EtherAddress,
 
 void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
-	summary->_lock.acquire_write();
 	int len = sizeof(empower_summary_trigger) + summary->_frames.size() * sizeof(summary_entry);
 	WritablePacket *p = Packet::make(len);
 
@@ -612,7 +611,6 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 	}
 
 	summary->_frames.clear();
-	summary->_lock.release_write();
 
 	output(0).push(p);
 

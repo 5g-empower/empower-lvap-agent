@@ -52,7 +52,7 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 			continue;
 		}
 		// not matching the address
-		if (nfo->_eth != rssi->_eth && !rssi->_eth.is_broadcast()) {
+		if (nfo->_eth != rssi->_eth) {
 			continue;
 		}
 		// check if condition matches
@@ -235,10 +235,8 @@ EmpowerRXStats::simple_action(Packet *p) {
 			continue;
 		}
 		if ((*qi)->_eth == nfo->_eth || (*qi)->_eth.is_broadcast()) {
-			(*qi)->_lock.acquire_write();
 			Frame frame = Frame(ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length());
 			(*qi)->_frames.push_back(frame);
-			(*qi)->_lock.release_write();
 		}
 	}
 

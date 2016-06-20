@@ -38,9 +38,9 @@ public:
 	String unparse() {
 		StringAccum sa;
 		sa << _trigger_id;
-		sa << ": eth=";
+		sa << ": eth ";
 		sa << _eth.unparse();
-		sa << " iface=";
+		sa << " iface ";
 		sa << _iface;
 		return sa.take_string();
 	}

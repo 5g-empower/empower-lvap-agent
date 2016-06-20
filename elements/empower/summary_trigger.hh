@@ -4,7 +4,6 @@
 #include <click/hashcode.hh>
 #include <click/timer.hh>
 #include <click/vector.hh>
-#include <click/sync.hh>
 #include "trigger.hh"
 CLICK_DECLS
 
@@ -39,7 +38,6 @@ public:
 	uint32_t _sent;
 	int16_t _limit;
 	FramesList _frames;
-	ReadWriteLock _lock;
 
 	SummaryTrigger(int, EtherAddress, uint32_t, int16_t, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
 	~SummaryTrigger();
@@ -47,7 +45,7 @@ public:
 	String unparse();
 
 	inline bool operator==(const SummaryTrigger &b) {
-		return _eth == b._eth;
+		return (_iface == b._iface) && (_eth == b._eth);
 	}
 
 };

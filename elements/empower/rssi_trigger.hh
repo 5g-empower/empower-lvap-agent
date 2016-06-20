@@ -31,7 +31,7 @@ public:
 	bool matches(const DstInfo* nfo);
 
 	inline bool operator==(const RssiTrigger &b) {
-		return (_eth== b._eth) && (_rel == b._rel) && (_val == b._val);
+		return (_iface == b._iface) && (_eth == b._eth) && (_rel == b._rel) && (_val == b._val);
 	}
 
 };
