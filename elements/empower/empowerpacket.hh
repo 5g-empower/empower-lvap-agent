@@ -249,8 +249,8 @@ struct lvap_stats_entry {
     uint8_t _rate; 	/* Rate in units of 500kbps or MCS index */
     uint32_t _prob; /* Probability [0-18000] */
   public:
-    void set_rate(uint8_t rate) { _rate = rate; }
-    void set_prob(uint8_t prob) { _prob = prob; }
+    void set_rate(uint8_t rate)  { _rate = rate; }
+    void set_prob(uint32_t prob) { _prob = htonl(prob); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* channel quality map request packet format */
