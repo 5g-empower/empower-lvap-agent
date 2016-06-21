@@ -154,7 +154,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 
 }
 
-void EmpowerLVAPManager::send_rssi_trigger(EtherAddress sta, uint32_t trigger_id, uint8_t current) {
+void EmpowerLVAPManager::send_rssi_trigger(uint32_t trigger_id, uint8_t current) {
 
 	WritablePacket *p = Packet::make(sizeof(empower_rssi_trigger));
 
@@ -174,7 +174,6 @@ void EmpowerLVAPManager::send_rssi_trigger(EtherAddress sta, uint32_t trigger_id
 	request->set_seq(get_next_seq());
 	request->set_trigger_id(trigger_id);
 	request->set_wtp(_wtp);
-	request->set_sta(sta);
 	request->set_current(current);
 
 	output(0).push(p);
@@ -340,7 +339,7 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 	status->set_seq(get_next_seq());
 	status->set_assoc_id(ess._assoc_id);
 	if (ess._set_mask)
-		status->set_flag(EMPOWER_STATUS_SET_MASK);
+		status->set_flag(EMPOWER_STATUS_LVAP_SET_MASK);
 	if (ess._authentication_status)
 		status->set_flag(EMPOWER_STATUS_LVAP_AUTHENTICATED);
 	if (ess._association_status)
@@ -488,9 +487,8 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta, int iface, EtherAddr
 
 }
 
-void EmpowerLVAPManager::send_img_response(int type, EtherAddress,
-		uint32_t graph_id, EtherAddress hwaddr, uint8_t channel,
-		empower_bands_types band) {
+void EmpowerLVAPManager::send_img_response(int type, uint32_t graph_id,
+		EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
 
 	int iface_id = element_to_iface(hwaddr, channel, band);
 
@@ -546,7 +544,7 @@ void EmpowerLVAPManager::send_img_response(int type, EtherAddress,
 	imgs->set_seq(get_next_seq());
 	imgs->set_graph_id(graph_id);
 	imgs->set_wtp(_wtp);
-	imgs->set_nb_neighbors(neighbors.size());
+	imgs->set_nb_entries(neighbors.size());
 
 	uint8_t *ptr = (uint8_t *) imgs;
 	ptr += sizeof(struct empower_cqm_response);
@@ -557,8 +555,8 @@ void EmpowerLVAPManager::send_img_response(int type, EtherAddress,
 		assert (ptr <= end);
 		cqm_entry *entry = (cqm_entry *) ptr;
 		entry->set_sta(neighbors[i]._eth);
-		entry->set_last_rssi(neighbors[i]._last_rssi);
-		entry->set_last_std(neighbors[i]._last_std);
+		entry->set_last_rssi_avg(neighbors[i]._last_rssi);
+		entry->set_last_rssi_std(neighbors[i]._last_std);
 		entry->set_last_packets(neighbors[i]._last_packets);
 		entry->set_hist_packets(neighbors[i]._hist_packets);
 		entry->set_mov_rssi(neighbors[i]._sma_rssi->avg());
@@ -599,7 +597,7 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 	for (int i = 0; i < summary->_frames.size(); i++) {
 		assert (ptr <= end);
 		summary_entry *entry = (summary_entry *) ptr;
-		entry->set_sta(summary->_frames[i]._eth);
+		entry->set_addr(summary->_frames[i]._eth);
 		entry->set_tsft(summary->_frames[i]._tsft);
 		entry->set_seq(summary->_frames[i]._seq);
 		entry->set_rssi(summary->_frames[i]._rssi);
@@ -648,7 +646,7 @@ void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lv
 	lvap_stats->set_seq(get_next_seq());
 	lvap_stats->set_lvap_stats_id(lvap_stats_id);
 	lvap_stats->set_wtp(_wtp);
-	lvap_stats->set_nb_lvap_stats(nfo->rates.size());
+	lvap_stats->set_nb_entries(nfo->rates.size());
 
 	uint8_t *ptr = (uint8_t *) lvap_stats;
 	ptr += sizeof(struct empower_lvap_stats_response);
@@ -657,13 +655,8 @@ void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lv
 	for (int i = 0; i < nfo->rates.size(); i++) {
 		assert (ptr <= end);
 		lvap_stats_entry *entry = (lvap_stats_entry *) ptr;
-		uint8_t prob = nfo->probability[i] / 180;
-		uint8_t rate = nfo->rates[i] / 2;
-		uint8_t tp = nfo->cur_tp[i] / ((18000 << 10) / 96);
-		tp = tp / 10;
-		entry->set_rate(rate);
-		entry->set_prob(prob);
-		entry->set_tp(tp);
+		entry->set_rate(nfo->rates[i]);
+		entry->set_prob(nfo->probability[i]);
 		ptr += sizeof(struct lvap_stats_entry);
 	}
 
@@ -905,7 +898,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	empower_bands_types band = (empower_bands_types) add_lvap->band();
 	bool authentication_state = add_lvap->flag(EMPOWER_STATUS_LVAP_AUTHENTICATED);
 	bool association_state = add_lvap->flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
-	bool set_mask = add_lvap->flag(EMPOWER_STATUS_SET_MASK);
+	bool set_mask = add_lvap->flag(EMPOWER_STATUS_LVAP_SET_MASK);
 	EtherAddress encap = add_lvap->encap();
 
     int iface = element_to_iface(hwaddr, channel, band);
@@ -1035,7 +1028,7 @@ int EmpowerLVAPManager::handle_add_rssi_trigger(Packet *p, uint32_t offset) {
 	empower_bands_types band = (empower_bands_types) q->band();
 	uint8_t channel = q->channel();
 	int iface = element_to_iface(hwaddr, channel, band);
-	_ers->add_rssi_trigger(iface, q->sta(), q->trigger_id(), static_cast<relation_t>(q->relation()), q->value());
+	_ers->add_rssi_trigger(iface, q->sta(), q->trigger_id(), static_cast<empower_rssi_trigger_relation>(q->relation()), q->value(), q->period());
 	return 0;
 }
 
@@ -1051,7 +1044,7 @@ int EmpowerLVAPManager::handle_add_summary_trigger(Packet *p, uint32_t offset) {
 	empower_bands_types band = (empower_bands_types) q->band();
 	uint8_t channel = q->channel();
 	int iface = element_to_iface(hwaddr, channel, band);
-	_ers->add_summary_trigger(iface, q->addrs(), q->trigger_id(), q->limit(), q->period());
+	_ers->add_summary_trigger(iface, q->addr(), q->trigger_id(), q->limit(), q->period());
 	return 0;
 }
 
@@ -1169,25 +1162,24 @@ int EmpowerLVAPManager::handle_assoc_response(Packet *p, uint32_t offset) {
 
 int EmpowerLVAPManager::handle_counters_request(Packet *p, uint32_t offset) {
 	struct empower_counters_request *q = (struct empower_counters_request *) (p->data() + offset);
-	EtherAddress lvap = q->lvap();
-	send_counters_response(lvap, q->counters_id());
+	EtherAddress sta = q->sta();
+	send_counters_response(sta, q->counters_id());
 	return 0;
 }
 
 int EmpowerLVAPManager::handle_uimg_request(Packet *p, uint32_t offset) {
 	struct empower_cqm_request *q = (struct empower_cqm_request *) (p->data() + offset);
-	EtherAddress sta = q->addrs();
 	EtherAddress hwaddr = q->hwaddr();
 	empower_bands_types band = (empower_bands_types) q->band();
 	uint8_t channel = q->channel();
-	send_img_response(EMPOWER_PT_UCQM_RESPONSE, sta, q->graph_id(), hwaddr, channel, band);
+	send_img_response(EMPOWER_PT_UCQM_RESPONSE, q->graph_id(), hwaddr, channel, band);
 	return 0;
 }
 
 int EmpowerLVAPManager::handle_lvap_stats_request(Packet *p, uint32_t offset) {
 	struct empower_lvap_stats_request *q = (struct empower_lvap_stats_request *) (p->data() + offset);
-	EtherAddress lvap = q->lvap();
-	send_lvap_stats_response(lvap, q->lvap_stats_id());
+	EtherAddress sta = q->sta();
+	send_lvap_stats_response(sta, q->lvap_stats_id());
 	return 0;
 }
 
@@ -1199,11 +1191,10 @@ int EmpowerLVAPManager::handle_nimg_request(Packet *p, uint32_t offset) {
 		return 0;
 	}
 	struct empower_cqm_request *q = (struct empower_cqm_request *) (p->data() + offset);
-	EtherAddress ap = q->addrs();
 	EtherAddress hwaddr = q->hwaddr();
 	empower_bands_types band = (empower_bands_types) q->band();
 	uint8_t channel = q->channel();
-	send_img_response(EMPOWER_PT_NCQM_RESPONSE, ap, q->graph_id(), hwaddr, channel, band);
+	send_img_response(EMPOWER_PT_NCQM_RESPONSE, q->graph_id(), hwaddr, channel, band);
 	return 0;
 }
 

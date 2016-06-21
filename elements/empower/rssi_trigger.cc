@@ -22,7 +22,7 @@
 CLICK_DECLS
 
 RssiTrigger::RssiTrigger(int iface, EtherAddress eth, uint32_t trigger_id,
-		relation_t rel, int val, bool dispatched, uint16_t period,
+		empower_rssi_trigger_relation rel, int val, bool dispatched, uint16_t period,
 		EmpowerLVAPManager * el, EmpowerRXStats * ers) :
 		Trigger(iface, eth, trigger_id, period, el, ers), _rel(rel), _val(val),
 		_dispatched(dispatched) {

@@ -43,12 +43,12 @@ public:
 
 	// Returns the average of the last P elements added to this SMA.
 	// If no elements have been added yet, returns 0.0
-	double avg() const {
+	int avg() const {
 		ptrdiff_t size = this->size();
 		if (size == 0) {
 			return 0; // No entries => 0 average
 		}
-		return total / (double) size;
+		return (total / (double) size);
 	}
 
 private:
@@ -85,13 +85,12 @@ public:
 	int _accum_rssi;
 	int _squares_rssi;
 	int _packets;
-	double _last_rssi;
-	double _last_std;
+	int _last_rssi;
+	int _last_std;
 	int _last_packets;
 	SMA *_sma_rssi;
 	int _sma_period;
 	int _aging;
-	int _hist_rssi;
 	int _hist_packets;
 	int _iface_id;
 	Timestamp _last_received;
@@ -107,7 +106,6 @@ public:
 		_last_rssi = 0;
 		_last_std= 0;
 		_last_packets= 0;
-		_hist_rssi = 0;
 		_hist_packets = 0;
 		_iface_id = -1;
 	}
@@ -123,22 +121,20 @@ public:
 		_last_rssi = 0;
 		_last_std = 0;
 		_last_packets= 0;
-		_hist_rssi = 0;
 		_hist_packets = 0;
 		_iface_id = -1;
 	}
 
 	void update() {
-		// Implement simple aging mechanism
-		if (_packets == 0) {
-			_sma_rssi->add(_aging);
-		}
-		// Update stats
-		_hist_rssi += _accum_rssi;
 		_hist_packets += _packets;
 		_last_rssi = (_packets > 0) ? _accum_rssi / (double) _packets : 0;
 		_last_std = (_packets > 0) ? sqrt( (_squares_rssi / (double) _packets) - (_last_rssi * _last_rssi) ) : 0;
 		_last_packets = _packets;
+		if (_packets == 0) {
+			_sma_rssi->add(_aging);
+		} else {
+			_sma_rssi->add(_last_rssi);
+		}
 		_packets = 0;
 		_accum_rssi = 0;
 		_squares_rssi = 0;
@@ -148,7 +144,6 @@ public:
 		_packets++;
 		_accum_rssi += rssi;
 		_squares_rssi += rssi * rssi;
-		_sma_rssi->add(rssi);
 		_last_received.assign_now();
 	}
 

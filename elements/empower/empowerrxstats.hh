@@ -12,6 +12,7 @@
 #include "summary_trigger.hh"
 #include "rssi_trigger.hh"
 #include "dstinfo.hh"
+#include "empowerpacket.hh"
 CLICK_DECLS
 
 /*
@@ -69,7 +70,7 @@ public:
 
 	void add_handlers();
 
-	void add_rssi_trigger(int, EtherAddress, uint32_t, relation_t, int);
+	void add_rssi_trigger(int, EtherAddress, uint32_t, empower_rssi_trigger_relation, int, uint16_t);
 	void del_rssi_trigger(uint32_t);
 
 	void add_summary_trigger(int, EtherAddress, uint32_t, int16_t, uint16_t);

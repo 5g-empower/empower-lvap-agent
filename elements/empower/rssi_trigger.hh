@@ -4,26 +4,20 @@
 #include <click/hashcode.hh>
 #include <click/timer.hh>
 #include <click/vector.hh>
+#include "empowerpacket.hh"
 #include "dstinfo.hh"
 #include "trigger.hh"
 CLICK_DECLS
 
-enum relation_t {
-	EQ = 0,
-	GT = 1,
-	LT = 2,
-	GE = 3,
-	LE = 4,
-};
 
 class RssiTrigger: public Trigger {
 public:
 
-	relation_t _rel;
+	empower_rssi_trigger_relation _rel;
 	int _val;
 	bool _dispatched;
 
-	RssiTrigger(int, EtherAddress, uint32_t, relation_t, int, bool, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
+	RssiTrigger(int, EtherAddress, uint32_t, empower_rssi_trigger_relation, int, bool, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
 	~RssiTrigger();
 
 	String unparse();
