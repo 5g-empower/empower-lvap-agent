@@ -21,10 +21,10 @@
 #include "trigger.hh"
 CLICK_DECLS
 
-RssiTrigger::RssiTrigger(int iface, EtherAddress eth, uint32_t trigger_id,
+RssiTrigger::RssiTrigger(EtherAddress eth, uint32_t trigger_id,
 		empower_rssi_trigger_relation rel, int val, bool dispatched, uint16_t period,
 		EmpowerLVAPManager * el, EmpowerRXStats * ers) :
-		Trigger(iface, eth, trigger_id, period, el, ers), _rel(rel), _val(val),
+		Trigger(eth, trigger_id, period, el, ers), _rel(rel), _val(val),
 		_dispatched(dispatched) {
 
 }

@@ -15,7 +15,6 @@ class Trigger {
 
 public:
 
-	int _iface;
 	EtherAddress _eth;
 	uint32_t _trigger_id;
 	Timer * _trigger_timer;
@@ -23,9 +22,9 @@ public:
 	EmpowerLVAPManager * _el;
 	EmpowerRXStats * _ers;
 
-	Trigger(int iface, EtherAddress eth, uint32_t trigger_id, uint16_t period,
+	Trigger(EtherAddress eth, uint32_t trigger_id, uint16_t period,
 			EmpowerLVAPManager * el, EmpowerRXStats * ers) :
-			_iface(iface), _eth(eth), _trigger_id(trigger_id), _period(period),
+			_eth(eth), _trigger_id(trigger_id), _period(period),
 			_el(el), _ers(ers) {
 
 		_trigger_timer = new Timer();
@@ -40,8 +39,6 @@ public:
 		sa << _trigger_id;
 		sa << ": eth ";
 		sa << _eth.unparse();
-		sa << " iface ";
-		sa << _iface;
 		return sa.take_string();
 	}
 

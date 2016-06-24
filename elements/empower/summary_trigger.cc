@@ -23,7 +23,7 @@ CLICK_DECLS
 
 SummaryTrigger::SummaryTrigger(int iface, EtherAddress eth, uint32_t trigger_id, int16_t limit,
 		uint16_t period, EmpowerLVAPManager * el, EmpowerRXStats * ers) :
-		Trigger(iface, eth, trigger_id, period, el, ers), _sent(0), _limit(limit) {
+		Trigger(eth, trigger_id, period, el, ers), _iface(iface), _sent(0), _limit(limit) {
 
 }
 
@@ -34,6 +34,8 @@ SummaryTrigger::~SummaryTrigger() {
 String SummaryTrigger::unparse() {
 	StringAccum sa;
 	sa << Trigger::unparse();
+	sa << " iface ";
+	sa << _iface;
 	sa << " limit ";
 	sa << _limit;
 	sa << " period ";

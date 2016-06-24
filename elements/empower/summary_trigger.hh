@@ -36,6 +36,7 @@ class SummaryTrigger: public Trigger {
 
 public:
 
+	int _iface;
 	uint32_t _sent;
 	int16_t _limit;
 	FramesList _frames;

@@ -47,17 +47,13 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 	rssi->_ers->_lock.acquire_read();
 	for (NTIter iter = rssi->_ers->stas.begin(); iter.live(); iter++) {
 		DstInfo *nfo = &iter.value();
-		// not on the same interface
-		if (nfo->_iface_id != rssi->_iface) {
-			continue;
-		}
 		// not matching the address
 		if (nfo->_eth != rssi->_eth) {
 			continue;
 		}
 		// check if condition matches
 		if (rssi->matches(nfo) && !rssi->_dispatched) {
-			rssi->_el->send_rssi_trigger(rssi->_trigger_id, nfo->_sma_rssi->avg());
+			rssi->_el->send_rssi_trigger(rssi->_trigger_id, nfo->_iface_id, nfo->_sma_rssi->avg());
 			rssi->_dispatched = true;
 		} else if (!rssi->matches(nfo) && rssi->_dispatched) {
 			rssi->_dispatched = false;
@@ -257,8 +253,8 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 }
 
-void EmpowerRXStats::add_rssi_trigger(int iface, EtherAddress eth, uint32_t trigger_id, empower_rssi_trigger_relation rel, int val, uint16_t period) {
-	RssiTrigger * rssi = new RssiTrigger(iface, eth, trigger_id, rel, val, false, period, _el, this);
+void EmpowerRXStats::add_rssi_trigger(EtherAddress eth, uint32_t trigger_id, empower_rssi_trigger_relation rel, int val, uint16_t period) {
+	RssiTrigger * rssi = new RssiTrigger(eth, trigger_id, rel, val, false, period, _el, this);
 	for (RTIter qi = _rssi_triggers.begin(); qi != _rssi_triggers.end(); qi++) {
 		if (*rssi== **qi) {
 			click_chatter("%{element} :: %s :: trigger already defined (%s), setting sent to false",

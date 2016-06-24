@@ -462,16 +462,10 @@ struct empower_add_rssi_trigger: public empower_header {
 private:
     uint32_t _trigger_id;	/* Module id (int) */
     uint8_t  _sta[6];		/* EtherAddress */
-    uint8_t  _hwaddr[6];	/* EtherAddress */
-    uint8_t  _channel;		/* WiFi channel (int) */
-    uint8_t  _band;			/* WiFi band (empower_band_types) */
     uint8_t  _relation;		/* Relation (relation_t) */
     int8_t   _value;		/* RSSI value in dBm (int) */
     uint16_t _period;		/* Reporting period in ms (int) */
 public:
-    EtherAddress hwaddr() { return EtherAddress(_hwaddr); }
-    uint8_t channel()     { return _channel; }
-    uint8_t band()        { return _band; }
     uint32_t trigger_id() { return ntohl(_trigger_id); }
     EtherAddress sta()    { return EtherAddress(_sta); }
     uint8_t relation()    { return _relation; }
@@ -491,10 +485,16 @@ public:
 struct empower_rssi_trigger: public empower_header {
 private:
     uint32_t _trigger_id; 	/* Module id (int) */
-    uint8_t _wtp[6];		/* EtherAddress */
-    int8_t _current;		/* RSSI value in dBm (int) */
+    uint8_t  _wtp[6];		/* EtherAddress */
+    uint8_t  _hwaddr[6];	/* EtherAddress */
+    uint8_t  _channel;		/* WiFi channel (int) */
+    uint8_t  _band;			/* WiFi band (empower_band_types) */
+    int8_t  _current;		/* RSSI value in dBm (int) */
 public:
     void set_wtp(EtherAddress wtp)          { memcpy(_wtp, wtp.data(), 6); }
+    void set_band(uint8_t band)             { _band = band; }
+    void set_channel(uint8_t channel)       { _channel = channel; }
+    void set_hwaddr(EtherAddress hwaddr)    { memcpy(_hwaddr, hwaddr.data(), 6); }
     void set_current(int8_t current)        { _current = current; }
     void set_trigger_id(int32_t trigger_id) { _trigger_id = htonl(trigger_id); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;

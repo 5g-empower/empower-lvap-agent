@@ -17,7 +17,7 @@ public:
 	int _val;
 	bool _dispatched;
 
-	RssiTrigger(int, EtherAddress, uint32_t, empower_rssi_trigger_relation, int, bool, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
+	RssiTrigger(EtherAddress, uint32_t, empower_rssi_trigger_relation, int, bool, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
 	~RssiTrigger();
 
 	String unparse();
@@ -25,7 +25,7 @@ public:
 	bool matches(const DstInfo* nfo);
 
 	inline bool operator==(const RssiTrigger &b) {
-		return (_iface == b._iface) && (_eth == b._eth) && (_rel == b._rel) && (_val == b._val);
+		return (_eth == b._eth) && (_rel == b._rel) && (_val == b._val);
 	}
 
 };
