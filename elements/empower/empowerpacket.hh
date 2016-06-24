@@ -534,7 +534,8 @@ public:
 /* summary entry format */
 struct summary_entry {
   private:
-    uint8_t  _addr[6];	/* Module id (int) */
+    uint8_t  _ra[6];	/* Receiver address (EtherAddress) */
+    uint8_t  _ta[6];	/* Transmitter address (EtherAddress) */
     uint64_t _tsft;		/* Timestamp in microseconds (int) */
     uint16_t _seq;		/* Sequence number */
     int8_t   _rssi;		/* RSSI in dBm (int) */
@@ -550,7 +551,8 @@ struct summary_entry {
     void set_type(uint8_t type)       { _type = type; }
     void set_subtype(uint8_t subtype) { _subtype = subtype; }
     void set_length(uint32_t length)  { _length= htonl(length); }
-    void set_addr(EtherAddress addr)  { memcpy(_addr, addr.data(), 6); }
+    void set_ra(EtherAddress ra)  	  { memcpy(_ra, ra.data(), 6); }
+    void set_ta(EtherAddress ta)  	  { memcpy(_ta, ta.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del summary packet format */

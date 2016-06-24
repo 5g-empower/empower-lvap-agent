@@ -597,7 +597,8 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 	for (int i = 0; i < summary->_frames.size(); i++) {
 		assert (ptr <= end);
 		summary_entry *entry = (summary_entry *) ptr;
-		entry->set_addr(summary->_frames[i]._eth);
+		entry->set_ra(summary->_frames[i]._ra);
+		entry->set_ta(summary->_frames[i]._ta);
 		entry->set_tsft(summary->_frames[i]._tsft);
 		entry->set_seq(summary->_frames[i]._seq);
 		entry->set_rssi(summary->_frames[i]._rssi);

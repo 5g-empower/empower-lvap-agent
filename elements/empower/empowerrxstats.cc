@@ -196,7 +196,8 @@ EmpowerRXStats::simple_action(Packet *p) {
 		break;
 	}
 
-	EtherAddress ta = EtherAddress(w->i_addr2);;
+	EtherAddress ra = EtherAddress(w->i_addr1);
+	EtherAddress ta = EtherAddress(w->i_addr2);
 	DstInfo *nfo;
 
 	int8_t rssi;
@@ -234,7 +235,7 @@ EmpowerRXStats::simple_action(Packet *p) {
 			continue;
 		}
 		if ((*qi)->_eth == nfo->_eth || (*qi)->_eth.is_broadcast()) {
-			Frame frame = Frame(ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length());
+			Frame frame = Frame(ra, ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length());
 			(*qi)->_frames.push_back(frame);
 		}
 	}
