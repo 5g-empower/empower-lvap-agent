@@ -25,7 +25,7 @@
 #include <clicknet/ether.h>
 #include <elements/standard/counter.hh>
 #include <elements/wifi/minstrel.hh>
-#include "transmissionpolicy.hh"
+#include <elements/wifi/transmissionpolicy.hh>
 #include "empowerpacket.hh"
 #include "empowerbeaconsource.hh"
 #include "empoweropenauthresponder.hh"

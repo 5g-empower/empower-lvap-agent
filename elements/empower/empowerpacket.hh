@@ -2,6 +2,7 @@
 #define CLICK_EMPOWERPACKET_HH
 #include <click/config.h>
 #include <clicknet/wifi.h>
+#include <elements/wifi/transmissionpolicies.hh>
 CLICK_DECLS
 
 /* protocol version */
@@ -61,37 +62,6 @@ enum empower_packet_types {
     EMPOWER_PT_STATUS_VAP = 0x33,      // wtp -> ac
 
 };
-
-enum empower_port_flags {
-    EMPOWER_STATUS_PORT_NOACK = (1<<0),
-};
-
-enum empower_lvap_flags {
-    EMPOWER_STATUS_LVAP_AUTHENTICATED = (1<<0),
-    EMPOWER_STATUS_LVAP_ASSOCIATED = (1<<1),
-    EMPOWER_STATUS_LVAP_SET_MASK = (1<<2),
-};
-
-enum empower_bands_types {
-    EMPOWER_BT_L20 = 0x0,
-    EMPOWER_BT_HT20 = 0x1,
-    EMPOWER_BT_HT40 = 0x2,
-};
-
-enum empower_rssi_trigger_relation {
-	EQ = 0x0,
-	GT = 0x1,
-	LT = 0x2,
-	GE = 0x3,
-	LE = 0x4,
-};
-
-enum empower_tx_mcast_type {
-	TX_MCAST_LEGACY = 0x0,
-	TX_MCAST_DMS = 0x1,
-	TX_MCAST_UR = 0x2,
-};
-
 
 /* header format, common to all messages */
 struct empower_header {

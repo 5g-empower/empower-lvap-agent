@@ -9,7 +9,6 @@
 #include "trigger.hh"
 CLICK_DECLS
 
-
 class RssiTrigger: public Trigger {
 public:
 

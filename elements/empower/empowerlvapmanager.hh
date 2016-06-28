@@ -60,6 +60,22 @@ Turn debug on/off
 =a EmpowerLVAPManager
 */
 
+enum empower_port_flags {
+    EMPOWER_STATUS_PORT_NOACK = (1<<0),
+};
+
+enum empower_lvap_flags {
+    EMPOWER_STATUS_LVAP_AUTHENTICATED = (1<<0),
+    EMPOWER_STATUS_LVAP_ASSOCIATED = (1<<1),
+    EMPOWER_STATUS_LVAP_SET_MASK = (1<<2),
+};
+
+enum empower_bands_types {
+    EMPOWER_BT_L20 = 0x0,
+    EMPOWER_BT_HT20 = 0x1,
+    EMPOWER_BT_HT40 = 0x2,
+};
+
 typedef HashTable<uint16_t, uint32_t> CBytes;
 typedef CBytes::iterator CBytesIter;
 

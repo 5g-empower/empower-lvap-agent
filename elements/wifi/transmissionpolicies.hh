@@ -6,7 +6,6 @@
 #include <click/bighashmap.hh>
 #include <click/glue.hh>
 #include "transmissionpolicy.hh"
-#include "empowerpacket.hh"
 CLICK_DECLS
 
 /*

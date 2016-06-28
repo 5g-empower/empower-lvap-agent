@@ -8,6 +8,14 @@
 #include "dstinfo.hh"
 CLICK_DECLS
 
+enum empower_rssi_trigger_relation {
+	EQ = 0x0,
+	GT = 0x1,
+	LT = 0x2,
+	GE = 0x3,
+	LE = 0x4,
+};
+
 class EmpowerLVAPManager;
 class EmpowerRXStats;
 

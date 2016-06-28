@@ -6,7 +6,7 @@
 #include <click/glue.hh>
 #include <click/timer.hh>
 #include <elements/wifi/bitrate.hh>
-#include <elements/empower/transmissionpolicies.hh>
+#include "transmissionpolicies.hh"
 CLICK_DECLS
 
 /*

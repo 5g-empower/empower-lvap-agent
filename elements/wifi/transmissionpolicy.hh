@@ -7,7 +7,6 @@
 #include <click/bighashmap.hh>
 #include <click/straccum.hh>
 #include <click/glue.hh>
-#include "empowerpacket.hh"
 CLICK_DECLS
 
 /*
@@ -25,6 +24,12 @@ Tracks a list of bitrates other stations are capable of.
 
 =a BeaconScanner
  */
+
+enum empower_tx_mcast_type {
+	TX_MCAST_LEGACY = 0x0,
+	TX_MCAST_DMS = 0x1,
+	TX_MCAST_UR = 0x2,
+};
 
 class TxPolicyInfo {
 public:
