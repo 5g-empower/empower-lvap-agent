@@ -6,6 +6,7 @@
 #include <click/bighashmap.hh>
 #include <click/glue.hh>
 #include "transmissionpolicy.hh"
+#include "empowerpacket.hh"
 CLICK_DECLS
 
 /*
@@ -54,7 +55,7 @@ class TransmissionPolicies : public Element { public:
   TxPolicyInfo * lookup(EtherAddress eth);
   TxPolicyInfo * supported(EtherAddress eth);
 
-  int insert(EtherAddress, Vector<int>, bool, tx_mcast_type, int, int);
+  int insert(EtherAddress, Vector<int>, bool, empower_tx_mcast_type, int, int);
   int insert(EtherAddress, Vector<int>);
   int remove(EtherAddress);
 

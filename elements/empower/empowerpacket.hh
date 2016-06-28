@@ -2,7 +2,6 @@
 #define CLICK_EMPOWERPACKET_HH
 #include <click/config.h>
 #include <clicknet/wifi.h>
-#include <elements/wifi/transmissionpolicy.hh>
 CLICK_DECLS
 
 /* protocol version */
@@ -86,6 +85,13 @@ enum empower_rssi_trigger_relation {
 	GE = 0x3,
 	LE = 0x4,
 };
+
+enum empower_tx_mcast_type {
+	TX_MCAST_LEGACY = 0x0,
+	TX_MCAST_DMS = 0x1,
+	TX_MCAST_UR = 0x2,
+};
+
 
 /* header format, common to all messages */
 struct empower_header {
@@ -419,15 +425,15 @@ private:
     uint8_t  _nb_mcs;			/* Number of rate entries (int) */
     uint8_t  *mcs[];			/* Rate entries in units of 500kbps or MCS index */
 public:
-    bool flag(int f)         { return ntohs(_flags) & f;  }
-    uint8_t band()           { return _band; }
-    uint8_t channel()        { return _channel; }
-    EtherAddress hwaddr()    { return EtherAddress(_hwaddr); }
-    EtherAddress addr()      { return EtherAddress(_sta); }
-    uint16_t rts_cts()       { return ntohs(_rts_cts); }
-    tx_mcast_type tx_mcast() { return tx_mcast_type(_tx_mcast); }
-    uint8_t ur_mcast_count() { return _ur_mcast_count; }
-    uint8_t nb_mcs()         { return _nb_mcs; }
+    bool flag(int f)         			{ return ntohs(_flags) & f;  }
+    uint8_t band()           			{ return _band; }
+    uint8_t channel()        			{ return _channel; }
+    EtherAddress hwaddr()    			{ return EtherAddress(_hwaddr); }
+    EtherAddress addr()      			{ return EtherAddress(_sta); }
+    uint16_t rts_cts()       			{ return ntohs(_rts_cts); }
+    empower_tx_mcast_type tx_mcast()	{ return empower_tx_mcast_type(_tx_mcast); }
+    uint8_t ur_mcast_count() 			{ return _ur_mcast_count; }
+    uint8_t nb_mcs()         			{ return _nb_mcs; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap status packet format */
@@ -445,16 +451,16 @@ private:
     uint8_t  _nb_mcs;			/* Number of rate entries (int) */
     uint8_t  *mcs[];			/* Rate entries in units of 500kbps or MCS index */
 public:
-    void set_band(uint8_t band)                     { _band = band; }
-    void set_channel(uint8_t channel)               { _channel = channel; }
-    void set_flag(uint16_t f)                       { _flags = htons(ntohs(_flags) | f); }
-    void set_hwaddr(EtherAddress hwaddr)            { memcpy(_hwaddr, hwaddr.data(), 6); }
-    void set_wtp(EtherAddress wtp)                  { memcpy(_wtp, wtp.data(), 6); }
-    void set_sta(EtherAddress sta)                  { memcpy(_sta, sta.data(), 6); }
-    void set_rts_cts(uint16_t rts_cts)              { _rts_cts = htons(rts_cts); }
-    void set_tx_mcast(tx_mcast_type tx_mcast)       { _tx_mcast = uint8_t(tx_mcast); }
-    void set_nb_mcs(uint8_t nb_mcs)                 { _nb_mcs = nb_mcs; }
-    void set_ur_mcast_count(uint8_t ur_mcast_count) { _ur_mcast_count = ur_mcast_count; }
+    void set_band(uint8_t band)                     	{ _band = band; }
+    void set_channel(uint8_t channel)               	{ _channel = channel; }
+    void set_flag(uint16_t f)                       	{ _flags = htons(ntohs(_flags) | f); }
+    void set_hwaddr(EtherAddress hwaddr)            	{ memcpy(_hwaddr, hwaddr.data(), 6); }
+    void set_wtp(EtherAddress wtp)                  	{ memcpy(_wtp, wtp.data(), 6); }
+    void set_sta(EtherAddress sta)                  	{ memcpy(_sta, sta.data(), 6); }
+    void set_rts_cts(uint16_t rts_cts)              	{ _rts_cts = htons(rts_cts); }
+    void set_tx_mcast(empower_tx_mcast_type tx_mcast)	{ _tx_mcast = uint8_t(tx_mcast); }
+    void set_nb_mcs(uint8_t nb_mcs)                 	{ _nb_mcs = nb_mcs; }
+    void set_ur_mcast_count(uint8_t ur_mcast_count) 	{ _ur_mcast_count = ur_mcast_count; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* add rssi trigger packet format */

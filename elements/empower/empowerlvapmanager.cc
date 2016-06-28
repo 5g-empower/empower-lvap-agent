@@ -25,7 +25,7 @@
 #include <clicknet/ether.h>
 #include <elements/standard/counter.hh>
 #include <elements/wifi/minstrel.hh>
-#include <elements/wifi/transmissionpolicy.hh>
+#include "transmissionpolicy.hh"
 #include "empowerpacket.hh"
 #include "empowerbeaconsource.hh"
 #include "empoweropenauthresponder.hh"
@@ -993,7 +993,7 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 
 	bool no_ack = q->flag(EMPOWER_STATUS_PORT_NOACK);
 	uint16_t rts_cts = q->rts_cts();
-	tx_mcast_type tx_mcast = q->tx_mcast();
+	empower_tx_mcast_type tx_mcast = q->tx_mcast();
 	uint8_t ur = q->ur_mcast_count();
 	Vector<int> mcs;
 
@@ -1086,6 +1086,11 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 	}
 
 	_lvaps.erase(_lvaps.find(sta));
+
+	// Forget station
+	int iface = ess->_iface_id;
+	_rcs[iface]->tx_policies()->tx_table()->erase(sta);
+	_rcs[iface]->forget_station(sta);
 
 	// Remove this VAP's BSSID from the mask
 	compute_bssid_mask();
@@ -1616,7 +1621,8 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 			TransmissionPolicies * _tx_policies = f->rcs()->at(iface)->tx_policies();
 			for (TxTableIter it_txp = _tx_policies->tx_table()->begin(); it_txp.live(); it_txp++) {
 				EtherAddress sta = it_txp.key();
-				f->send_status_port(sta, iface);
+				ResourceElement* re = f->iface_to_element(iface);
+				f->send_status_port(sta, iface, re->_hwaddr, re->_channel, re->_band);
 			}
 		}
 		break;

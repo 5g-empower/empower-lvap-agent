@@ -123,7 +123,7 @@ int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs) {
 }
 
 int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, bool no_ack,
-		tx_mcast_type tx_mcast, int ur_mcast_count, int rts_cts) {
+		empower_tx_mcast_type tx_mcast, int ur_mcast_count, int rts_cts) {
 
 	if (!(eth)) {
 		click_chatter("TransmissionPolicies %s: You fool, you tried to insert %s\n",
@@ -192,8 +192,8 @@ String TransmissionPolicies::read_handler(Element *e, void *thunk) {
 	switch ((uintptr_t) thunk) {
 	case H_POLICIES: {
 	    StringAccum sa;
-	    sa << "DEFAULT " << td->default_tx_policy()->unparse() << "\n";
-		for (TxTableIter it = td->tx_table()->begin(); it.live(); it++) {
+	    sa << "DEFAULT " << td->_default_tx_policy->unparse() << "\n";
+		for (TxTableIter it = td->_tx_table.begin(); it.live(); it++) {
 		    sa << it.key().unparse() << " " << it.value()->unparse() << "\n";
 		}
 		return sa.take_string();
@@ -222,7 +222,7 @@ int TransmissionPolicies::write_handler(const String &in_s, Element *e,
 		bool no_ack = false;
 		int rts_cts = 2436;
 		String mcs_string;
-		tx_mcast_type tx_mcast = TX_MCAST_LEGACY;
+		empower_tx_mcast_type tx_mcast = TX_MCAST_LEGACY;
 		int ur = 3;
 		Vector<int> mcs;
 

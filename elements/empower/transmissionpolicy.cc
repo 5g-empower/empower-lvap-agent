@@ -37,7 +37,7 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 	int rts_cts = 2436;
 	String mcs_string;
 	String tx_mcast_string = "LEGACY";
-	tx_mcast_type tx_mcast;
+	empower_tx_mcast_type tx_mcast;
 	int ur_mcast_count = 3;
 	Vector<int> mcs;
 

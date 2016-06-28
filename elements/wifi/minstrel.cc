@@ -178,19 +178,6 @@ void Minstrel::assign_rate(Packet *p_in)
 		return;
 	}
 
-	if (!dst) {
-		Vector<int> rates = _tx_policies->default_tx_policy()->_mcs;
-		ceh->rate = (rates.size()) ? rates[0] : 2;
-		ceh->rate1 = -1;
-		ceh->rate2 = -1;
-		ceh->rate3 = -1;
-		ceh->max_tries = WIFI_MAX_RETRIES + 1;
-		ceh->max_tries1 = 0;
-		ceh->max_tries2 = 0;
-		ceh->max_tries3 = 0;
-		return;
-	}
-
 	struct click_wifi *w = (struct click_wifi *) p_in->data();
 
 	int type = w->i_fc[0] & WIFI_FC0_TYPE_MASK;
@@ -199,28 +186,17 @@ void Minstrel::assign_rate(Packet *p_in)
 	if (type == WIFI_FC0_TYPE_MGT) {
 		if (subtype == WIFI_FC0_SUBTYPE_BEACON || subtype == WIFI_FC0_SUBTYPE_PROBE_RESP) {
 			ceh->flags |= WIFI_EXTRA_TX_NOACK;
-			Vector<int> rates = _tx_policies->lookup(dst)->_mcs;
-			ceh->rate = (rates.size()) ? rates[0] : 2;
-			ceh->rate1 = -1;
-			ceh->rate2 = -1;
-			ceh->rate3 = -1;
-			ceh->max_tries = 1;
-			ceh->max_tries1 = 0;
-			ceh->max_tries2 = 0;
-			ceh->max_tries3 = 0;
-			return;
-		} else {
-			Vector<int> rates = _tx_policies->lookup(dst)->_mcs;
-			ceh->rate = (rates.size()) ? rates[0] : 2;
-			ceh->rate1 = -1;
-			ceh->rate2 = -1;
-			ceh->rate3 = -1;
-			ceh->max_tries = WIFI_MAX_RETRIES + 1;
-			ceh->max_tries1 = 0;
-			ceh->max_tries2 = 0;
-			ceh->max_tries3 = 0;
-			return;
 		}
+		Vector<int> rates = _tx_policies->lookup(dst)->_mcs;
+		ceh->rate = (rates.size()) ? rates[0] : 2;
+		ceh->rate1 = -1;
+		ceh->rate2 = -1;
+		ceh->rate3 = -1;
+		ceh->max_tries = 1;
+		ceh->max_tries1 = 0;
+		ceh->max_tries2 = 0;
+		ceh->max_tries3 = 0;
+		return;
 	}
 
 	MinstrelDstInfo *nfo = _neighbors.findp(dst);
