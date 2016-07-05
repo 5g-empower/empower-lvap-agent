@@ -438,7 +438,7 @@ struct empower_add_rssi_trigger: public empower_header {
 private:
     uint32_t _trigger_id;	/* Module id (int) */
     uint8_t  _sta[6];		/* EtherAddress */
-    uint8_t  _relation;		/* Relation (relation_t) */
+    uint8_t  _relation;	/* Relation (relation_t) */
     int8_t   _value;		/* RSSI value in dBm (int) */
     uint16_t _period;		/* Reporting period in ms (int) */
 public:
