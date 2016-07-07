@@ -174,7 +174,7 @@ EmpowerWifiDecap::push(int, Packet *p) {
 		uint16_t ether_type = 0xBBBB;
 
 		memcpy(p_out->data(), ess->_encap.data(), 6);
-		memcpy(p_out->data() + 6, _el->wtp().data(), 6);
+		memcpy(p_out->data() + 6, ess->_sta.data(), 6);
 		memcpy(p_out->data() + 12, &ether_type, 2);
 
 		if (!_no_stats) {
