@@ -231,7 +231,7 @@ EmpowerRXStats::simple_action(Packet *p) {
 			continue;
 		}
 		if ((*qi)->_eth == nfo->_eth || (*qi)->_eth.is_broadcast()) {
-			Frame frame = Frame(ra, ta, ceh->tsft, w->i_seq, rssi, ceh->rate, type, subtype, p->length());
+			Frame frame = Frame(ra, ta, ceh->tsft, ceh->flags, w->i_seq, rssi, ceh->rate, type, subtype, p->length());
 			(*qi)->_frames.push_back(frame);
 		}
 	}

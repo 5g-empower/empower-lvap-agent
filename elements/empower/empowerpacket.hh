@@ -1,8 +1,8 @@
 #ifndef CLICK_EMPOWERPACKET_HH
 #define CLICK_EMPOWERPACKET_HH
-#include <click/config.h>
 #include <clicknet/wifi.h>
 #include <elements/wifi/transmissionpolicies.hh>
+#include "empowerlvapmanager.hh"
 CLICK_DECLS
 
 /* protocol version */
@@ -499,8 +499,8 @@ public:
 struct empower_summary_trigger: public empower_header {
 private:
     uint32_t _trigger_id; 	/* Module id (int) */
-    uint8_t _wtp[6];		/* EtherAddress */
-    uint16_t _nb_entries;	/* Number of frames (int) */
+    uint8_t _wtp[6];			/* EtherAddress */
+    uint16_t _nb_entries;		/* Number of frames (int) */
 public:
     void set_trigger_id(uint32_t trigger_id) { _trigger_id = htonl(trigger_id); }
     void set_wtp(EtherAddress wtp)           { memcpy(_wtp, wtp.data(), 6); }
@@ -513,6 +513,7 @@ struct summary_entry {
     uint8_t  _ra[6];	/* Receiver address (EtherAddress) */
     uint8_t  _ta[6];	/* Transmitter address (EtherAddress) */
     uint64_t _tsft;		/* Timestamp in microseconds (int) */
+    uint16_t _flags;	/* Flags (empower_rate_flags) */
     uint16_t _seq;		/* Sequence number */
     int8_t   _rssi;		/* RSSI in dBm (int) */
     uint8_t  _rate;		/* Rate in units of 500kbps or MCS index */
@@ -520,15 +521,17 @@ struct summary_entry {
     uint8_t  _subtype;	/* WiFi frame sub-type */
     uint32_t _length;	/* Frame length in bytes (int) */
   public:
-    void set_tsft(uint64_t tsft)      { _tsft = htobe64(tsft); }
-    void set_seq(int16_t seq)         { _seq = htons(seq); }
-    void set_rssi(int8_t rssi)        { _rssi = rssi; }
-    void set_rate(uint8_t rate)       { _rate = rate; }
-    void set_type(uint8_t type)       { _type = type; }
-    void set_subtype(uint8_t subtype) { _subtype = subtype; }
-    void set_length(uint32_t length)  { _length= htonl(length); }
-    void set_ra(EtherAddress ra)  	  { memcpy(_ra, ra.data(), 6); }
-    void set_ta(EtherAddress ta)  	  { memcpy(_ta, ta.data(), 6); }
+    void set_tsft(uint64_t tsft)      	{ _tsft = htobe64(tsft); }
+    void set_flags(uint16_t flags)    	{ _flags = htons(flags); }
+    void set_flag(uint16_t f)        	{ _flags = htons(ntohs(_flags) | f); }
+    void set_seq(int16_t seq)         	{ _seq = htons(seq); }
+    void set_rssi(int8_t rssi)        	{ _rssi = rssi; }
+    void set_rate(uint8_t rate)       	{ _rate = rate; }
+    void set_type(uint8_t type)      	{ _type = type; }
+    void set_subtype(uint8_t subtype) 	{ _subtype = subtype; }
+    void set_length(uint32_t length)  	{ _length= htonl(length); }
+    void set_ra(EtherAddress ra)  	  	{ memcpy(_ra, ra.data(), 6); }
+    void set_ta(EtherAddress ta)		{ memcpy(_ta, ta.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del summary packet format */
@@ -543,10 +546,10 @@ public:
 struct empower_add_vap : public empower_header {
 private:
     uint8_t _hwaddr[6];		/* EtherAddress */
-    uint8_t _channel;		/* WiFi channel (int) */
-    uint8_t _band;			/* WiFi band (empower_band_types) */
+    uint8_t _channel;			/* WiFi channel (int) */
+    uint8_t _band;				/* WiFi band (empower_band_types) */
     uint8_t _net_bssid[6];	/* EtherAddress */
-    char    _ssid[];		/* SSID (String) */
+    char    _ssid[];			/* SSID (String) */
 public:
     uint8_t      band()      { return _band; }
     uint8_t      channel()   { return _channel; }
@@ -566,12 +569,12 @@ struct empower_del_vap : public empower_header {
 /* lvap status packet format */
 struct empower_status_vap : public empower_header {
 private:
-    uint8_t _wtp[6];		/* EtherAddress */
+    uint8_t _wtp[6];			/* EtherAddress */
     uint8_t _hwaddr[6];		/* EtherAddress */
-    uint8_t _channel;		/* WiFi channel (int) */
-    uint8_t _band;			/* WiFi band (empower_band_types) */
+    uint8_t _channel;			/* WiFi channel (int) */
+    uint8_t _band;				/* WiFi band (empower_band_types) */
     uint8_t _net_bssid[6];	/* EtherAddress */
-    char    _ssid[];		/* SSID (String) */
+    char    _ssid[];			/* SSID (String) */
 public:
     void set_band(uint8_t band)            { _band = band; }
     void set_hwaddr(EtherAddress hwaddr)   { memcpy(_hwaddr, hwaddr.data(), 6); }

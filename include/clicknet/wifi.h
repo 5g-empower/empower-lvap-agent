@@ -13,19 +13,19 @@
 #define WIFI_EXTRA_MAGIC  0x7492001
 
 enum {
-  WIFI_EXTRA_TX			        = (1<<0), /* packet transmission */
-  WIFI_EXTRA_TX_FAIL		    = (1<<1), /* transmission failed */
+  WIFI_EXTRA_TX			        	= (1<<0), /* packet transmission */
+  WIFI_EXTRA_TX_FAIL		    	= (1<<1), /* transmission failed */
   WIFI_EXTRA_TX_USED_ALT_RATE	= (1<<2), /* used alternate bitrate */
-  WIFI_EXTRA_RX_ERR		        = (1<<3), /* failed crc check */
-  WIFI_EXTRA_RX_MORE		    = (1<<4), /* first part of a fragmented skb */
-  WIFI_EXTRA_NO_SEQ		        = (1<<5),
-  WIFI_EXTRA_NO_TXF	 	        = (1<<6),
-  WIFI_EXTRA_DO_RTS_CTS		    = (1<<7),
-  WIFI_EXTRA_DO_CTS		        = (1<<8),
-  WIFI_EXTRA_MCS		        = (1<<9),
-  WIFI_EXTRA_MCS_SGI		    = (1<<10),
-  WIFI_EXTRA_MCS_BW_40		    = (1<<11),
-  WIFI_EXTRA_TX_NOACK			= (1<<12)
+  WIFI_EXTRA_RX_ERR		        	= (1<<3), /* failed crc check */
+  WIFI_EXTRA_RX_MORE		   	 	= (1<<4), /* first part of a fragmented skb */
+  WIFI_EXTRA_NO_SEQ		        	= (1<<5),
+  WIFI_EXTRA_NO_TXF	 	        	= (1<<6),
+  WIFI_EXTRA_DO_RTS_CTS		   = (1<<7),
+  WIFI_EXTRA_DO_CTS		        	= (1<<8),
+  WIFI_EXTRA_MCS		        	= (1<<9),
+  WIFI_EXTRA_MCS_SGI		    	= (1<<10),
+  WIFI_EXTRA_MCS_BW_40		    	= (1<<11),
+  WIFI_EXTRA_TX_NOACK				= (1<<12)
 };
 
 struct click_wifi_extra {

@@ -605,6 +605,7 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 		entry->set_ra(summary->_frames[i]._ra);
 		entry->set_ta(summary->_frames[i]._ta);
 		entry->set_tsft(summary->_frames[i]._tsft);
+		entry->set_flags(summary->_frames[i]._flags);
 		entry->set_seq(summary->_frames[i]._seq);
 		entry->set_rssi(summary->_frames[i]._rssi);
 		entry->set_rate(summary->_frames[i]._rate);
