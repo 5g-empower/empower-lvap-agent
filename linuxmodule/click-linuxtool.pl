@@ -331,6 +331,8 @@ sub one_includeroot ($$) {
 	    s{\bnew\b}{new_value}g;
 	    s{\band\b}{and_value}g;
 	    s{\bcompl\b}{compl_value}g;
+            s{\bprivate\b}{kprivate}g;
+            s{(PAGEFLAG[^)]*)kprivate}{$1private}g;
 	    s{\bswap\b}{linux_swap}g;
 
 	    # "sizeof" isn't nice to the preprocessor
@@ -357,10 +359,6 @@ sub one_includeroot ($$) {
 	    s{(\w+)\s*-\s*\(\s*void\s*\*\s*\)}{(uintptr_t)$1 - (uintptr_t)}g;
 
 	    # stuff for particular files (what a shame)
-	    if ($d eq "page-flags.h") {
-		s{(#define PAGE_FLAGS_H)}{$1\n#undef private};
-		s{(#endif.*[\s\n]*)\z}{#define private linux_private\n$1};
-	    }
 	    if ($d eq "timer.h") {
 		s{enum hrtimer_restart}{int};
 	    }
@@ -368,7 +366,7 @@ sub one_includeroot ($$) {
 		s{\b(\w+)\s*=\s*\{(\s*\w+:.*?)\}\s*;}{"$1;\n" . expand_initializer($1, $2, $f)}sge;
 	    }
             if ($d eq "atomic.h") {
-                s{^(ATOMIC_OP.*?(?:and|or))_value}{$1}mg;
+                s{^(ATOMIC_OP.*?(?:and|or|compl))_value}{$1}mg;
             }
 	    if ($d eq "fs.h") {
 		s{\(struct\s+(\w+)\)\s*\{(\s*\w+:.*?)\}}{"({ struct $1 __magic_struct_$1;\n" . expand_initializer("__magic_struct_$1", $2, $f) . "\n__magic_struct_$1; })"}sge;
@@ -433,12 +431,15 @@ sub one_includeroot ($$) {
 		s<struct\s+__raw_tickets\s+(\w+)\s*=\s*\{\s*tail:\s*(\S+?)\s*\};><struct __raw_tickets $1 = {}; $1.tail = $2;>;
 	    }
 	    if ($d eq "compiler.h" || $d eq "linkage.h") {
-		s<^#define ACCESS_ONCE\(x\) \(\*\(volatile typeof\(x\) \*\)\&\(x\)\)><#define ACCESS_ONCE(x) (*(typeof(x) * volatile)&(x))>m;
+		# s<^#define ACCESS_ONCE\(x\) \(\*\(volatile typeof\(x\) \*\)\&\(x\)\)><#define ACCESS_ONCE(x) (*(typeof(x) * volatile)&(x))>m;
 		s<^(#define\s+notrace\s+__attribute__\(\(no_instrument_function\)\))><// g++ has stricter rules about this attribute. We can't deal.\n#ifdef __cplusplus\n#define notrace\n#else\n$1\n#endif>m;
 	    }
 	    if ($d eq "sysctl.h") {
 		s<^(\s+)(proc_handler \*proc_handler;.*)$><#ifdef __cplusplus\n$1::$2\n#else\n$1$2\n#endif>m;
 	    }
+            if ($d eq "rbtree_latch.h") {
+                s{container_of\(node, (struct latch_tree_node), node\[idx\]\)}{(\{ ($1*) ((char*) node - offsetof($1, node[0]) - sizeof((($1*)0)->node[0]) * idx); \})};
+            }
 
 	    if ($d eq "fs.h" || $d eq "netfilter.h") {
 		s<enum (migrate_mode|ip_conntrack_info);><enum $1 \{$1_DUMMY\};>;
@@ -454,16 +455,14 @@ sub one_includeroot ($$) {
                 s<^#define (.*?) \\\n__typeof__\(__builtin_choose_expr\((.*?), (.*?), (.*?)\)\)(.*)><#if __cplusplus\n#define $1 typename click_conditional<($2), __typeof($3), __typeof($4)>::type$5\n#else\n#define $1 __typeof__(__builtin_choose_expr($2, $3, $4))$5\n#endif>m;
             }
             if ($d eq "cpufeature.h") {
-                s{^#include <linux/bitops.h>}{/* #include <linux/bitops.h> */}m;
+                s{^#include <linux/bitops.h>}{/* #include <linux/bitops.h> */}mg;
             }
             if ($d eq "sections.h") {
-                s{^extern(.*?) const void}{extern$1 const char}m;
+                s{^extern(.*?) const void}{extern$1 const char}mg;
             }
             if ($d eq "irq.h") {
-                s{^enum irqchip_irq_state;}{enum irqchip_irq_state : int;}m;
-            }
-            if ($d eq "interrupt.h") {
-                s{^enum irqchip_irq_state\s*\{}{enum irqchip_irq_state : int \{}m;
+                s{enum irqchip_irq_state;}{}g;
+                s{enum irqchip_irq_state\b}{int}g;
             }
 
 	    # CLICK_CXX_PROTECTED check
