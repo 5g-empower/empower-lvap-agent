@@ -728,6 +728,8 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 
 void EmpowerLVAPManager::send_caps() {
 
+	_ports_lock.acquire_read();
+
 	int len = sizeof(empower_caps);
 	len += _elements_to_ifaces.size() * sizeof(struct resource_elements_entry);
 	len += _ports.size() * sizeof(struct port_elements_entry);
@@ -780,6 +782,8 @@ void EmpowerLVAPManager::send_caps() {
 		entry->set_port_id(iter.value()._port_id);
 		ptr += sizeof(struct port_elements_entry);
 	}
+
+	_ports_lock.release_read();
 
 	output(0).push(p);
 
@@ -1409,11 +1413,13 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	EmpowerLVAPManager *td = (EmpowerLVAPManager *) e;
 	switch ((uintptr_t) thunk) {
 	case H_PORTS: {
+	    td->_ports_lock.acquire_read();
 	    StringAccum sa;
-		for (PortsIter it = td->ports()->begin(); it.live(); it++) {
+		for (PortsIter it = td->_ports.begin(); it.live(); it++) {
 		    sa << it.value().unparse();
 		    sa << "\n";
 		}
+	    td->_ports_lock.release_read();
 		return sa.take_string();
 	}
 	case H_DEBUG:
@@ -1588,7 +1594,9 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		}
 
 		NetworkPort port = NetworkPort(hwaddr, tokens[2], port_id);
-		f->ports()->find_insert(port_id, port);
+		f->_ports_lock.acquire_write();
+		f->_ports.find_insert(port_id, port);
+		f->_ports_lock.release_write();
 
 		if (iface == f->_empower_iface) {
 			f->_empower_hwaddr = hwaddr;

@@ -6,6 +6,7 @@
 #include <click/etheraddress.hh>
 #include <click/hashtable.hh>
 #include <clicknet/wifi.h>
+#include <click/sync.hh>
 #include "empowerrxstats.hh"
 #include "empowerpacket.hh"
 CLICK_DECLS
@@ -314,7 +315,7 @@ public:
 		return _info_bssids;
 	}
 
-	Ports* ports() { return &_ports; }
+	//Ports* ports() { return &_ports; }
 	uint32_t get_next_seq() { return ++_seq; }
 
 	const IfTable & elements() { return _elements_to_ifaces; }
@@ -334,6 +335,8 @@ public:
 	Vector<Minstrel *> * rcs() { return &_rcs; }
 
 private:
+
+	ReadWriteLock _ports_lock;
 
 	IfTable _elements_to_ifaces;
 	RETable _ifaces_to_elements;
