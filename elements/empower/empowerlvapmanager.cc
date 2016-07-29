@@ -1630,8 +1630,7 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 			TransmissionPolicies * _tx_policies = f->rcs()->at(iface)->tx_policies();
 			for (TxTableIter it_txp = _tx_policies->tx_table()->begin(); it_txp.live(); it_txp++) {
 				EtherAddress sta = it_txp.key();
-				ResourceElement* re = f->iface_to_element(iface);
-				f->send_status_port(sta, iface, re->_hwaddr, re->_channel, re->_band);
+				f->send_status_port(sta, iface, it_re.value()._hwaddr, it_re.value()._channel, it_re.value()._band);
 			}
 		}
 		break;
