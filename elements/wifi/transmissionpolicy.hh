@@ -90,13 +90,6 @@ public:
 		}
 		sa << " ur_mcast_count " << _ur_mcast_count;
 		sa << " rts_cts " << _rts_cts;
-
-		sa << "\n";
-
-		for (CBytesIter iter = _tx.begin(); iter.live(); iter++) {
-			sa << iter.key() << " " << iter.value() << "\n";
-		}
-
 		return sa.take_string();
 	}
 
