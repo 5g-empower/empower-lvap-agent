@@ -627,7 +627,7 @@ void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lv
 	MinstrelDstInfo *nfo = _rcs.at(ess._iface_id)->neighbors()->findp(lvap);
 
 	if (!nfo) {
-		click_chatter("%{element} :: %s :: no rate infor for %s",
+		click_chatter("%{element} :: %s :: no rate information for %s",
 					  this,
 					  __func__,
 					  lvap.unparse().c_str());
@@ -715,6 +715,62 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 	}
 
 	for (CBytesIter iter = ess._rx.begin(); iter.live(); iter++) {
+		assert (ptr <= end);
+		counters_entry *entry = (counters_entry *) ptr;
+		entry->set_size(iter.key());
+		entry->set_count(iter.value());
+		ptr += sizeof(struct counters_entry);
+	}
+
+	output(0).push(p);
+
+}
+
+void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherAddress hwaddr, uint8_t channel, empower_bands_types band, EtherAddress mcast) {
+
+	int iface_id = element_to_iface(hwaddr, channel, band);
+
+	if (iface_id == -1) {
+		click_chatter("%{element} :: %s :: invalid resource element (%s, %u, %u)!",
+					  this,
+					  __func__,
+					  hwaddr.unparse().c_str(),
+					  channel,
+					  band);
+		return;
+	}
+
+	TxPolicyInfo * tx_policy = _rcs[iface_id]->tx_policies()->tx_table()->find(mcast);
+
+	int len = sizeof(empower_txp_counters_response);
+	len += tx_policy->_tx.size() * 6; // the tx samples
+
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	memset(p->data(), 0, p->length());
+
+	empower_txp_counters_response *counters = (struct empower_txp_counters_response *) (p->data());
+	counters->set_version(_empower_version);
+	counters->set_length(len);
+	counters->set_type(EMPOWER_PT_TXP_COUNTERS_RESPONSE);
+	counters->set_seq(get_next_seq());
+	counters->set_counters_id(counters_id);
+	counters->set_wtp(_wtp);
+	counters->set_nb_tx(tx_policy->_tx.size());
+
+	uint8_t *ptr = (uint8_t *) counters;
+	ptr += sizeof(struct empower_txp_counters_response);
+
+	uint8_t *end = ptr + (len - sizeof(struct empower_txp_counters_response));
+
+	for (CBytesIter iter = tx_policy->_tx.begin(); iter.live(); iter++) {
 		assert (ptr <= end);
 		counters_entry *entry = (counters_entry *) ptr;
 		entry->set_size(iter.key());
@@ -1172,6 +1228,16 @@ int EmpowerLVAPManager::handle_assoc_response(Packet *p, uint32_t offset) {
 	return 0;
 }
 
+int EmpowerLVAPManager::handle_txp_counters_request(Packet *p, uint32_t offset) {
+	struct empower_txp_counters_request *q = (struct empower_txp_counters_request *) (p->data() + offset);
+	EtherAddress hwaddr = q->hwaddr();
+	empower_bands_types band = (empower_bands_types) q->band();
+	uint8_t channel = q->channel();
+	EtherAddress mcast = q->mcast();
+	send_txp_counters_response(q->counters_id(), hwaddr, channel, band, mcast);
+	return 0;
+}
+
 int EmpowerLVAPManager::handle_counters_request(Packet *p, uint32_t offset) {
 	struct empower_counters_request *q = (struct empower_counters_request *) (p->data() + offset);
 	EtherAddress sta = q->sta();
@@ -1254,6 +1320,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_COUNTERS_REQUEST:
 			handle_counters_request(p, offset);
+			break;
+		case EMPOWER_PT_TXP_COUNTERS_REQUEST:
+			handle_txp_counters_request(p, offset);
 			break;
 		case EMPOWER_PT_ADD_RSSI_TRIGGER:
 			handle_add_rssi_trigger(p, offset);
@@ -1406,7 +1475,6 @@ enum {
 	H_EMPOWER_HWADDR,
 	H_ELEMENTS,
 	H_INTERFACES,
-	H_INFO_BSSIDS
 };
 
 String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
@@ -1487,16 +1555,6 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 		StringAccum sa;
 		for (REIter iter = td->_ifaces_to_elements.begin(); iter.live(); iter++) {
 			sa << iter.key() << " -> " << iter.value().unparse()  << "\n";
-		}
-		return sa.take_string();
-	}
-	case H_INFO_BSSIDS: {
-		StringAccum sa;
-		for (IBIter iter = td->info_bssids()->begin(); iter.live(); iter++) {
-			sa << "bssid " << iter.key() << " iface " << iter.value()._iface_id  << "\n";
-			for (int i = 0; i < iter.value()._stas.size(); i++) {
-				sa << iter.value()._stas[i] << '\n';
-			}
 		}
 		return sa.take_string();
 	}
@@ -1649,7 +1707,6 @@ void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("empower_iface", read_handler, (void *) H_EMPOWER_IFACE);
 	add_read_handler("empower_hwaddr", read_handler, (void *) H_EMPOWER_HWADDR);
 	add_read_handler("elements", read_handler, (void *) H_ELEMENTS);
-	add_read_handler("info_bssids", read_handler, (void *) H_INFO_BSSIDS);
 	add_read_handler("interfaces", read_handler, (void *) H_INTERFACES);
 	add_write_handler("reconnect", write_handler, (void *) H_RECONNECT);
 	add_write_handler("ports", write_handler, (void *) H_PORTS);

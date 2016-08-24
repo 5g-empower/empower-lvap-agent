@@ -258,6 +258,7 @@ public:
 	int handle_auth_response(Packet *, uint32_t);
 	int handle_assoc_response(Packet *, uint32_t);
 	int handle_counters_request(Packet *, uint32_t);
+	int handle_txp_counters_request(Packet *, uint32_t);
 	int handle_add_rssi_trigger(Packet *, uint32_t);
 	int handle_del_rssi_trigger(Packet *, uint32_t);
 	int handle_del_summary_trigger(Packet *, uint32_t);
@@ -280,6 +281,7 @@ public:
 	void send_status_port(EtherAddress, int, EtherAddress, int, empower_bands_types);
 
 	void send_counters_response(EtherAddress, uint32_t);
+	void send_txp_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, EtherAddress);
 	void send_img_response(int, uint32_t, EtherAddress, uint8_t, empower_bands_types);
 	void send_caps();
 	void send_rssi_trigger(uint32_t, uint32_t, uint8_t);
@@ -291,31 +293,6 @@ public:
 	LVAP* lvaps() { return &_lvaps; }
 	VAP* vaps() { return &_vaps; }
 
-	InfoBssids* info_bssids() {
-		InfoBssids * _info_bssids = new InfoBssids();
-		for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
-			if (!it.value()._set_mask) {
-				continue;
-			}
-			if (!it.value()._authentication_status) {
-				continue;
-			}
-			if (!it.value()._association_status) {
-				continue;
-			}
-			if (_info_bssids->find(it.value()._lvap_bssid) == _info_bssids->end()) {
-				InfoBssid info;
-				info._bssid = it.value()._lvap_bssid;
-				info._iface_id = it.value()._iface_id;
-				_info_bssids->set(it.value()._lvap_bssid, info);
-			}
-			InfoBssid *eib = _info_bssids->get_pointer(it.value()._lvap_bssid);
-			eib->_stas.push_back(it.value()._sta);
-		}
-		return _info_bssids;
-	}
-
-	//Ports* ports() { return &_ports; }
 	uint32_t get_next_seq() { return ++_seq; }
 
 	const IfTable & elements() { return _elements_to_ifaces; }

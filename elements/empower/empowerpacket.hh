@@ -37,29 +37,33 @@ enum empower_packet_types {
     EMPOWER_PT_COUNTERS_RESPONSE = 0x18,// wtp -> ac
 
     // Triggers
-    EMPOWER_PT_ADD_RSSI_TRIGGER = 0x19, // ac -> wtp
-    EMPOWER_PT_RSSI_TRIGGER = 0x20,     // ac -> wtp
-    EMPOWER_PT_DEL_RSSI_TRIGGER = 0x21, // ac -> wtp
+    EMPOWER_PT_ADD_RSSI_TRIGGER = 0x19, 		// ac -> wtp
+    EMPOWER_PT_RSSI_TRIGGER = 0x20,     		// ac -> wtp
+    EMPOWER_PT_DEL_RSSI_TRIGGER = 0x21, 		// ac -> wtp
 
-    EMPOWER_PT_ADD_SUMMARY_TRIGGER = 0x22, // ac -> wtp
-    EMPOWER_PT_SUMMARY_TRIGGER = 0x23,     // ac -> wtp
-    EMPOWER_PT_DEL_SUMMARY_TRIGGER = 0x24, // ac -> wtp
+    EMPOWER_PT_ADD_SUMMARY_TRIGGER = 0x22, 		// ac -> wtp
+    EMPOWER_PT_SUMMARY_TRIGGER = 0x23,     		// ac -> wtp
+    EMPOWER_PT_DEL_SUMMARY_TRIGGER = 0x24, 		// ac -> wtp
 
     // Channel Quality Maps
-    EMPOWER_PT_UCQM_REQUEST = 0x25,     // ac -> wtp
-    EMPOWER_PT_UCQM_RESPONSE = 0x26,    // wtp -> ac
+    EMPOWER_PT_UCQM_REQUEST = 0x25,     		// ac -> wtp
+    EMPOWER_PT_UCQM_RESPONSE = 0x26,    		// wtp -> ac
 
-    EMPOWER_PT_NCQM_REQUEST = 0x27,     // ac -> wtp
-    EMPOWER_PT_NCQM_RESPONSE = 0x28,    // wtp -> ac
+    EMPOWER_PT_NCQM_REQUEST = 0x27,     		// ac -> wtp
+    EMPOWER_PT_NCQM_RESPONSE = 0x28,    		// wtp -> ac
 
     // Link Stats
-    EMPOWER_PT_LVAP_STATS_REQUEST = 0x29,    // ac -> wtp
-    EMPOWER_PT_LVAP_STATS_RESPONSE = 0x30,   // wtp -> ac
+    EMPOWER_PT_LVAP_STATS_REQUEST = 0x29,   	// ac -> wtp
+    EMPOWER_PT_LVAP_STATS_RESPONSE = 0x30,  	// wtp -> ac
 
     // VAPs
-    EMPOWER_PT_ADD_VAP = 0x31,         // ac -> wtp
-    EMPOWER_PT_DEL_VAP = 0x32,         // ac -> wtp
-    EMPOWER_PT_STATUS_VAP = 0x33,      // wtp -> ac
+    EMPOWER_PT_ADD_VAP = 0x31,         			// ac -> wtp
+    EMPOWER_PT_DEL_VAP = 0x32,         			// ac -> wtp
+    EMPOWER_PT_STATUS_VAP = 0x33,      			// wtp -> ac
+
+    // MCAST Packet/Bytes counters
+    EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x34,		// ac -> wtp
+    EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x35,	// wtp -> ac
 
 };
 
@@ -222,7 +226,7 @@ public:
 /* lvap_stats entry format */
 struct lvap_stats_entry {
   private:
-    uint8_t 	_rate; 	/* Rate in units of 500kbps or MCS index */
+    uint8_t  _rate; 	/* Rate in units of 500kbps or MCS index */
     uint16_t _flags;	/* Flags (empower_rate_flags) */
     uint32_t _prob; 	/* Probability [0-18000] */
   public:
@@ -299,6 +303,34 @@ public:
     void set_sta(EtherAddress sta)             { memcpy(_sta, sta.data(), 6); }
     void set_nb_tx(uint16_t nb_tx)             { _nb_tx = htons(nb_tx); }
     void set_nb_rx(uint16_t nb_rx)             { _nb_rx = htons(nb_rx); }
+    void set_counters_id(uint32_t counters_id) { _counters_id = htonl(counters_id); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* txp counters request packet format */
+struct empower_txp_counters_request : public empower_header {
+private:
+  uint32_t _counters_id;	/* Module id (int) */
+  uint8_t  _hwaddr[6];		/* EtherAddress */
+  uint8_t  _channel;		/* WiFi Channel (int) */
+  uint8_t  _band;			/* WiFi band (empower_band_types) */
+  uint8_t  _mcast[6];		/* EtherAddress */
+public:
+    uint32_t counters_id() { return ntohl(_counters_id); }
+    EtherAddress mcast()   { return EtherAddress(_mcast); }
+    uint8_t channel()      { return _channel; }
+    uint8_t band()         { return _band; }
+    EtherAddress hwaddr()  { return EtherAddress(_hwaddr); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* txp counters response packet format */
+struct empower_txp_counters_response : public empower_header {
+private:
+  uint32_t _counters_id;	/* Module id (int) */
+  uint8_t  _wtp[6];			/* EtherAddress */
+  uint16_t _nb_tx;			/* Int */
+public:
+    void set_wtp(EtherAddress wtp)             { memcpy(_wtp, wtp.data(), 6); }
+    void set_nb_tx(uint16_t nb_tx)             { _nb_tx = htons(nb_tx); }
     void set_counters_id(uint32_t counters_id) { _counters_id = htonl(counters_id); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 

@@ -4,6 +4,7 @@
 #include <click/element.hh>
 #include <click/ipaddress.hh>
 #include <click/etheraddress.hh>
+#include <click/hashtable.hh>
 #include <click/bighashmap.hh>
 #include <click/straccum.hh>
 #include <click/glue.hh>
@@ -25,6 +26,10 @@ Tracks a list of bitrates other stations are capable of.
 =a BeaconScanner
  */
 
+typedef HashTable<uint16_t, uint32_t> CBytes;
+typedef CBytes::iterator CBytesIter;
+
+
 enum empower_tx_mcast_type {
 	TX_MCAST_LEGACY = 0x0,
 	TX_MCAST_DMS = 0x1,
@@ -39,6 +44,7 @@ public:
 	empower_tx_mcast_type _tx_mcast;
 	int _ur_mcast_count;
 	int _rts_cts;
+	CBytes _tx;
 
 	TxPolicyInfo() {
 		_mcs = Vector<int>();
@@ -56,6 +62,13 @@ public:
 		_tx_mcast = tx_mcast;
 		_rts_cts = rts_cts;
 		_ur_mcast_count = ur_mcast_count;
+	}
+
+	void update_tx(uint16_t len) {
+		if (_tx.find(len) == _tx.end()) {
+			_tx.set(len, 0);
+		}
+		(*_tx.get_pointer(len))++;
 	}
 
 	String unparse() {
@@ -77,6 +90,13 @@ public:
 		}
 		sa << " ur_mcast_count " << _ur_mcast_count;
 		sa << " rts_cts " << _rts_cts;
+
+		sa << "\n";
+
+		for (CBytesIter iter = _tx.begin(); iter.live(); iter++) {
+			sa << iter.key() << " " << iter.value() << "\n";
+		}
+
 		return sa.take_string();
 	}
 
