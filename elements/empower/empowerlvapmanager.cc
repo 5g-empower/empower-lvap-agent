@@ -742,6 +742,28 @@ void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherA
 
 	TxPolicyInfo * tx_policy = _rcs[iface_id]->tx_policies()->tx_table()->find(mcast);
 
+	if (!tx_policy) {
+		int len = sizeof(empower_txp_counters_response);
+		WritablePacket *p = Packet::make(len);
+		if (!p) {
+			click_chatter("%{element} :: %s :: cannot make packet!",
+						  this,
+						  __func__);
+			return;
+		}
+		memset(p->data(), 0, p->length());
+		empower_txp_counters_response *counters = (struct empower_txp_counters_response *) (p->data());
+		counters->set_version(_empower_version);
+		counters->set_length(len);
+		counters->set_type(EMPOWER_PT_TXP_COUNTERS_RESPONSE);
+		counters->set_seq(get_next_seq());
+		counters->set_counters_id(counters_id);
+		counters->set_wtp(_wtp);
+		counters->set_nb_tx(tx_policy->_tx.size());
+		output(0).push(p);
+		return;
+	}
+
 	int len = sizeof(empower_txp_counters_response);
 	len += tx_policy->_tx.size() * 6; // the tx samples
 
