@@ -5,6 +5,7 @@
 #include <click/hashcode.hh>
 #include <click/timer.hh>
 #include <click/vector.hh>
+#include "frame.hh"
 CLICK_DECLS
 
 class SMA {
@@ -82,6 +83,7 @@ private:
 class DstInfo {
 public:
 	EtherAddress _eth;
+    int _sender_type;
 	int _accum_rssi;
 	int _squares_rssi;
 	int _packets;
@@ -90,36 +92,22 @@ public:
 	int _last_packets;
 	SMA *_sma_rssi;
 	int _sma_period;
-	int _aging;
+	unsigned _silent_window_count;
 	int _hist_packets;
 	int _iface_id;
 	Timestamp _last_received;
 
 	DstInfo() {
 		_eth = EtherAddress();
+		_sender_type = 0;
 		_sma_period = 101;
-		_sma_rssi = new SMA(_sma_period);
+		_sma_rssi = 0;
 		_accum_rssi = 0;
 		_squares_rssi = 0;
-		_aging = -95;
+		_silent_window_count = 0;
 		_packets = 0;
 		_last_rssi = 0;
 		_last_std= 0;
-		_last_packets= 0;
-		_hist_packets = 0;
-		_iface_id = -1;
-	}
-
-	DstInfo(EtherAddress eth, int sma_period, int aging) {
-		_eth = eth;
-		_sma_period = sma_period;
-		_sma_rssi = new SMA(_sma_period);
-		_aging = aging;
-		_accum_rssi = 0;
-		_squares_rssi = 0;
-		_packets = 0;
-		_last_rssi = 0;
-		_last_std = 0;
 		_last_packets= 0;
 		_hist_packets = 0;
 		_iface_id = -1;
@@ -131,8 +119,9 @@ public:
 		_last_std = (_packets > 0) ? sqrt( (_squares_rssi / (double) _packets) - (_last_rssi * _last_rssi) ) : 0;
 		_last_packets = _packets;
 		if (_packets == 0) {
-			_sma_rssi->add(_aging);
+			_silent_window_count++;
 		} else {
+			_silent_window_count = 0;
 			_sma_rssi->add(_last_rssi);
 		}
 		_packets = 0;
@@ -140,25 +129,26 @@ public:
 		_squares_rssi = 0;
 	}
 
-	void add_rssi_sample(int rssi) {
+	void add_sample(Frame *frame) {
 		_packets++;
-		_accum_rssi += rssi;
-		_squares_rssi += rssi * rssi;
+		_accum_rssi += frame->_rssi;
+		_squares_rssi += frame->_rssi * frame->_rssi;
 		_last_received.assign_now();
 	}
 
-	String unparse(bool station) {
+	String unparse() {
 		Timestamp now = Timestamp::now();
 		StringAccum sa;
 		Timestamp age = now - _last_received;
 		sa << _eth.unparse();
-		sa << (station ? " STA" : " AP");
+		sa << (_sender_type == 0 ? " STA" : " AP");
 		sa << " sma_rssi " << _sma_rssi->avg();
 		sa << " last_rssi_avg " << _last_rssi;
 		sa << " last_rssi_std " << _last_std;
 		sa << " last_packets " << _last_packets;
 		sa << " hist_packets " << _hist_packets;
 		sa << " last_received " << age;
+		sa << " silent_window_count " << _silent_window_count;
 		sa << " iface_id " << _iface_id << "\n";
 		return sa.take_string();
 	}

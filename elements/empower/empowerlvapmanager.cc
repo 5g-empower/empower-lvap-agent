@@ -510,7 +510,7 @@ void EmpowerLVAPManager::send_img_response(int type, uint32_t graph_id,
 	// Select stations active on the specified resource element (iface_id)
 
 	Vector<DstInfo> neighbors;
-	_ers->_lock.acquire_read();
+	_ers->lock.acquire_read();
 
 	if (type == EMPOWER_PT_UCQM_RESPONSE) {
 		for (NTIter iter = _ers->stas.begin(); iter.live(); iter++) {
@@ -528,7 +528,7 @@ void EmpowerLVAPManager::send_img_response(int type, uint32_t graph_id,
 		}
 	}
 
-	_ers->_lock.release_read();
+	_ers->lock.release_read();
 
 	int len = sizeof(empower_cqm_response) + neighbors.size() * sizeof(cqm_entry);
 	WritablePacket *p = Packet::make(len);
@@ -602,16 +602,16 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 	for (int i = 0; i < summary->_frames.size(); i++) {
 		assert (ptr <= end);
 		summary_entry *entry = (summary_entry *) ptr;
-		entry->set_ra(summary->_frames[i]._ra);
-		entry->set_ta(summary->_frames[i]._ta);
-		entry->set_tsft(summary->_frames[i]._tsft);
-		entry->set_flags(summary->_frames[i]._flags);
-		entry->set_seq(summary->_frames[i]._seq);
-		entry->set_rssi(summary->_frames[i]._rssi);
-		entry->set_rate(summary->_frames[i]._rate);
-		entry->set_length(summary->_frames[i]._length);
-		entry->set_type(summary->_frames[i]._type);
-		entry->set_subtype(summary->_frames[i]._subtype);
+		entry->set_ra(summary->_frames[i]->_ra);
+		entry->set_ta(summary->_frames[i]->_ta);
+		entry->set_tsft(summary->_frames[i]->_tsft);
+		entry->set_flags(summary->_frames[i]->_flags);
+		entry->set_seq(summary->_frames[i]->_seq);
+		entry->set_rssi(summary->_frames[i]->_rssi);
+		entry->set_rate(summary->_frames[i]->_rate);
+		entry->set_length(summary->_frames[i]->_length);
+		entry->set_type(summary->_frames[i]->_type);
+		entry->set_subtype(summary->_frames[i]->_subtype);
 		ptr += sizeof(struct summary_entry);
 	}
 

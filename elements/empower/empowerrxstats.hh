@@ -12,6 +12,7 @@
 #include "summary_trigger.hh"
 #include "rssi_trigger.hh"
 #include "dstinfo.hh"
+#include "cqmlink.hh"
 #include "empowerpacket.hh"
 CLICK_DECLS
 
@@ -40,6 +41,9 @@ CLICK_DECLS
 
  =a EmpowerLVAPManager
  */
+
+typedef HashTable<EtherAddress, CqmLink> CqmLinkTable;
+typedef CqmLinkTable::iterator CIter;
 
 typedef HashTable<EtherAddress, DstInfo> NeighborTable;
 typedef NeighborTable::iterator NTIter;
@@ -70,6 +74,12 @@ public:
 
 	void add_handlers();
 
+	void set_rssi_threshold(double threshold) { _rssi_threshold = threshold; };
+	double get_rssi_threshold(void) { return _rssi_threshold; };
+
+	void set_max_silent_window_count(uint64_t count) { _max_silent_window_count = count; };
+	uint64_t get_max_silent_window_count(void) { return _max_silent_window_count; };
+
 	void add_rssi_trigger(EtherAddress, uint32_t, empower_rssi_trigger_relation, int, uint16_t);
 	void del_rssi_trigger(uint32_t);
 
@@ -78,12 +88,11 @@ public:
 
 	void clear_triggers();
 
-	void clear_stale_neighbors(Timer *timer);
-
-	ReadWriteLock _lock;
+	ReadWriteLock lock;
 
 	NeighborTable aps;
 	NeighborTable stas;
+	CqmLinkTable links;
 
 private:
 
@@ -94,14 +103,18 @@ private:
 	SummaryTriggersList _summary_triggers;
 
 	int _signal_offset;
-	int _aging;
-	int _aging_th;
-	unsigned _period;
+	unsigned _period; // in ms
 	unsigned _sma_period;
+	unsigned _max_silent_window_count; // in number of windows
+	double _rssi_threshold; // threshold for rssi cdf
+
 	bool _debug;
 
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);
+
+	void update_neighbor(Frame *);
+	void update_link_table(Frame *);
 
 };
 

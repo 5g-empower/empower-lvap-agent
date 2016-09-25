@@ -33,8 +33,8 @@ enum empower_packet_types {
     EMPOWER_PT_CAPS = 0x16,             // wtp -> ac
 
     // Packet/Bytes counters
-    EMPOWER_PT_COUNTERS_REQUEST = 0x17, // ac -> wtp
-    EMPOWER_PT_COUNTERS_RESPONSE = 0x18,// wtp -> ac
+    EMPOWER_PT_COUNTERS_REQUEST = 0x17,         // ac -> wtp
+    EMPOWER_PT_COUNTERS_RESPONSE = 0x18,        // wtp -> ac
 
     // Triggers
     EMPOWER_PT_ADD_RSSI_TRIGGER = 0x19, 		// ac -> wtp
@@ -64,6 +64,13 @@ enum empower_packet_types {
     // MCAST Packet/Bytes counters
     EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x34,		// ac -> wtp
     EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x35,	// wtp -> ac
+
+    // Channel Quality Map Links
+    EMPOWER_PT_UCQM_LINKS_REQUEST = 0x36,		// ac -> wtp
+    EMPOWER_PT_UCQM_LINKS_RESPONSE = 0x37,		// wtp -> ac
+
+    EMPOWER_PT_NCQM_LINKS_REQUEST = 0x38,		// ac -> wtp
+    EMPOWER_PT_NCQM_LINKS_RESPONSE = 0x39,		// wtp -> ac
 
 };
 
