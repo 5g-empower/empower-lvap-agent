@@ -151,6 +151,7 @@ EmpowerRXStats::simple_action(Packet *p) {
 	int dir = w->i_fc[1] & WIFI_FC1_DIR_MASK;
 	int type = w->i_fc[0] & WIFI_FC0_TYPE_MASK;
 	int subtype = w->i_fc[0] & WIFI_FC0_SUBTYPE_MASK;
+	int retry = w->i_fc[1] & WIFI_FC1_RETRY;
 	bool station = false;
 
 	switch (dir) {
@@ -231,7 +232,7 @@ EmpowerRXStats::simple_action(Packet *p) {
 			continue;
 		}
 		if ((*qi)->_eth == nfo->_eth || (*qi)->_eth.is_broadcast()) {
-			Frame frame = Frame(ra, ta, ceh->tsft, ceh->flags, w->i_seq, rssi, ceh->rate, type, subtype, p->length());
+			Frame frame = Frame(ra, ta, ceh->tsft, ceh->flags, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), retry);
 			(*qi)->_frames.push_back(frame);
 		}
 	}
