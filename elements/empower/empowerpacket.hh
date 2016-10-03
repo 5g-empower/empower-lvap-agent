@@ -237,7 +237,8 @@ struct lvap_stats_entry {
     uint8_t  _rate; 	/* Rate in units of 500kbps or MCS index */
     uint16_t _flags;	/* Flags (empower_rate_flags) */
     uint32_t _prob; 	/* Probability [0-18000] */
-    uint32_t _cur_prob;	/* Probability [0-18000] */
+    uint32_t _cur_prob; 	/* Probability [0-18000] */
+
   public:
     void set_flags(uint16_t flags)    		{ _flags = htons(flags); }
     void set_flag(uint16_t f)        		{ _flags = htons(ntohs(_flags) | f); }
