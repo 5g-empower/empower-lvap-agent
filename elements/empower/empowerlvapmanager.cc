@@ -664,6 +664,7 @@ void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lv
 		lvap_stats_entry *entry = (lvap_stats_entry *) ptr;
 		entry->set_rate(nfo->rates[i]);
 		entry->set_prob((uint32_t) nfo->probability[i]);
+		entry->set_cur_prob((uint32_t) nfo->cur_prob[i]);
 		ptr += sizeof(struct lvap_stats_entry);
 	}
 
