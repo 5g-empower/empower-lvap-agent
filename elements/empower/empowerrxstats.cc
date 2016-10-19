@@ -102,7 +102,6 @@ void EmpowerRXStats::run_timer(Timer *) {
 		nfo->update();
 		// Delete stale entries
 		if (nfo->_silent_window_count > _max_silent_window_count) {
-			click_chatter("erasing");
 			iter = stas.erase(iter);
 		} else {
 			++iter;

@@ -1011,13 +1011,13 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 				sa << ", " << ssids[i];
 			}
     	}
-		click_chatter("%{element} :: %s :: sta %s net_bssid %s lvap_bssid %s ssid %s [ %s ] assoc_id %d %s %s %s %s %s",
-				      this,
-				      __func__,
-				      sta.unparse_colon().c_str(),
-				      net_bssid.unparse().c_str(),
-				      lvap_bssid.unparse().c_str(),
-				      ssid.c_str(),
+		click_chatter("%{element} :: %s :: sta %s net_bssid %s lvap_bssid %s ssid %s [ %s ] assoc_id %d %s %s %s",
+					  this,
+					  __func__,
+					  sta.unparse_colon().c_str(),
+					  net_bssid.unparse().c_str(),
+					  lvap_bssid.unparse().c_str(),
+					  ssid.c_str(),
 				      sa.take_string().c_str(),
 				      assoc_id,
 				      set_mask ? "DL+UL" : "UL",
