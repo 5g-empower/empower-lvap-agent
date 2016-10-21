@@ -113,6 +113,10 @@ public:
 		_iface_id = -1;
 	}
 
+	~DstInfo() {
+		delete _sma_rssi;
+	}
+
 	void update() {
 		_hist_packets += _packets;
 		_last_rssi = (_packets > 0) ? _accum_rssi / (double) _packets : 0;
