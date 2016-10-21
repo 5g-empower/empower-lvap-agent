@@ -66,7 +66,8 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 
 EmpowerRXStats::EmpowerRXStats() :
 		_el(0), _timer(this), _signal_offset(0), _period(1000),
-		_sma_period(13), _max_silent_window_count(10), _debug(false) {
+		_sma_period(13), _max_silent_window_count(10), _rssi_threshold(-70),
+		_debug(false) {
 
 }
 
@@ -114,7 +115,7 @@ void EmpowerRXStats::run_timer(Timer *) {
 		nfo->update();
 		// Delete stale entries
 		if (nfo->_silent_window_count > _max_silent_window_count) {
-			iter = stas.erase(iter);
+			iter = aps.erase(iter);
 		} else {
 			++iter;
 		}
