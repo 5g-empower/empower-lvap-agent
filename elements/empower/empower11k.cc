@@ -117,7 +117,7 @@ void Empower11k::push(int, Packet *p) {
 		return;
 	}
 
-	click_chatter("%{element} :: %s :: %s management action from %s",
+	click_chatter("%{element} :: %s :: management action from %s",
 			      this,
 			      __func__,
 			      src.unparse().c_str());
