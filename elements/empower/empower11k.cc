@@ -89,7 +89,7 @@ void Empower11k::push(int, Packet *p) {
 
 	EmpowerStationState *ess = _el->lvaps()->get_pointer(src);
 
-	//If we're not aware of this LVAP, ignore
+	// if we're not aware of this LVAP, ignore
 	if (!ess) {
 		click_chatter("%{element} :: %s :: Unknown station %s",
 				      this,
@@ -105,7 +105,7 @@ void Empower11k::push(int, Packet *p) {
 		return;
 	}
 
-    // If auth request is coming from different channel, ignore
+    // if auth request is coming from different channel, ignore
 	if (ess->_iface_id != iface_id) {
 		click_chatter("%{element} :: %s :: %s is on iface %u, message coming from %u",
 				      this,
