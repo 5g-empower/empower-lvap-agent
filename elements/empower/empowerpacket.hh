@@ -244,7 +244,7 @@ struct lvap_stats_entry {
     void set_flag(uint16_t f)        		{ _flags = htons(ntohs(_flags) | f); }
     void set_rate(uint8_t rate)  		{ _rate = rate; }
     void set_prob(uint32_t prob) 		{ _prob = htonl(prob); }
-    void set_cur_prob(uint32_t cur_prob)	{ _cur_prob = htonl(cur_prob); }
+    void set_cur_prob(uint32_t cur_prob) 		{ _cur_prob = htonl(cur_prob); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* channel quality map request packet format */
