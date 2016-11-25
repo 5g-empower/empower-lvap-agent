@@ -751,6 +751,7 @@ void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherA
 						  __func__);
 			return;
 		}
+
 		memset(p->data(), 0, p->length());
 		empower_txp_counters_response *counters = (struct empower_txp_counters_response *) (p->data());
 		counters->set_version(_empower_version);
@@ -759,7 +760,7 @@ void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherA
 		counters->set_seq(get_next_seq());
 		counters->set_counters_id(counters_id);
 		counters->set_wtp(_wtp);
-		counters->set_nb_tx(tx_policy->_tx.size());
+		counters->set_nb_tx(0);
 		output(0).push(p);
 		return;
 	}
