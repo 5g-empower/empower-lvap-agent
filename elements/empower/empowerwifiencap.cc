@@ -107,7 +107,6 @@ EmpowerWifiEncap::push(int, Packet *p) {
 
 		Minstrel * rc = _el->rcs()->at(i);
 		TxPolicyInfo * tx_policy = rc->tx_policies()->lookup(dst);
-		tx_policy->update_tx(p->length());
 
 		if (tx_policy->_tx_mcast == TX_MCAST_DMS) {
 
@@ -142,6 +141,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 					continue;
 				}
 				Packet * p_out = wifi_encap(q, sta, src, it.value()._lvap_bssid);
+				tx_policy->update_tx(p->length());
 				SET_PAINT_ANNO(p_out, i);
 				output(0).push(p_out);
 			}
@@ -180,6 +180,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 					continue;
 				}
 				Packet * p_out = wifi_encap(q, dst, src, bssid);
+				tx_policy->update_tx(p->length());
 				SET_PAINT_ANNO(p_out, i);
 				output(0).push(p_out);
 			}
@@ -189,6 +190,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	}
 
 	p->kill();
+	return;
 
 }
 
