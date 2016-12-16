@@ -31,8 +31,10 @@ CLICK_DECLS
 void send_summary_trigger_callback(Timer *timer, void *data) {
 	// send summary
 	SummaryTrigger *summary = (SummaryTrigger *) data;
+	summary->_ers->lock.acquire_write();
 	summary->_el->send_summary_trigger(summary);
 	summary->_sent++;
+	summary->_ers->lock.release_write();
 	if (summary->_limit > 0 && summary->_sent >= (unsigned) summary->_limit) {
 		summary->_ers->del_summary_trigger(summary->_trigger_id);
 		return;
@@ -44,7 +46,7 @@ void send_summary_trigger_callback(Timer *timer, void *data) {
 void send_rssi_trigger_callback(Timer *timer, void *data) {
 	// process triggers
 	RssiTrigger *rssi = (RssiTrigger *) data;
-	rssi->_ers->lock.acquire_read();
+	rssi->_ers->lock.acquire_write();
 	for (NTIter iter = rssi->_ers->stas.begin(); iter.live(); iter++) {
 		DstInfo *nfo = &iter.value();
 		// not matching the address
@@ -59,7 +61,7 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 			rssi->_dispatched = false;
 		}
 	}
-	rssi->_ers->lock.release_read();
+	rssi->_ers->lock.release_write();
 	// re-schedule the timer
 	timer->schedule_after_msec(rssi->_period);
 }
