@@ -1,8 +1,8 @@
 /*
  * empowerrxstats.{cc,hh} -- tracks rx stats
- * John Bicket, Roberto Riggio
+ * Roberto Riggio, Akhila Rao
  *
- * Copyright (c) 2003 Massachusetts Institute of Technology
+ * Copyright (c) 2003 CREATE-NET
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -167,9 +167,8 @@ EmpowerRXStats::simple_action(Packet *p) {
 	int retry = w->i_fc[1] & WIFI_FC1_RETRY;
 	bool station = false;
 
-	// Discard frames that do not have sequence numbers OR are retry frames
-	// These conditions are to enable using the sequence number to estimate packet delivery rate
-	if (retry == 1 || type == WIFI_FC0_TYPE_CTL) {
+	// Discard frames that do not have sequence numbers
+	if (type == WIFI_FC0_TYPE_CTL) {
 		return p;
 	}
 
@@ -231,6 +230,8 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 	update_neighbor(frame);
 	update_link_table(frame);
+	unsigned usec = calc_usecs_wifi_packet(p->length(), ceh->rate, 0);
+	update_channel_busy_time(ta, usec, p->length());
 
 	// check if frame meta-data should be saved
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
@@ -248,22 +249,41 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 }
 
+void EmpowerRXStats::update_channel_busy_time(EtherAddress ta,
+		double occupancy_time, uint32_t payload_length) {
+
+	// Update channel quality map with channel busy fraction, throughput
+	// and available BW
+	CqmLink *nfo;
+	nfo = links.get_pointer(ta);
+
+	// If an entry for this device has not been created yet, wait till the
+	// first frame with a sequence number is received. This is to synchronize
+	// the begin times of measurement windows for PDR and CBT.
+	if (!nfo) {
+		// wait till a frame with a sequence number is received to begin the
+		// measurement window.
+		return;
+	}
+	nfo->add_cbt_sample(occupancy_time, payload_length);
+
+}
+
 void EmpowerRXStats::update_link_table(Frame *frame) {
 
 	// Update channel quality map
 	CqmLink *nfo;
 	nfo = links.get_pointer(frame->_ta);
+
 	if (!nfo) {
 		links[frame->_ta] = CqmLink();
 		nfo = links.get_pointer(frame->_ta);
-		nfo->senderType = frame->_station ? 0 : 1;
 		nfo->sourceAddr = frame->_ta;
 		nfo->lastEstimateTime = Timestamp::now();
 		nfo->currentTime = Timestamp::now();
 		nfo->lastSeqNum = frame->_seq - 1;
 		nfo->currentSeqNum = frame->_seq;
 		nfo->xi = 0;
-		nfo->ifaceId = frame->_iface_id;
 		nfo->rssiThreshold = _rssi_threshold;
 	}
 
