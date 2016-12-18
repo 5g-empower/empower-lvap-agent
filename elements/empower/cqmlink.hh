@@ -11,18 +11,18 @@ CLICK_DECLS
 class CqmLink {
 public:
 
-	CqmLink();
-	~CqmLink();
+    CqmLink();
+    ~CqmLink();
 
-	void estimator();
-	void performance_degradation_trigger();
+    void estimator();
+    void performance_degradation_trigger();
 
-	void add_sample(Frame *);
-	void add_cbt_sample(double, uint32_t);
+    void add_sample(Frame *);
+    void add_cbt_sample(double, uint32_t);
 
-	String unparse();
+    String unparse();
 
-	Timestamp lastEstimateTime;
+    Timestamp lastEstimateTime;
     Timestamp currentTime;
 
     EtherAddress sourceAddr;
@@ -48,21 +48,21 @@ public:
     double data_bits_recv;
     double throughput;
     double available_BW;
-    double p_channel_busy_fraction; // risk of channel busy fraction exceeding set threshold. 
+    double p_channel_busy_fraction; // risk of channel busy fraction exceeding set threshold.
     double p_throughput;
     double p_available_BW;
 
     double xi;
 
-	//sics
-	double rssiThreshold;
-	double rssi_tolerance;
-	double cbt_threshold;
-	double cbt_tolerance;
-	double throughput_threshold;
-	double throughput_tolerance;
-	double pdr_threshold;
-	double pdr_tolerance;
+    //sics
+    double rssiThreshold;
+    double rssi_tolerance;
+    double cbt_threshold;
+    double cbt_tolerance;
+    double throughput_threshold;
+    double throughput_tolerance;
+    double pdr_threshold;
+    double pdr_tolerance;
 
 };
 

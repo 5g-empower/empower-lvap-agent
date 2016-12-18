@@ -19,7 +19,7 @@ CLICK_DECLS
 
 CqmLink::CqmLink() {
 
-	sourceAddr = EtherAddress();
+    sourceAddr = EtherAddress();
 
     rssiCdf = 0;
     numFramesCount = 0;
@@ -39,24 +39,27 @@ CqmLink::CqmLink() {
 
     xi = 0;
 
-	channel_busy_time = 0;
-	data_bits_recv = 0;
-	channel_busy_fraction = 0;
-	throughput = 0;
-	available_BW = 0;
+    channel_busy_time = 0;
+    data_bits_recv = 0;
+    channel_busy_fraction = 0;
+    throughput = 0;
+    available_BW = 0;
 
-	rssiThreshold = -70;
-	rssi_tolerance = 0.2;
-	cbt_threshold = 0.9;
-	cbt_tolerance = 0.2;
-	throughput_threshold = 10000; // kbps
-	throughput_tolerance = 0.2;
-	pdr_threshold = 0.9;
-	pdr_tolerance = 0.2;
-	p_channel_busy_fraction = 0; // risk of channel busy fraction exceeding set threshold.
-	p_throughput = 0;
-	p_available_BW= 0;
+    rssiThreshold = -70;
+    rssi_tolerance = 0.2;
+    cbt_threshold = 0.9;
+    cbt_tolerance = 0.2;
+    throughput_threshold = 10000; // kbps
+    throughput_tolerance = 0.2;
+    pdr_threshold = 0.9;
+    pdr_tolerance = 0.2;
+    p_channel_busy_fraction = 0; // risk of channel busy fraction exceeding set threshold.
+    p_throughput = 0;
+    p_available_BW= 0;
 
+}
+
+CqmLink::~CqmLink() {
 }
 
 // short window estimation
