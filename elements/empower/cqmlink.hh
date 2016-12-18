@@ -18,7 +18,6 @@ public:
     void performance_degradation_trigger();
 
     void add_sample(Frame *);
-    void add_cbt_sample(double, uint32_t);
 
     String unparse();
 

@@ -14,6 +14,7 @@
  */
 
 #include <click/config.h>
+#include <elements/wifi/bitrate.hh>
 #include "cqmlink.hh"
 CLICK_DECLS
 
@@ -167,15 +168,13 @@ void CqmLink::performance_degradation_trigger() {
 }
 
 void CqmLink::add_sample(Frame *frame) {
+    unsigned usec = calc_usecs_wifi_packet(frame->_length, frame->_rate, 0);
+    channel_busy_time += usec;
+    data_bits_recv += 8 * frame->_length;
 	numFramesCount_l++;
 	rssiCdfCount_l = rssiCdfCount_l + (frame->_rssi > rssiThreshold ? 1 : 0);
 	currentSeqNum = frame->_seq;
 	currentTime.assign_now();
-}
-
-void CqmLink::add_cbt_sample(double occupancy_time, uint32_t payload_length) {
-	channel_busy_time += occupancy_time;
-	data_bits_recv += 8 * payload_length;
 }
 
 String CqmLink::unparse() {

@@ -230,8 +230,6 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 	update_neighbor(frame);
 	update_link_table(frame);
-	unsigned usec = calc_usecs_wifi_packet(p->length(), ceh->rate, 0);
-	update_channel_busy_time(ta, usec, p->length());
 
 	// check if frame meta-data should be saved
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
@@ -246,26 +244,6 @@ EmpowerRXStats::simple_action(Packet *p) {
 	lock.release_write();
 
 	return p;
-
-}
-
-void EmpowerRXStats::update_channel_busy_time(EtherAddress ta,
-		double occupancy_time, uint32_t payload_length) {
-
-	// Update channel quality map with channel busy fraction, throughput
-	// and available BW
-	CqmLink *nfo;
-	nfo = links.get_pointer(ta);
-
-	// If an entry for this device has not been created yet, wait till the
-	// first frame with a sequence number is received. This is to synchronize
-	// the begin times of measurement windows for PDR and CBT.
-	if (!nfo) {
-		// wait till a frame with a sequence number is received to begin the
-		// measurement window.
-		return;
-	}
-	nfo->add_cbt_sample(occupancy_time, payload_length);
 
 }
 

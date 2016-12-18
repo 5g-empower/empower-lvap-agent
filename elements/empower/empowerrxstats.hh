@@ -115,7 +115,6 @@ private:
 
 	void update_neighbor(Frame *);
 	void update_link_table(Frame *);
-	void update_channel_busy_time(EtherAddress , double , uint32_t);
 
 };
 
