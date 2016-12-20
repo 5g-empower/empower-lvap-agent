@@ -80,17 +80,17 @@ struct empower_header {
   private:
     uint8_t  _version; /* see protocol version */
     uint8_t  _type;    /* see protocol type */
-    uint16_t _length;  /* including this header */
+    uint32_t _length;  /* including this header */
     uint32_t _seq;     /* sequence number */
   public:
     uint8_t  version()                    { return _version; }
     uint8_t  type()                       { return _type; }
-    uint16_t length()                     { return ntohs(_length); }
+    uint32_t length()                     { return ntohl(_length); }
     uint32_t seq()                        { return ntohl(_seq); }
     void     set_seq(uint32_t seq)        { _seq = htonl(seq); }
     void     set_version(uint8_t version) { _version = version; }
     void     set_type(uint8_t type)       { _type = type; }
-    void     set_length(uint16_t length)  { _length = htons(length); }
+    void     set_length(uint32_t length)  { _length = htonl(length); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* hello packet format */
