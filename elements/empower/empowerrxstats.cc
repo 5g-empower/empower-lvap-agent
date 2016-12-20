@@ -68,8 +68,7 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 
 EmpowerRXStats::EmpowerRXStats() :
 		_el(0), _timer(this), _signal_offset(0), _period(1000),
-		_sma_period(13), _max_silent_window_count(10), _rssi_threshold(-70),
-		_debug(false) {
+		_sma_period(13), _max_silent_window_count(10), _debug(false) {
 
 }
 
@@ -118,18 +117,6 @@ void EmpowerRXStats::run_timer(Timer *) {
 		// Delete stale entries
 		if (nfo->_silent_window_count > _max_silent_window_count) {
 			iter = aps.erase(iter);
-		} else {
-			++iter;
-		}
-	}
-	// process links
-	for (CIter iter = links.begin(); iter.live();) {
-		// Update estimator
-		CqmLink *nfo = &iter.value();
-		nfo->estimator();
-		// Delete stale entries
-		if (nfo->silentWindowCount> _max_silent_window_count) {
-			iter = links.erase(iter);
 		} else {
 			++iter;
 		}
@@ -223,13 +210,15 @@ EmpowerRXStats::simple_action(Packet *p) {
 	Frame *frame = new Frame(ra, ta, ceh->tsft, ceh->flags, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), retry, station, iface_id);
 
 	if (_debug) {
-		click_chatter("%{element} :: %s :: %s", this, __func__, frame->unparse().c_str());
+		click_chatter("%{element} :: %s :: %s",
+					  this,
+					  __func__,
+					  frame->unparse().c_str());
 	}
 
 	lock.acquire_write();
 
 	update_neighbor(frame);
-	update_link_table(frame);
 
 	// check if frame meta-data should be saved
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
@@ -244,29 +233,6 @@ EmpowerRXStats::simple_action(Packet *p) {
 	lock.release_write();
 
 	return p;
-
-}
-
-void EmpowerRXStats::update_link_table(Frame *frame) {
-
-	// Update channel quality map
-	CqmLink *nfo;
-	nfo = links.get_pointer(frame->_ta);
-
-	if (!nfo) {
-		links[frame->_ta] = CqmLink();
-		nfo = links.get_pointer(frame->_ta);
-		nfo->sourceAddr = frame->_ta;
-		nfo->lastEstimateTime = Timestamp::now();
-		nfo->currentTime = Timestamp::now();
-		nfo->lastSeqNum = frame->_seq - 1;
-		nfo->currentSeqNum = frame->_seq;
-		nfo->xi = 0;
-		nfo->rssiThreshold = _rssi_threshold;
-	}
-
-	// Add sample
-	nfo->add_sample(frame);
 
 }
 
@@ -374,7 +340,6 @@ void EmpowerRXStats::del_summary_trigger(uint32_t summary_id) {
 enum {
 	H_DEBUG,
 	H_NEIGHBORS,
-	H_LINKS,
 	H_RESET,
 	H_SIGNAL_OFFSET,
 	H_MATCHES,
@@ -429,14 +394,6 @@ String EmpowerRXStats::read_handler(Element *e, void *thunk) {
 		}
 		return sa.take_string();
 	}
-	case H_LINKS: {
-		StringAccum sa;
-		for (CIter iter = td->links.begin(); iter.live(); iter++) {
-			CqmLink *nfo = &iter.value();
-			sa << nfo->unparse();
-		}
-		return sa.take_string();
-	}
 	case H_SIGNAL_OFFSET:
 		return String(td->_signal_offset) + "\n";
 	case H_DEBUG:
@@ -478,7 +435,6 @@ int EmpowerRXStats::write_handler(const String &in_s, Element *e, void *vparam,
 
 void EmpowerRXStats::add_handlers() {
 	add_read_handler("neighbors", read_handler, (void *) H_NEIGHBORS);
-	add_read_handler("links", read_handler, (void *) H_LINKS);
 	add_read_handler("summary_triggers", read_handler, (void *) H_SUMMARY_TRIGGERS);
 	add_read_handler("matches", read_handler, (void *) H_MATCHES);
 	add_read_handler("rssi_triggers", read_handler, (void *) H_RSSI_TRIGGERS);
@@ -491,4 +447,3 @@ void EmpowerRXStats::add_handlers() {
 EXPORT_ELEMENT(EmpowerRXStats)
 ELEMENT_REQUIRES(bitrate DstInfo Trigger SummaryTrigger RssiTrigger)
 CLICK_ENDDECLS
-
