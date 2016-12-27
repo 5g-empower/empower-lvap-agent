@@ -25,11 +25,12 @@
 #include <clicknet/ether.h>
 #include <click/packet_anno.hh>
 #include <click/etheraddress.hh>
+#include <elements/wifi/minstrel.hh>
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 
 EmpowerWifiDecap::EmpowerWifiDecap() :
-		_el(0), _debug(false), _no_stats(false) {
+		_el(0), _debug(false) {
 }
 
 EmpowerWifiDecap::~EmpowerWifiDecap() {
@@ -40,7 +41,6 @@ int EmpowerWifiDecap::configure(Vector<String> &conf,
 
 	return Args(conf, this, errh)
 			.read_m("EL", ElementCastArg("EmpowerLVAPManager"), _el)
-			.read("NO_STATS", _no_stats)
 			.read("DEBUG", _debug)
 			.complete();
 
@@ -127,7 +127,7 @@ EmpowerWifiDecap::push(int, Packet *p) {
 		return;
 	}
 
-    EmpowerStationState *ess = _el->lvaps()->get_pointer(src);
+    EmpowerStationState *ess = _el->get_ess(src);
 
     if (!ess) {
 		p->kill();
@@ -162,6 +162,8 @@ EmpowerWifiDecap::push(int, Packet *p) {
 		return;
 	}
 
+	TxPolicyInfo * txp = _el->get_txp(src);
+
 	// frame must be encapsulated in another Ethernet frame
 	if (ess->_encap) {
 
@@ -177,9 +179,7 @@ EmpowerWifiDecap::push(int, Packet *p) {
 		memcpy(p_out->data() + 6, ess->_sta.data(), 6);
 		memcpy(p_out->data() + 12, &ether_type, 2);
 
-		if (!_no_stats) {
-			ess->update_rx(p_out->length());
-		}
+		txp->update_rx(p_out->length());
 
 		if (Packet *clone = p->clone())
 			output(1).push(clone);
@@ -211,9 +211,7 @@ EmpowerWifiDecap::push(int, Packet *p) {
 	memcpy(p_out->data() + 6, src.data(), 6);
 	memcpy(p_out->data() + 12, &ether_type, 2);
 
-	if (!_no_stats) {
-		ess->update_rx(p_out->length());
-	}
+	txp->update_rx(p_out->length());
 
 	if (Packet *clone = p->clone())
 		output(1).push(clone);

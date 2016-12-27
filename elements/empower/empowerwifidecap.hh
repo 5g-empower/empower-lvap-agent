@@ -57,7 +57,6 @@ private:
 	class EmpowerLVAPManager *_el;
 
 	bool _debug;
-	bool _no_stats;
 
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);

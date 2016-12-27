@@ -673,11 +673,20 @@ void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lv
 
 void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t counters_id) {
 
-	EmpowerStationState ess = _lvaps.get(sta);
+	//EmpowerStationState ess = _lvaps.get(sta);
+	TxPolicyInfo * txp = get_txp(sta);
+
+	if (!txp) {
+		click_chatter("%{element} :: %s :: unable to find TXP for station %s!",
+					  this,
+					  __func__,
+					  sta.unparse().c_str());
+		return;
+	}
 
 	int len = sizeof(empower_counters_response);
-	len += ess._tx.size() * 6; // the tx samples
-	len += ess._rx.size() * 6; // the rx samples
+	len += txp->_tx.size() * 6; // the tx samples
+	len += txp->_rx.size() * 6; // the rx samples
 
 	WritablePacket *p = Packet::make(len);
 
@@ -697,16 +706,16 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 	counters->set_seq(get_next_seq());
 	counters->set_counters_id(counters_id);
 	counters->set_wtp(_wtp);
-	counters->set_sta(ess._sta);
-	counters->set_nb_tx(ess._tx.size());
-	counters->set_nb_rx(ess._rx.size());
+	counters->set_sta(sta);
+	counters->set_nb_tx(txp->_tx.size());
+	counters->set_nb_rx(txp->_rx.size());
 
 	uint8_t *ptr = (uint8_t *) counters;
 	ptr += sizeof(struct empower_counters_response);
 
 	uint8_t *end = ptr + (len - sizeof(struct empower_counters_response));
 
-	for (CBytesIter iter = ess._tx.begin(); iter.live(); iter++) {
+	for (CBytesIter iter = txp->_tx.begin(); iter.live(); iter++) {
 		assert (ptr <= end);
 		counters_entry *entry = (counters_entry *) ptr;
 		entry->set_size(iter.key());
@@ -714,7 +723,7 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 		ptr += sizeof(struct counters_entry);
 	}
 
-	for (CBytesIter iter = ess._rx.begin(); iter.live(); iter++) {
+	for (CBytesIter iter = txp->_rx.begin(); iter.live(); iter++) {
 		assert (ptr <= end);
 		counters_entry *entry = (counters_entry *) ptr;
 		entry->set_size(iter.key());
@@ -844,7 +853,7 @@ void EmpowerLVAPManager::send_caps() {
 
 	uint8_t *end = ptr + (len - sizeof(struct empower_caps));
 
-	for (IfIter iter = elements().begin(); iter.live(); iter++) {
+	for (IfIter iter = _elements_to_ifaces.begin(); iter.live(); iter++) {
 		assert (ptr <= end);
 		resource_elements_entry *entry = (resource_elements_entry *) ptr;
 		entry->set_hwaddr(iter.key()._hwaddr);
@@ -1605,9 +1614,10 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	case H_BYTES: {
 		StringAccum sa;
 		for (LVAPIter it = td->lvaps()->begin(); it.live(); it++) {
+			TxPolicyInfo *txp = td->get_txp(it.key());
 			sa << "!" << it.key().unparse() << "\n";
 			sa << "!TX\n";
-			CBytes tx = it.value()._tx;
+			CBytes tx = txp->_tx;
 			Vector<int> lens_tx;
 			for (CBytesIter iter = tx.begin(); iter.live(); iter++) {
 				lens_tx.push_back(iter.key());
@@ -1618,7 +1628,7 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 				sa << itr.key() << " " << itr.value() << "\n";
 			}
 			sa << "!RX\n";
-			CBytes rx = it.value()._rx;
+			CBytes rx = txp->_rx;
 			Vector<int> lens_rx;
 			for (CBytesIter iter = rx.begin(); iter.live(); iter++) {
 				lens_rx.push_back(iter.key());
@@ -1707,11 +1717,10 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		}
 		// send tx policies
 		for (REIter it_re = f->_ifaces_to_elements.begin(); it_re.live(); it_re++) {
-			int iface = it_re.key();
-			TransmissionPolicies * _tx_policies = f->rcs()->at(iface)->tx_policies();
-			for (TxTableIter it_txp = _tx_policies->tx_table()->begin(); it_txp.live(); it_txp++) {
+			int iface_id = it_re.key();
+			for (TxTableIter it_txp = f->get_tx_policies(iface_id)->tx_table()->begin(); it_txp.live(); it_txp++) {
 				EtherAddress sta = it_txp.key();
-				f->send_status_port(sta, iface, it_re.value()._hwaddr, it_re.value()._channel, it_re.value()._band);
+				f->send_status_port(sta, iface_id, it_re.value()._hwaddr, it_re.value()._channel, it_re.value()._band);
 			}
 		}
 		break;

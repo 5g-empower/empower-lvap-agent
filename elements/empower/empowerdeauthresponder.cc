@@ -86,7 +86,7 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 
 	EtherAddress src = EtherAddress(w->i_addr2);
 
-    EmpowerStationState *ess = _el->lvaps()->get_pointer(src);
+    EmpowerStationState *ess = _el->get_ess(src);
 
     //If we're not aware of this LVAP, ignore
 	if (!ess) {
@@ -158,7 +158,7 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 
 void EmpowerDeAuthResponder:: send_deauth_request(EtherAddress dst, uint16_t reason, int iface_id)
 {
-	EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
+	EmpowerStationState *ess = _el->get_ess(dst);
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: sending deauthentication request to %s",

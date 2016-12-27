@@ -83,7 +83,7 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 
 	EtherAddress src = EtherAddress(w->i_addr2);
 
-	EmpowerStationState *ess = _el->lvaps()->get_pointer(src);
+	EmpowerStationState *ess = _el->get_ess(src);
 
 	//If we're not aware of this LVAP, ignore
 	if (!ess) {
@@ -384,7 +384,7 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 		uint16_t status, int iface_id) {
 
-    EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
+    EmpowerStationState *ess = _el->get_ess(dst);
 	ess->_association_status = true;
 
 	if (_debug) {
@@ -443,8 +443,7 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 
 	/* rates */
 
-	Minstrel * rc = _el->rcs()->at(iface_id);
-	TransmissionPolicies * tx_table = rc->tx_policies();
+	TransmissionPolicies * tx_table = _el->get_tx_policies(iface_id);
 
 	Vector<int> rates = tx_table->lookup(ess->_sta)->_mcs;
 	ptr[0] = WIFI_ELEMID_RATES;

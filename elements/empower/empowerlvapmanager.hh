@@ -7,6 +7,7 @@
 #include <click/hashtable.hh>
 #include <clicknet/wifi.h>
 #include <click/sync.hh>
+#include <elements/wifi/minstrel.hh>
 #include "empowerrxstats.hh"
 #include "empowerpacket.hh"
 CLICK_DECLS
@@ -142,20 +143,6 @@ public:
 	bool _set_mask;
 	bool _authentication_status;
 	bool _association_status;
-	CBytes _rx;
-	CBytes _tx;
-	void update_tx(uint16_t len) {
-		if (_tx.find(len) == _tx.end()) {
-			_tx.set(len, 0);
-		}
-		(*_tx.get_pointer(len))++;
-	}
-	void update_rx(uint16_t len) {
-		if (_rx.find(len) == _rx.end()) {
-			_rx.set(len, 0);
-		}
-		(*_rx.get_pointer(len))++;
-	}
 };
 
 // Cross structure mapping bssids to list of associated
@@ -288,14 +275,10 @@ public:
 	void send_summary_trigger(SummaryTrigger *);
 	void send_lvap_stats_response(EtherAddress, uint32_t);
 
-	EtherAddress wtp() { return _wtp; }
-	EtherAddress empower_hwaddr() { return _empower_hwaddr; }
 	LVAP* lvaps() { return &_lvaps; }
 	VAP* vaps() { return &_vaps; }
 
 	uint32_t get_next_seq() { return ++_seq; }
-
-	const IfTable & elements() { return _elements_to_ifaces; }
 
 	int element_to_iface(EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
 		IfIter iter = _elements_to_ifaces.find(ResourceElement(hwaddr, channel, band));
@@ -309,7 +292,29 @@ public:
 		return _ifaces_to_elements.get_pointer(iface);
 	}
 
-	Vector<Minstrel *> * rcs() { return &_rcs; }
+	int num_ifaces() {
+		return _rcs.size();
+	}
+
+	EmpowerStationState * get_ess(EtherAddress sta) {
+		EmpowerStationState *ess = _lvaps.get_pointer(sta);
+		return ess;
+	}
+
+	TxPolicyInfo * get_txp(EtherAddress sta) {
+		EmpowerStationState *ess = _lvaps.get_pointer(sta);
+		if (!ess) {
+			return 0;
+		}
+		Minstrel * rc = _rcs[ess->_iface_id];
+		TxPolicyInfo * txp = rc->tx_policies()->lookup(ess->_sta);
+		return txp;
+	}
+
+	TransmissionPolicies * get_tx_policies(int iface_id) {
+		Minstrel * rc = _rcs[iface_id];
+		return rc->tx_policies();
+	}
 
 private:
 

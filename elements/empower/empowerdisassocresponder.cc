@@ -81,7 +81,7 @@ void EmpowerDisassocResponder::push(int, Packet *p) {
 	}
 
 	EtherAddress src = EtherAddress(w->i_addr2);
-	EmpowerStationState *ess = _el->lvaps()->get_pointer(src);
+	EmpowerStationState *ess = _el->get_ess(src);
 
     //If we're not aware of this LVAP, ignore
 	if (!ess) {

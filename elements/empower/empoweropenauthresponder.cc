@@ -96,7 +96,7 @@ void EmpowerOpenAuthResponder::push(int, Packet *p) {
 
 	EtherAddress src = EtherAddress(w->i_addr2);
 
-    EmpowerStationState *ess = _el->lvaps()->get_pointer(src);
+    EmpowerStationState *ess = _el->get_ess(src);
 
     // If we're not aware of this LVAP, ignore
 	if (!ess) {
@@ -193,7 +193,7 @@ void EmpowerOpenAuthResponder::push(int, Packet *p) {
 
 void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, uint16_t seq, uint16_t status, int iface_id) {
 
-    EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
+    EmpowerStationState *ess = _el->get_ess(dst);
 
 	ess->_authentication_status = true;
 

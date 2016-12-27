@@ -87,7 +87,7 @@ void Empower11k::push(int, Packet *p) {
 
 	EtherAddress src = EtherAddress(w->i_addr2);
 
-	EmpowerStationState *ess = _el->lvaps()->get_pointer(src);
+	EmpowerStationState *ess = _el->get_ess(src);
 
 	// if we're not aware of this LVAP, ignore
 	if (!ess) {
@@ -129,7 +129,7 @@ void Empower11k::push(int, Packet *p) {
 
 void Empower11k::send_neighbor_report_request(EtherAddress sta, uint8_t token) {
 
-    EmpowerStationState *ess = _el->lvaps()->get_pointer(sta);
+    EmpowerStationState *ess = _el->get_ess(sta);
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: sending neighbor report request to %s token %u",
@@ -194,7 +194,7 @@ void Empower11k::send_neighbor_report_request(EtherAddress sta, uint8_t token) {
 
 void Empower11k::send_link_measurement_request(EtherAddress sta, uint8_t token) {
 
-    EmpowerStationState *ess = _el->lvaps()->get_pointer(sta);
+    EmpowerStationState *ess = _el->get_ess(sta);
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: sending neighbor report request to %s token %u",

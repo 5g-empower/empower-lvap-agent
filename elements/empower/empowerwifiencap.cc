@@ -69,7 +69,10 @@ EmpowerWifiEncap::push(int, Packet *p) {
 
 	// unicast traffic
 	if (!dst.is_broadcast() && !dst.is_group()) {
-        EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
+        EmpowerStationState *ess = _el->get_ess(dst);
+        TxPolicyInfo *txp = _el->get_txp(dst);
+
+
         if (!ess) {
 			p->kill();
 			return;
@@ -94,7 +97,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 			p->kill();
 			return;
 		}
-		ess->update_tx(p->length());
+		txp->update_tx(p->length());
 		Packet * p_out = wifi_encap(p, dst, src, ess->_lvap_bssid);
 		SET_PAINT_ANNO(p_out, ess->_iface_id);
 		output(0).push(p_out);
@@ -103,10 +106,9 @@ EmpowerWifiEncap::push(int, Packet *p) {
 
 	// broadcast and multicast traffic, we need to transmit one frame for each unique
 	// bssid. this is due to the fact that we can have the same bssid for multiple LVAPs.
-	for (int i = 0; i < _el->rcs()->size(); i++) {
+	for (int i = 0; i < _el->num_ifaces(); i++) {
 
-		Minstrel * rc = _el->rcs()->at(i);
-		TxPolicyInfo * tx_policy = rc->tx_policies()->lookup(dst);
+		TxPolicyInfo * tx_policy = _el->get_tx_policies(i)->lookup(dst);
 
 		if (tx_policy->_tx_mcast == TX_MCAST_DMS) {
 
