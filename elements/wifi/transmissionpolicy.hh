@@ -45,6 +45,7 @@ public:
 	int _ur_mcast_count;
 	int _rts_cts;
 	CBytes _tx;
+	CBytes _rx;
 
 	TxPolicyInfo() {
 		_mcs = Vector<int>();
@@ -69,6 +70,13 @@ public:
 			_tx.set(len, 0);
 		}
 		(*_tx.get_pointer(len))++;
+	}
+
+	void update_rx(uint16_t len) {
+		if (_rx.find(len) == _rx.end()) {
+			_rx.set(len, 0);
+		}
+		(*_rx.get_pointer(len))++;
 	}
 
 	String unparse() {
