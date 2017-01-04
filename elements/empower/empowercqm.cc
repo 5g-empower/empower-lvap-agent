@@ -1,8 +1,6 @@
 /*
- * empowercqm.{cc,hh} -- tracks channel quality map
- * Akhila Rao, Roberto Riggio
- *
- * Copyright (c) 2016 SICS
+ * empowercqm.{cc,hh}
+ * Akila Rao, Roberto Riggio
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -14,6 +12,7 @@
  * notice is a summary of the Click LICENSE file; the license in that file is
  * legally binding.
  */
+
 #include <click/config.h>
 #include <click/args.hh>
 #include <click/error.hh>
