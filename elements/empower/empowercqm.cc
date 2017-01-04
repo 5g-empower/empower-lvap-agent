@@ -176,16 +176,16 @@ EmpowerCQM::simple_action(Packet *p) {
 }
 
 void EmpowerCQM::update_channel_busy_time(Frame *frame) {
-        for (CIter iter = links.begin(); iter.live();) {
-                CqmLink *nfo = &iter.value();
+	for (CIter iter = links.begin(); iter.live();) {
+		CqmLink *nfo = &iter.value();
 		if (!nfo) {
-                	// wait till a frame with a sequence number is received to begin the measurement window.
+			// wait till a frame with a sequence number is received to begin the measurement window.
 			++iter;
-                	continue;
-        	}
-                nfo->add_cbt_sample(frame);
-                ++iter;
-        }
+			continue;
+		}
+		nfo->add_cbt_sample(frame);
+		++iter;
+	}
 }
 
 void EmpowerCQM::update_link_table(Frame *frame) {

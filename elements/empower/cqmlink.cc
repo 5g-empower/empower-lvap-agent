@@ -85,8 +85,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		// this value if for when rts cts is disabled, the sending rate is 54Mbps, basic rate is 6Mbps, and data payload length is 1000B or 8000b
 		channel_busy_fraction = channel_busy_time / (double) us_window_period; //channel busy time is in micro s
 		throughput = (double) data_bits_recv / (double) us_window_period; // is in Mbps since window is in us units
-		available_BW = raw_mcs_rate * (cbt_threshold - channel_busy_fraction)
-				* payload_efficiency;
+		available_BW = raw_mcs_rate * (cbt_threshold - channel_busy_fraction) * payload_efficiency;
 
 		// Bayesian analysis: Compute Posterior
 		if (numFramesCount_l > 0) {
@@ -145,8 +144,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 	} else {
 
 		window_count = 0;
-		p_channel_busy_fraction = (double) p_channel_busy_fraction
-				/ (double) num_estimates;
+		p_channel_busy_fraction = (double) p_channel_busy_fraction / (double) num_estimates;
 		p_throughput = (double) p_throughput / (double) num_estimates;
 		p_available_BW = (double) p_available_BW / (double) num_estimates;
 		p_pdr = (double) p_pdr / (double) num_estimates;
