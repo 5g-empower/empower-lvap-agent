@@ -551,5 +551,5 @@ void EmpowerRXStats::add_handlers() {
 }
 
 EXPORT_ELEMENT(EmpowerRXStats)
-ELEMENT_REQUIRES(bitrate DstInfo BusynessInfo Trigger SummaryTrigger RssiTrigger BusynessTriggers)
+ELEMENT_REQUIRES(bitrate DstInfo BusynessInfo Trigger SummaryTrigger RssiTrigger BusynessTrigger)
 CLICK_ENDDECLS

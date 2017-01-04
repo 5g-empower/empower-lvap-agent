@@ -1794,4 +1794,4 @@ void EmpowerLVAPManager::add_handlers() {
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(EmpowerLVAPManager)
-ELEMENT_REQUIRES(userlevel)
+ELEMENT_REQUIRES(userlevel EmpowerRXStats)
