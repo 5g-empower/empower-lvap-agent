@@ -26,10 +26,11 @@
 #include <elements/wifi/bitrate.hh>
 #include "empowerlvapmanager.hh"
 #include "empowercqm.hh"
+#include "frame.hh"
 CLICK_DECLS
 
 EmpowerCQM::EmpowerCQM() :
-		_el(0), _timer(this), _signal_offset(0), _period(1000),
+		_el(0), _timer(this), _signal_offset(0), _period(500),
 		_max_silent_window_count(10), _rssi_threshold(-70),
 		_debug(false) {
 
@@ -64,7 +65,7 @@ void EmpowerCQM::run_timer(Timer *) {
 	for (CIter iter = links.begin(); iter.live();) {
 		// Update estimator
 		CqmLink *nfo = &iter.value();
-		nfo->estimator();
+		nfo->estimator(_period, _debug);
 		// Delete stale entries
 		if (nfo->silentWindowCount> _max_silent_window_count) {
 			iter = links.erase(iter);
@@ -105,8 +106,8 @@ EmpowerCQM::simple_action(Packet *p) {
 	int retry = w->i_fc[1] & WIFI_FC1_RETRY;
 	bool station = false;
 
-	// Discard frames that do not have sequence numbers
-	if (type == WIFI_FC0_TYPE_CTL) {
+	// Ignore frames that do not have sequence numbers or that are retries
+	if (retry != 1 && type != WIFI_FC0_TYPE_CTL) {
 		return p;
 	}
 
@@ -166,10 +167,33 @@ EmpowerCQM::simple_action(Packet *p) {
 
 	lock.acquire_write();
 
+	update_link_table(frame);
+	update_channel_busy_time(frame);
+
+	lock.release_write();
+
+	return p;
+
+}
+
+void EmpowerCQM::update_channel_busy_time(Frame *frame) {
+        for (CIter iter = links.begin(); iter.live();) {
+                CqmLink *nfo = &iter.value();
+		if (!nfo) {
+                	// wait till a frame with a sequence number is received to begin the measurement window.
+			++iter;
+                	continue;
+        	}
+                nfo->add_cbt_sample(frame);
+                ++iter;
+        }
+}
+
+void EmpowerCQM::update_link_table(Frame *frame) {
+
 	// Update channel quality map
 	CqmLink *nfo;
 	nfo = links.get_pointer(frame->_ta);
-
 	if (!nfo) {
 		links[frame->_ta] = CqmLink();
 		nfo = links.get_pointer(frame->_ta);
@@ -184,10 +208,6 @@ EmpowerCQM::simple_action(Packet *p) {
 
 	// Add sample
 	nfo->add_sample(frame);
-
-	lock.release_write();
-
-	return p;
 
 }
 
@@ -252,5 +272,5 @@ void EmpowerCQM::add_handlers() {
 }
 
 EXPORT_ELEMENT(EmpowerCQM)
-ELEMENT_REQUIRES(bitrate)
+ELEMENT_REQUIRES(bitrate Frame)
 CLICK_ENDDECLS

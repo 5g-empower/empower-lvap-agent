@@ -62,12 +62,6 @@ public:
 
 	void add_handlers();
 
-	//void set_rssi_threshold(double threshold) { _rssi_threshold = threshold; };
-	//double get_rssi_threshold(void) { return _rssi_threshold; };
-
-	//void set_max_silent_window_count(uint64_t count) { _max_silent_window_count = count; };
-	//uint64_t get_max_silent_window_count(void) { return _max_silent_window_count; };
-
 	ReadWriteLock lock;
 	CqmLinkTable links;
 
@@ -85,6 +79,9 @@ private:
 
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);
+
+	void update_channel_busy_time(Frame *);
+	void update_link_table(Frame *);
 
 };
 

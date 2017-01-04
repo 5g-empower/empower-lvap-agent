@@ -14,10 +14,10 @@ public:
     CqmLink();
     ~CqmLink();
 
-    void estimator();
-    void performance_degradation_trigger();
+    void estimator(unsigned, bool);
 
     void add_sample(Frame *);
+    void add_cbt_sample(Frame *);
 
     String unparse();
 
@@ -47,6 +47,8 @@ public:
     double data_bits_recv;
     double throughput;
     double available_BW;
+
+    double p_pdr;
     double p_channel_busy_fraction; // risk of channel busy fraction exceeding set threshold.
     double p_throughput;
     double p_available_BW;
@@ -62,6 +64,8 @@ public:
     double throughput_tolerance;
     double pdr_threshold;
     double pdr_tolerance;
+
+    uint16_t window_count;
 
 };
 
