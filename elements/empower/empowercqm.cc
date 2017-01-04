@@ -26,6 +26,7 @@
 #include "empowerlvapmanager.hh"
 #include "empowercqm.hh"
 #include "frame.hh"
+#include "sma.hh"
 CLICK_DECLS
 
 EmpowerCQM::EmpowerCQM() :
@@ -58,10 +59,9 @@ int EmpowerCQM::configure(Vector<String> &conf, ErrorHandler *errh) {
 }
 
 void EmpowerCQM::run_timer(Timer *) {
-	// process stations
 	lock.acquire_write();
 	// process links
-	for (CIter iter = links.begin(); iter.live();) {
+	for (CLTIter iter = links.begin(); iter.live();) {
 		// Update estimator
 		CqmLink *nfo = &iter.value();
 		nfo->estimator(_period, _debug);
@@ -106,7 +106,7 @@ EmpowerCQM::simple_action(Packet *p) {
 	bool station = false;
 
 	// Ignore frames that do not have sequence numbers or that are retries
-	if (retry != 1 && type != WIFI_FC0_TYPE_CTL) {
+	if (retry == 1 || type == WIFI_FC0_TYPE_CTL) {
 		return p;
 	}
 
@@ -160,32 +160,22 @@ EmpowerCQM::simple_action(Packet *p) {
 	// create frame meta-data
 	Frame *frame = new Frame(ra, ta, ceh->tsft, ceh->flags, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), retry, station, iface_id);
 
-	if (_debug) {
-		click_chatter("%{element} :: %s :: %s", this, __func__, frame->unparse().c_str());
+	if (false) {
+		click_chatter("%{element} :: %s :: %s",
+				      this,
+					  __func__,
+					  frame->unparse().c_str());
 	}
 
 	lock.acquire_write();
 
-	update_link_table(frame);
-	update_channel_busy_time(frame);
+	//update_link_table(frame);
+
 
 	lock.release_write();
 
 	return p;
 
-}
-
-void EmpowerCQM::update_channel_busy_time(Frame *frame) {
-	for (CIter iter = links.begin(); iter.live();) {
-		CqmLink *nfo = &iter.value();
-		if (!nfo) {
-			// wait till a frame with a sequence number is received to begin the measurement window.
-			++iter;
-			continue;
-		}
-		nfo->add_cbt_sample(frame);
-		++iter;
-	}
 }
 
 void EmpowerCQM::update_link_table(Frame *frame) {
@@ -224,7 +214,7 @@ String EmpowerCQM::read_handler(Element *e, void *thunk) {
 	switch ((uintptr_t) thunk) {
 	case H_LINKS: {
 		StringAccum sa;
-		for (CIter iter = td->links.begin(); iter.live(); iter++) {
+		for (CLTIter iter = td->links.begin(); iter.live(); iter++) {
 			CqmLink *nfo = &iter.value();
 			sa << nfo->unparse();
 		}

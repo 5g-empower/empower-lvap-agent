@@ -18,25 +18,25 @@
 #include <click/config.h>
 #include "empowerrxstats.hh"
 #include "empowerlvapmanager.hh"
-#include "rssi_trigger.hh"
+#include "busyness_trigger.hh"
 CLICK_DECLS
 
-RssiTrigger::RssiTrigger(EtherAddress eth, uint32_t trigger_id,
+BusynessTrigger::BusynessTrigger(int iface_id, uint32_t trigger_id,
 		empower_trigger_relation rel, int val, bool dispatched, uint16_t period,
 		EmpowerLVAPManager * el, EmpowerRXStats * ers) :
-		Trigger(trigger_id, period, el, ers), _eth(eth), _rel(rel), _val(val),
+		Trigger(trigger_id, period, el, ers), _iface_id(iface_id), _rel(rel), _val(val),
 		_dispatched(dispatched) {
 
 }
 
-RssiTrigger::~RssiTrigger() {
+BusynessTrigger::~BusynessTrigger() {
 }
 
-String RssiTrigger::unparse() {
+String BusynessTrigger::unparse() {
 	StringAccum sa;
 	sa << Trigger::unparse();
-	sa << " addr ";
-	sa << _eth.unparse();
+	sa << "iface_id ";
+	sa << _iface_id;
 	sa << " rel ";
 	switch (_rel) {
 	case EQ:
@@ -62,28 +62,27 @@ String RssiTrigger::unparse() {
 	return sa.take_string();
 }
 
-bool RssiTrigger::matches(const DstInfo* nfo) {
+bool BusynessTrigger::matches(const BusynessInfo* nfo) {
 	bool match = false;
 	switch (_rel) {
 	case EQ:
-		match = (nfo->_sma_rssi->avg() == _val);
+		match = (nfo->_sma_busyness->avg() == _val);
 		break;
 	case GT:
-		match = (nfo->_sma_rssi->avg() > _val);
+		match = (nfo->_sma_busyness->avg() > _val);
 		break;
 	case LT:
-		match = (nfo->_sma_rssi->avg() < _val);
+		match = (nfo->_sma_busyness->avg() < _val);
 		break;
 	case GE:
-		match = (nfo->_sma_rssi->avg() >= _val);
+		match = (nfo->_sma_busyness->avg() >= _val);
 		break;
 	case LE:
-		match = (nfo->_sma_rssi->avg() <= _val);
+		match = (nfo->_sma_busyness->avg() <= _val);
 		break;
 	}
 	return match;
 }
 
 CLICK_ENDDECLS
-ELEMENT_PROVIDES(RssiTrigger)
-
+ELEMENT_PROVIDES(BusynessTrigger)

@@ -255,6 +255,8 @@ public:
 	int handle_set_port(Packet *, uint32_t);
 	int handle_frames_request(Packet *, uint32_t);
 	int handle_lvap_stats_request(Packet *, uint32_t);
+	int handle_add_busyness_trigger(Packet *, uint32_t);
+	int handle_del_busyness_trigger(Packet *, uint32_t);
 
 	void send_hello();
 	void send_probe_request(EtherAddress, String, uint8_t);
@@ -273,6 +275,7 @@ public:
 	void send_caps();
 	void send_rssi_trigger(uint32_t, uint32_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);
+	void send_busyness_trigger(uint32_t, uint32_t, uint32_t);
 	void send_lvap_stats_response(EtherAddress, uint32_t);
 
 	LVAP* lvaps() { return &_lvaps; }

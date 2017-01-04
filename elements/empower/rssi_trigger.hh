@@ -1,5 +1,5 @@
-#ifndef CLICK_EMPOWERDUMP_HH
-#define CLICK_EMPOWERDUMP_HH
+#ifndef CLICK_EMPOWERRSSI_HH
+#define CLICK_EMPOWERRSSI_HH
 #include <click/straccum.hh>
 #include <click/hashcode.hh>
 #include <click/timer.hh>
@@ -12,11 +12,12 @@ CLICK_DECLS
 class RssiTrigger: public Trigger {
 public:
 
-	empower_rssi_trigger_relation _rel;
+	EtherAddress _eth;
+	empower_trigger_relation _rel;
 	int _val;
 	bool _dispatched;
 
-	RssiTrigger(EtherAddress, uint32_t, empower_rssi_trigger_relation, int, bool, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
+	RssiTrigger(EtherAddress, uint32_t, empower_trigger_relation, int, bool, uint16_t, EmpowerLVAPManager *, EmpowerRXStats *);
 	~RssiTrigger();
 
 	String unparse();
@@ -30,4 +31,4 @@ public:
 };
 
 CLICK_ENDDECLS
-#endif /* CLICK_EMPOWER_DUMP_HH */
+#endif /* CLICK_EMPOWER_RSSI_HH */

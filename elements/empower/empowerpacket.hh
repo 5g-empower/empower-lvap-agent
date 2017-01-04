@@ -45,6 +45,10 @@ enum empower_packet_types {
     EMPOWER_PT_SUMMARY_TRIGGER = 0x23,     		// ac -> wtp
     EMPOWER_PT_DEL_SUMMARY_TRIGGER = 0x24, 		// ac -> wtp
 
+    EMPOWER_PT_ADD_BUSYNESS_TRIGGER = 0x19, 	// ac -> wtp
+    EMPOWER_PT_BUSYNESS_TRIGGER = 0x20,     	// ac -> wtp
+    EMPOWER_PT_DEL_BUSYNESS_TRIGGER = 0x21, 	// ac -> wtp
+
     // Channel Quality Maps
     EMPOWER_PT_UCQM_REQUEST = 0x25,     		// ac -> wtp
     EMPOWER_PT_UCQM_RESPONSE = 0x26,    		// wtp -> ac
@@ -469,6 +473,54 @@ public:
     void set_tx_mcast(empower_tx_mcast_type tx_mcast)	{ _tx_mcast = uint8_t(tx_mcast); }
     void set_nb_mcs(uint8_t nb_mcs)                 	{ _nb_mcs = nb_mcs; }
     void set_ur_mcast_count(uint8_t ur_mcast_count) 	{ _ur_mcast_count = ur_mcast_count; }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* add busyness packet format */
+struct empower_add_busyness_trigger: public empower_header {
+private:
+    uint32_t _trigger_id;	/* Module id (int) */
+    uint8_t  _addr[6];		/* EtherAddress */
+    uint8_t  _hwaddr[6];	/* EtherAddress */
+    uint8_t  _channel;		/* WiFi channel (int) */
+    uint8_t  _band;			/* WiFi band (empower_band_types) */
+    uint8_t  _relation;   	/* Relation (relation_t) */
+    uint32_t  _value;		/* Busyness value between 0 and 18000 */
+    uint16_t _period;		/* Reporting period in ms (int) */
+public:
+    EtherAddress addr()   { return EtherAddress(_addr); }
+    EtherAddress hwaddr() { return EtherAddress(_hwaddr); }
+    uint8_t channel()     { return _channel; }
+    uint8_t band()        { return _band; }
+    uint32_t trigger_id() { return ntohl(_trigger_id); }
+    uint8_t relation()    { return _relation; }
+    uint32_t value()      { return ntohl(_value); }
+    uint16_t period()     { return ntohs(_period); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* del busyness trigger packet format */
+struct empower_del_busyness_trigger: public empower_header {
+private:
+    uint32_t _trigger_id; /* Module id (int) */
+public:
+    uint32_t trigger_id() { return ntohl(_trigger_id); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* busyness trigger packet format */
+struct empower_busyness_trigger: public empower_header {
+private:
+    uint32_t _trigger_id; 	/* Module id (int) */
+    uint8_t  _wtp[6];		/* EtherAddress */
+    uint8_t  _hwaddr[6];	/* EtherAddress */
+    uint8_t  _channel;		/* WiFi channel (int) */
+    uint8_t  _band;			/* WiFi band (empower_band_types) */
+    uint32_t  _current;     /* Busyness value between 0 and 18000 */
+public:
+    void set_wtp(EtherAddress wtp)          { memcpy(_wtp, wtp.data(), 6); }
+    void set_band(uint8_t band)             { _band = band; }
+    void set_channel(uint8_t channel)       { _channel = channel; }
+    void set_hwaddr(EtherAddress hwaddr)    { memcpy(_hwaddr, hwaddr.data(), 6); }
+    void set_current(uint32_t current)      { _current = htonl(current); }
+    void set_trigger_id(int32_t trigger_id) { _trigger_id = htonl(trigger_id); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* add rssi trigger packet format */

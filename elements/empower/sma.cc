@@ -1,8 +1,8 @@
 /*
- * dstinfo.{cc,hh}
+ * sma.{cc,hh}
  * Roberto Riggio
  *
- * Copyright (c) 2009 CREATE-NET
+ * Copyright (c) 2017 CREATE-NET
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -16,8 +16,8 @@
  */
 
 #include <click/config.h>
-#include "dstinfo.hh"
+#include "sma.hh"
 CLICK_DECLS
 
 CLICK_ENDDECLS
-ELEMENT_PROVIDES(DstInfo)
+ELEMENT_PROVIDES(SMA)

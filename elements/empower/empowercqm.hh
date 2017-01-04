@@ -10,6 +10,7 @@
 #include <clicknet/wifi.h>
 #include <click/sync.hh>
 #include "cqmlink.hh"
+#include "busynessinfo.hh"
 #include "empowerpacket.hh"
 CLICK_DECLS
 
@@ -40,7 +41,7 @@ CLICK_DECLS
  */
 
 typedef HashTable<EtherAddress, CqmLink> CqmLinkTable;
-typedef CqmLinkTable::iterator CIter;
+typedef CqmLinkTable::iterator CLTIter;
 
 class EmpowerLVAPManager;
 
@@ -80,7 +81,6 @@ private:
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);
 
-	void update_channel_busy_time(Frame *);
 	void update_link_table(Frame *);
 
 };

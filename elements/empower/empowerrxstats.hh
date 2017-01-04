@@ -11,7 +11,9 @@
 #include <click/sync.hh>
 #include "summary_trigger.hh"
 #include "rssi_trigger.hh"
+#include "busyness_trigger.hh"
 #include "dstinfo.hh"
+#include "busynessinfo.hh"
 #include "empowerpacket.hh"
 CLICK_DECLS
 
@@ -41,6 +43,9 @@ CLICK_DECLS
  =a EmpowerLVAPManager
  */
 
+typedef HashTable<int, BusynessInfo> ChannelBusynessFractionTable;
+typedef ChannelBusynessFractionTable::iterator CBFTIter;
+
 typedef HashTable<EtherAddress, DstInfo> NeighborTable;
 typedef NeighborTable::iterator NTIter;
 
@@ -49,6 +54,9 @@ typedef RssiTriggersList::iterator RTIter;
 
 typedef Vector<SummaryTrigger *> SummaryTriggersList;
 typedef SummaryTriggersList::iterator DTIter;
+
+typedef Vector<BusynessTrigger *> BusynessTriggersList;
+typedef BusynessTriggersList::iterator BTIter;
 
 class EmpowerLVAPManager;
 
@@ -70,10 +78,10 @@ public:
 
 	void add_handlers();
 
-	void set_max_silent_window_count(uint64_t count) { _max_silent_window_count = count; };
-	uint64_t get_max_silent_window_count(void) { return _max_silent_window_count; };
+	void add_busyness_trigger(int, uint32_t, empower_trigger_relation, int, uint16_t);
+	void del_busyness_trigger(uint32_t);
 
-	void add_rssi_trigger(EtherAddress, uint32_t, empower_rssi_trigger_relation, int, uint16_t);
+	void add_rssi_trigger(EtherAddress, uint32_t, empower_trigger_relation, int, uint16_t);
 	void del_rssi_trigger(uint32_t);
 
 	void add_summary_trigger(int, EtherAddress, uint32_t, int16_t, uint16_t);
@@ -86,11 +94,14 @@ public:
 	NeighborTable aps;
 	NeighborTable stas;
 
+	ChannelBusynessFractionTable busyness;
+
 private:
 
 	EmpowerLVAPManager *_el;
 	Timer _timer;
 
+	BusynessTriggersList _busyness_triggers;
 	RssiTriggersList _rssi_triggers;
 	SummaryTriggersList _summary_triggers;
 
@@ -105,6 +116,7 @@ private:
 	static String read_handler(Element *, void *);
 
 	void update_neighbor(Frame *);
+	void update_channel_busyness_time(Frame *);
 
 };
 

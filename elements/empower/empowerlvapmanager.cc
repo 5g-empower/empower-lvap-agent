@@ -153,6 +153,37 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 
 }
 
+void EmpowerLVAPManager::send_busyness_trigger(uint32_t trigger_id, uint32_t iface, uint32_t current) {
+
+    WritablePacket *p = Packet::make(sizeof(empower_busyness_trigger));
+
+    ResourceElement* re = iface_to_element(iface);
+
+    if (!p) {
+        click_chatter("%{element} :: %s :: cannot make packet!",
+                      this,
+                      __func__);
+        return;
+    }
+
+    memset(p->data(), 0, p->length());
+
+    empower_busyness_trigger*request = (struct empower_busyness_trigger *) (p->data());
+    request->set_version(_empower_version);
+    request->set_length(sizeof(empower_busyness_trigger));
+    request->set_type(EMPOWER_PT_BUSYNESS_TRIGGER);
+    request->set_seq(get_next_seq());
+    request->set_trigger_id(trigger_id);
+    request->set_wtp(_wtp);
+    request->set_channel(re->_channel);
+    request->set_band(re->_band);
+    request->set_hwaddr(re->_hwaddr);
+    request->set_current(current);
+
+    output(0).push(p);
+
+}
+
 void EmpowerLVAPManager::send_rssi_trigger(uint32_t trigger_id, uint32_t iface, uint8_t current) {
 
 	WritablePacket *p = Packet::make(sizeof(empower_rssi_trigger));
@@ -1121,9 +1152,25 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 
 }
 
+int EmpowerLVAPManager::handle_add_busyness_trigger(Packet *p, uint32_t offset) {
+	struct empower_add_busyness_trigger *q = (struct empower_add_busyness_trigger *) (p->data() + offset);
+	EtherAddress hwaddr = q->hwaddr();
+	empower_bands_types band = (empower_bands_types) q->band();
+	uint8_t channel = q->channel();
+	int iface = element_to_iface(hwaddr, channel, band);
+	_ers->add_busyness_trigger(iface, q->trigger_id(), static_cast<empower_trigger_relation>(q->relation()), q->value(), q->period());
+	return 0;
+}
+
+int EmpowerLVAPManager::handle_del_busyness_trigger(Packet *p, uint32_t offset) {
+	struct empower_del_busyness_trigger *q = (struct empower_del_busyness_trigger *) (p->data() + offset);
+	_ers->del_busyness_trigger(q->trigger_id());
+	return 0;
+}
+
 int EmpowerLVAPManager::handle_add_rssi_trigger(Packet *p, uint32_t offset) {
 	struct empower_add_rssi_trigger *q = (struct empower_add_rssi_trigger *) (p->data() + offset);
-	_ers->add_rssi_trigger(q->sta(), q->trigger_id(), static_cast<empower_rssi_trigger_relation>(q->relation()), q->value(), q->period());
+	_ers->add_rssi_trigger(q->sta(), q->trigger_id(), static_cast<empower_trigger_relation>(q->relation()), q->value(), q->period());
 	return 0;
 }
 

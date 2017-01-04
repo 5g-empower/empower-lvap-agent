@@ -18,12 +18,12 @@
 #include <click/config.h>
 #include "empowerrxstats.hh"
 #include "empowerlvapmanager.hh"
-#include "trigger.hh"
+#include "summary_trigger.hh"
 CLICK_DECLS
 
 SummaryTrigger::SummaryTrigger(int iface, EtherAddress eth, uint32_t trigger_id, int16_t limit,
 		uint16_t period, EmpowerLVAPManager * el, EmpowerRXStats * ers) :
-		Trigger(eth, trigger_id, period, el, ers), _iface(iface), _sent(0), _limit(limit) {
+		Trigger(trigger_id, period, el, ers), _eth(eth), _iface(iface), _sent(0), _limit(limit) {
 
 }
 

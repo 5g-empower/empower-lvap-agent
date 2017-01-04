@@ -15,6 +15,7 @@ class SummaryTrigger: public Trigger {
 
 public:
 
+	EtherAddress _eth;
 	int _iface;
 	uint32_t _sent;
 	int16_t _limit;
