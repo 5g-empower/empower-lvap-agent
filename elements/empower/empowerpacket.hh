@@ -2,7 +2,6 @@
 #define CLICK_EMPOWERPACKET_HH
 #include <clicknet/wifi.h>
 #include <elements/wifi/transmissionpolicies.hh>
-#include <endian.h>
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 
@@ -65,13 +64,6 @@ enum empower_packet_types {
     // MCAST Packet/Bytes counters
     EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x34,		// ac -> wtp
     EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x35,	// wtp -> ac
-
-    // Channel Quality Map Links
-    EMPOWER_PT_UCQM_LINKS_REQUEST = 0x36,		// ac -> wtp
-    EMPOWER_PT_UCQM_LINKS_RESPONSE = 0x37,		// wtp -> ac
-
-    EMPOWER_PT_NCQM_LINKS_REQUEST = 0x38,		// ac -> wtp
-    EMPOWER_PT_NCQM_LINKS_RESPONSE = 0x39,		// wtp -> ac
 
 };
 
