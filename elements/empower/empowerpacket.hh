@@ -636,16 +636,16 @@ public:
 struct empower_add_vap : public empower_header {
 private:
     uint8_t _hwaddr[6];		/* EtherAddress */
-    uint8_t _channel;			/* WiFi channel (int) */
-    uint8_t _band;				/* WiFi band (empower_band_types) */
+    uint8_t _channel;		/* WiFi channel (int) */
+    uint8_t _band;			/* WiFi band (empower_band_types) */
     uint8_t _net_bssid[6];	/* EtherAddress */
-    char    _ssid[];			/* SSID (String) */
+    char    _ssid[];		/* SSID (String) */
 public:
     uint8_t      band()      { return _band; }
     uint8_t      channel()   { return _channel; }
     EtherAddress hwaddr()    { return EtherAddress(_hwaddr); }
     EtherAddress net_bssid() { return EtherAddress(_net_bssid); }
-    String       ssid()      { int len = length() - 22; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    String       ssid()      { int len = length() - 24; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del vap packet format */
