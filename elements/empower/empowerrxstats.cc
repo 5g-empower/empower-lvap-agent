@@ -544,6 +544,7 @@ void EmpowerRXStats::add_handlers() {
 	add_read_handler("rssi_matches", read_handler, (void *) H_RSSI_MATCHES);
 	add_read_handler("busyness_matches", read_handler, (void *) H_BUSYNESS_MATCHES);
 	add_read_handler("rssi_triggers", read_handler, (void *) H_RSSI_TRIGGERS);
+	add_read_handler("busyness_triggers", read_handler, (void *) H_BUSYNESS_TRIGGERS);
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
 	add_read_handler("signal_offset", read_handler, (void *) H_SIGNAL_OFFSET);
 	add_write_handler("signal_offset", write_handler, (void *) H_SIGNAL_OFFSET);
