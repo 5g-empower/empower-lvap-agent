@@ -45,9 +45,9 @@ enum empower_packet_types {
     EMPOWER_PT_SUMMARY_TRIGGER = 0x23,     		// ac -> wtp
     EMPOWER_PT_DEL_SUMMARY_TRIGGER = 0x24, 		// ac -> wtp
 
-    EMPOWER_PT_ADD_BUSYNESS_TRIGGER = 0x19, 	// ac -> wtp
-    EMPOWER_PT_BUSYNESS_TRIGGER = 0x20,     	// ac -> wtp
-    EMPOWER_PT_DEL_BUSYNESS_TRIGGER = 0x21, 	// ac -> wtp
+    EMPOWER_PT_ADD_BUSYNESS_TRIGGER = 0x38, 	// ac -> wtp
+    EMPOWER_PT_BUSYNESS_TRIGGER = 0x39,     	// ac -> wtp
+    EMPOWER_PT_DEL_BUSYNESS_TRIGGER = 0x40, 	// ac -> wtp
 
     // Channel Quality Maps
     EMPOWER_PT_UCQM_REQUEST = 0x25,     		// ac -> wtp
@@ -509,15 +509,13 @@ public:
 struct empower_add_busyness_trigger: public empower_header {
 private:
     uint32_t _trigger_id;	/* Module id (int) */
-    uint8_t  _addr[6];		/* EtherAddress */
     uint8_t  _hwaddr[6];	/* EtherAddress */
     uint8_t  _channel;		/* WiFi channel (int) */
     uint8_t  _band;			/* WiFi band (empower_band_types) */
     uint8_t  _relation;   	/* Relation (relation_t) */
-    uint32_t  _value;		/* Busyness value between 0 and 18000 */
+    uint32_t _value;		/* Busyness value between 0 and 18000 */
     uint16_t _period;		/* Reporting period in ms (int) */
 public:
-    EtherAddress addr()   { return EtherAddress(_addr); }
     EtherAddress hwaddr() { return EtherAddress(_hwaddr); }
     uint8_t channel()     { return _channel; }
     uint8_t band()        { return _band; }

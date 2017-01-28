@@ -1458,6 +1458,12 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 		case EMPOWER_PT_DEL_RSSI_TRIGGER:
 			handle_del_rssi_trigger(p, offset);
 			break;
+		case EMPOWER_PT_ADD_BUSYNESS_TRIGGER:
+			handle_add_busyness_trigger(p, offset);
+			break;
+		case EMPOWER_PT_DEL_BUSYNESS_TRIGGER:
+			handle_del_busyness_trigger(p, offset);
+			break;
 		case EMPOWER_PT_ADD_SUMMARY_TRIGGER:
 			handle_add_summary_trigger(p, offset);
 			break;
