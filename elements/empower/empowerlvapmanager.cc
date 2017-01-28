@@ -602,6 +602,44 @@ void EmpowerLVAPManager::send_img_response(int type, uint32_t graph_id,
 
 }
 
+void EmpowerLVAPManager::send_busyness_response(uint32_t busyness_id, EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
+
+	int iface_id = element_to_iface(hwaddr, channel, band);
+
+	if (iface_id == -1) {
+		click_chatter("%{element} :: %s :: invalid resource element (%s, %u, %u)!",
+					  this,
+					  __func__,
+					  hwaddr.unparse().c_str(),
+					  channel,
+					  band);
+		return;
+	}
+
+	BusynessInfo *nfo = _ers->busyness.get_pointer(iface_id);
+	int len = sizeof(empower_busyness_response);
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	memset(p->data(), 0, p->length());
+
+	empower_busyness_response *busy = (struct empower_busyness_response *) (p->data());
+	busy->set_version(_empower_version);
+	busy->set_length(len);
+	busy->set_type(EMPOWER_PT_BUSYNESS_RESPONSE);
+	busy->set_seq(get_next_seq());
+	busy->set_prob((uint32_t) nfo->_sma_busyness->avg());
+
+	output(0).push(p);
+
+}
+
 void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
 	int len = sizeof(empower_summary_trigger) + summary->_frames.size() * sizeof(summary_entry);
@@ -1324,6 +1362,15 @@ int EmpowerLVAPManager::handle_counters_request(Packet *p, uint32_t offset) {
 	return 0;
 }
 
+int EmpowerLVAPManager::handle_busyness_request(Packet *p, uint32_t offset) {
+	struct empower_busyness_request *q = (struct empower_busyness_request *) (p->data() + offset);
+	EtherAddress hwaddr = q->hwaddr();
+	empower_bands_types band = (empower_bands_types) q->band();
+	uint8_t channel = q->channel();
+	send_busyness_response(q->busyness_id(), hwaddr, channel, band);
+	return 0;
+}
+
 int EmpowerLVAPManager::handle_uimg_request(Packet *p, uint32_t offset) {
 	struct empower_cqm_request *q = (struct empower_cqm_request *) (p->data() + offset);
 	EtherAddress hwaddr = q->hwaddr();
@@ -1426,6 +1473,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_LVAP_STATS_REQUEST:
 			handle_lvap_stats_request(p, offset);
+			break;
+		case EMPOWER_PT_BUSYNESS_REQUEST:
+			handle_busyness_request(p, offset);
 			break;
 		default:
 			click_chatter("%{element} :: %s :: Unknown packet type: %d",

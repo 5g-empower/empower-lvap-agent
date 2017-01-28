@@ -257,6 +257,7 @@ public:
 	int handle_lvap_stats_request(Packet *, uint32_t);
 	int handle_add_busyness_trigger(Packet *, uint32_t);
 	int handle_del_busyness_trigger(Packet *, uint32_t);
+	int handle_busyness_request(Packet *, uint32_t);
 
 	void send_hello();
 	void send_probe_request(EtherAddress, String, uint8_t);
@@ -272,6 +273,7 @@ public:
 	void send_counters_response(EtherAddress, uint32_t);
 	void send_txp_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, EtherAddress);
 	void send_img_response(int, uint32_t, EtherAddress, uint8_t, empower_bands_types);
+	void send_busyness_response(uint32_t, EtherAddress, uint8_t, empower_bands_types);
 	void send_caps();
 	void send_rssi_trigger(uint32_t, uint32_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);

@@ -69,6 +69,10 @@ enum empower_packet_types {
     EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x34,		// ac -> wtp
     EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x35,	// wtp -> ac
 
+    // Busyness
+    EMPOWER_PT_BUSYNESS_REQUEST = 0x36,			// ac -> wtp
+    EMPOWER_PT_BUSYNESS_RESPONSE = 0x37,		// wtp -> ac
+
 };
 
 /* header format, common to all messages */
@@ -238,9 +242,35 @@ struct lvap_stats_entry {
   public:
     void set_flags(uint16_t flags)    		{ _flags = htons(flags); }
     void set_flag(uint16_t f)        		{ _flags = htons(ntohs(_flags) | f); }
-    void set_rate(uint8_t rate)  		{ _rate = rate; }
-    void set_prob(uint32_t prob) 		{ _prob = htonl(prob); }
-    void set_cur_prob(uint32_t cur_prob) 		{ _cur_prob = htonl(cur_prob); }
+    void set_rate(uint8_t rate)  			{ _rate = rate; }
+    void set_prob(uint32_t prob) 			{ _prob = htonl(prob); }
+    void set_cur_prob(uint32_t cur_prob) 	{ _cur_prob = htonl(cur_prob); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* busyness request packet format */
+struct empower_busyness_request : public empower_header {
+private:
+  uint32_t _busyness_id; /* Module id (int) */
+  uint8_t  _hwaddr[6];	 /* EtherAddress */
+  uint8_t  _channel;	 /* WiFi Channel (int) */
+  uint8_t  _band;		 /* WiFi band (empower_band_types) */
+public:
+    uint32_t busyness_id()	{ return ntohl(_busyness_id); }
+    uint8_t channel()     	{ return _channel; }
+    uint8_t band()        	{ return _band; }
+    EtherAddress hwaddr() 	{ return EtherAddress(_hwaddr); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* link stats response packet format */
+struct empower_busyness_response : public empower_header {
+private:
+  uint32_t _busyness_id;	/* Module id (int) */
+  uint8_t  _wtp[6];			/* EtherAddress */
+  uint32_t _prob; 			/* Probability [0-18000] */
+public:
+  void set_busyness_id(uint32_t lvap_stats_id) 	{ _busyness_id = htonl(_busyness_id); }
+  void set_wtp(EtherAddress wtp)				{ memcpy(_wtp, wtp.data(), 6); }
+  void set_prob(uint32_t prob) 					{ _prob = htonl(prob); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* channel quality map request packet format */
