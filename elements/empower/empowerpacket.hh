@@ -268,7 +268,7 @@ private:
   uint8_t  _wtp[6];			/* EtherAddress */
   uint32_t _prob; 			/* Probability [0-18000] */
 public:
-  void set_busyness_id(uint32_t lvap_stats_id) 	{ _busyness_id = htonl(_busyness_id); }
+  void set_busyness_id(uint32_t busyness_id) 	{ _busyness_id = htonl(busyness_id); }
   void set_wtp(EtherAddress wtp)				{ memcpy(_wtp, wtp.data(), 6); }
   void set_prob(uint32_t prob) 					{ _prob = htonl(prob); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;

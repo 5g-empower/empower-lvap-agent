@@ -634,6 +634,7 @@ void EmpowerLVAPManager::send_busyness_response(uint32_t busyness_id, EtherAddre
 	busy->set_length(len);
 	busy->set_type(EMPOWER_PT_BUSYNESS_RESPONSE);
 	busy->set_seq(get_next_seq());
+	busy->set_busyness_id(busyness_id);
 	busy->set_wtp(_wtp);
 	busy->set_prob((uint32_t) nfo->_sma_busyness->avg());
 
