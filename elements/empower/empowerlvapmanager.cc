@@ -137,9 +137,9 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 
 		if (tokens_re[2] == "L20") {
 			band = EMPOWER_BT_L20;
-		} else if (tokens_re[1] == "HT20") {
+		} else if (tokens_re[2] == "HT20") {
 			band = EMPOWER_BT_HT20;
-		} else if (tokens_re[1] == "HT40") {
+		} else if (tokens_re[2] == "HT40") {
 			band = EMPOWER_BT_HT40;
 		}
 
