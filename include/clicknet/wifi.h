@@ -250,19 +250,36 @@ struct click_wifi_ht_caps {
 	uint8_t		antenna_selection;
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
+/*
+ * HT Info Element
+ */
+
+#define WIFI_HT_INFO_TYPE 61
+#define WIFI_HT_INFO_SIZE 22
+
+struct click_wifi_ht_info {
+	uint8_t		type;
+	uint8_t		len;
+	uint8_t		primary_channel;
+	uint8_t		ht_info_1_3;
+	uint16_t	ht_info_2_3;
+	uint16_t	ht_info_3_3;
+	uint8_t		rx_supported_mcs[16];
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
 #define WIFI_RATES_MAXSIZE	15
 #define WIFI_NWID_MAXSIZE	32
 
 enum {
-  WIFI_ELEMID_SSID		= 0,
-  WIFI_ELEMID_RATES		= 1,
+  WIFI_ELEMID_SSID			= 0,
+  WIFI_ELEMID_RATES			= 1,
   WIFI_ELEMID_FHPARMS		= 2,
   WIFI_ELEMID_DSPARMS		= 3,
   WIFI_ELEMID_CFPARMS		= 4,
-  WIFI_ELEMID_TIM		= 5,
+  WIFI_ELEMID_TIM			= 5,
   WIFI_ELEMID_IBSSPARMS		= 6,
   WIFI_ELEMID_CHALLENGE		= 16,
-  WIFI_ELEMID_ERP		= 42,
+  WIFI_ELEMID_ERP			= 42,
   WIFI_ELEMID_HTCAPS		= 45,
   WIFI_ELEMID_XRATES		= 50,
   WIFI_ELEMID_HTINFO		= 61,

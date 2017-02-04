@@ -215,7 +215,6 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 
 		/* ht capabilities */
 		struct click_wifi_ht_caps *ht = (struct click_wifi_ht_caps *) ptr;
-
 		ht->type = WIFI_HT_CAPS_TYPE;
 		ht->len = WIFI_HT_CAPS_SIZE;
 
@@ -243,11 +242,16 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		actual_length += 2 + WIFI_HT_CAPS_SIZE;
 
 		/* ht information */
-		ptr[0] = WIFI_ELEMID_HTINFO;
-		ptr[1] = 22;
+		struct click_wifi_ht_info *ht_info = (struct click_wifi_ht_info *) ptr;
+		ht_info->type = WIFI_HT_INFO_TYPE;
+		ht_info->len = WIFI_HT_INFO_SIZE;
 
-		ptr += 2 + 22;
-		actual_length += 2 + 22;
+		ht_info->primary_channel = (uint8_t) channel;
+		ht_info->ht_info_1_3 = 0x0d;
+		ht_info->ht_info_2_3 = 0x0004;
+
+		ptr += 2 + WIFI_HT_INFO_SIZE;
+		actual_length += 2 + WIFI_HT_INFO_SIZE;
 
 	}
 
