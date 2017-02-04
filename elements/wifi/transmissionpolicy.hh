@@ -40,6 +40,7 @@ class TxPolicyInfo {
 public:
 
 	Vector<int> _mcs;
+	Vector<int> _ht_mcs;
 	bool _no_ack;
 	empower_tx_mcast_type _tx_mcast;
 	int _ur_mcast_count;
@@ -49,6 +50,7 @@ public:
 
 	TxPolicyInfo() {
 		_mcs = Vector<int>();
+		_ht_mcs = Vector<int>();
 		_no_ack = false;
 		_tx_mcast = TX_MCAST_DMS;
 		_rts_cts = 2436;
@@ -59,6 +61,18 @@ public:
 			int ur_mcast_count, int rts_cts) {
 
 		_mcs = mcs;
+		_ht_mcs = Vector<int>();
+		_no_ack = no_ack;
+		_tx_mcast = tx_mcast;
+		_rts_cts = rts_cts;
+		_ur_mcast_count = ur_mcast_count;
+	}
+
+	TxPolicyInfo(Vector<int> mcs, Vector<int> ht_mcs, bool no_ack, empower_tx_mcast_type tx_mcast,
+			int ur_mcast_count, int rts_cts) {
+
+		_mcs = mcs;
+		_ht_mcs = ht_mcs;
 		_no_ack = no_ack;
 		_tx_mcast = tx_mcast;
 		_rts_cts = rts_cts;
@@ -84,6 +98,11 @@ public:
 		sa << "mcs [";
 		for (int i = 0; i < _mcs.size(); i++) {
 			sa << " " << _mcs[i] << " ";
+		}
+		sa << "]";
+		sa << " ht mcs [";
+		for (int i = 0; i < _ht_mcs.size(); i++) {
+			sa << " " << _ht_mcs[i] << " ";
 		}
 		sa << "]";
 		sa << " no_ack " << _no_ack << " mcast ";

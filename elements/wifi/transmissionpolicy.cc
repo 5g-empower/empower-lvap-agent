@@ -36,12 +36,15 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 	bool no_ack = false;
 	int rts_cts = 2436;
 	String mcs_string;
+	String ht_mcs_string;
 	String tx_mcast_string = "LEGACY";
 	empower_tx_mcast_type tx_mcast;
 	int ur_mcast_count = 3;
 	Vector<int> mcs;
+	Vector<int> ht_mcs;
 
 	res = Args(conf, this, errh).read_m("MCS", mcs_string)
+								.read_m("HT_MCS", mcs_string)
 								.read("NO_ACK", no_ack)
 								.read("TX_MCAST", tx_mcast_string)
 								.read("UR_MCAST_COUNT", ur_mcast_count)
@@ -65,6 +68,14 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 		int r = 0;
 		IntArg().parse(args[x], r);
 		mcs.push_back(r);
+	}
+
+	cp_spacevec(ht_mcs_string, args);
+
+	for (int x = 0; x < args.size(); x++) {
+		int r = 0;
+		IntArg().parse(args[x], r);
+		ht_mcs.push_back(r);
 	}
 
 	_tx_policy = TxPolicyInfo(mcs, no_ack, tx_mcast, ur_mcast_count, rts_cts);
