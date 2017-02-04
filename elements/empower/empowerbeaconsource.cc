@@ -93,6 +93,15 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		2 + WIFI_RATES_MAXSIZE + /* xrates */
 		0;
 
+	/* check if this interface supports HT extensions */
+	ResourceElement *elm = _el->iface_to_element(iface_id);
+
+	if (elm->_band == EMPOWER_BT_HT20 || elm->_band == EMPOWER_BT_HT40) {
+		max_len += 2 + 26 + /* ht capabilities */
+			2 + 22 + /* ht information */
+			0;
+	}
+
 	WritablePacket *p = Packet::make(max_len);
 	memset(p->data(), 0, p->length());
 
@@ -199,6 +208,47 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		}
 		ptr += 2 + num_xrates;
 		actual_length += 2 + num_xrates;
+	}
+
+	/* 802.11n fields */
+	if (elm->_band == EMPOWER_BT_HT20) {
+
+		/* ht capabilities */
+		struct click_wifi_ht_caps *ht = (struct click_wifi_ht_caps *) ptr;
+
+		ht->type = WIFI_HT_CAPS_TYPE;
+		ht->len = WIFI_HT_CAPS_SIZE;
+
+		//ht->ht_caps_info |= WIFI_HT_CI_LDPC;
+		//ht->ht_caps_info |= WIFI_HT_CI_CHANNEL_WIDTH_SET;
+		ht->ht_caps_info |= WIFI_HT_CI_SM_PS_DISABLED << WIFI_HT_CI_SM_PS_SHIFT;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_GF;
+		//ht->ht_caps_info |= WIFI_HT_CI_SGI_20;
+		//ht->ht_caps_info |= WIFI_HT_CI_SGI_40;
+		//ht->ht_caps_info |= WIFI_HT_CI_TX_STBC;
+		//ht->ht_caps_info |= WIFI_HT_CI_RX_STBC_1SS << WIFI_HT_CI_RX_STBC_SHIFT;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_DBACK;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_MAX_AMSDU;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_DSSS_CCK;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_PSMP;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_INTOLLERANT;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_LSIG_TXOP;
+
+		ht->rx_supported_mcs[0] = 0xff; /* MCS 0-7 */
+		ht->rx_supported_mcs[1] = 0xff; /* MCS 8-15 */
+
+		ht->rx_supported_mcs[12] |= WIFI_HT_CI_SM12_TX_MCS_SET_DEFINED;
+
+		ptr += 2 + WIFI_HT_CAPS_SIZE;
+		actual_length += 2 + WIFI_HT_CAPS_SIZE;
+
+		/* ht information */
+		ptr[0] = WIFI_ELEMID_HTINFO;
+		ptr[1] = 22;
+
+		ptr += 2 + 22;
+		actual_length += 2 + 22;
+
 	}
 
 	p->take(max_len - actual_length);
@@ -411,14 +461,14 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 		} else if (mpdu_density == 4) {
 			sa << " MPDU Density: 2us";
 		} else if (mpdu_density == 5) {
-			sa << " MPDU Density: 5us";
+			sa << " MPDU Density: 4us";
 		} else if (mpdu_density == 6) {
-			sa << " MPDU Density: 6us";
+			sa << " MPDU Density: 8us";
 		} else if (mpdu_density == 7) {
-			sa << " MPDU Density: 7us";
+			sa << " MPDU Density: 16us";
 		}
 
-		sa << " mcs {";
+		sa << " SUPPORTED MCSes {";
 		for (int i = 0; i < 76; i++) {
 			int c = (int) i / 8;
 			int d = i % 8;
@@ -440,7 +490,7 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 			sa << " TX " << ht_rates.size() / 8 << "SS";
 		}
 
-		if ((ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_MCS_SET_DEFINED) && ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_RX_MCS_SET_NOT_EQUAL) {
+		if ((ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_MCS_SET_DEFINED) && (ht->rx_supported_mcs[12] & WIFI_HT_CI_SM12_TX_RX_MCS_SET_NOT_EQUAL)) {
 			int max_ss= ht->rx_supported_mcs[11] & WIFI_HT_CI_SM12_TX_MAX_SS_MASK >> WIFI_HT_CI_SM12_TX_MAX_SS_SHIFT;
 			if (max_ss == 0) {
 				sa << " TX 1SS";
