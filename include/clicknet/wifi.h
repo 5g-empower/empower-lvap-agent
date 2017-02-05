@@ -235,9 +235,9 @@ struct wifi_information {
 
 #define	WIFI_HT_CI_SM12_TX_MCS_SET_DEFINED 			0x1
 #define	WIFI_HT_CI_SM12_TX_RX_MCS_SET_NOT_EQUAL		0x2
-#define	WIFI_HT_CI_SM12_TX_MAX_SS_MASK			0x10
-#define	WIFI_HT_CI_SM12_TX_MAX_SS_SHIFT			2
-#define	WIFI_HT_CI_SM12_TX_UEQM 0x016
+#define	WIFI_HT_CI_SM12_TX_MAX_SS_MASK				0x10
+#define	WIFI_HT_CI_SM12_TX_MAX_SS_SHIFT				2
+#define	WIFI_HT_CI_SM12_TX_UEQM 					0x016
 
 struct click_wifi_ht_caps {
 	uint8_t		type;

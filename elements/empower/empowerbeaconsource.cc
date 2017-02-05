@@ -87,11 +87,19 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		2 + /* cap_info */
 		2 + ssid.length() + /* ssid */
 		2 + WIFI_RATES_MAXSIZE + /* rates */
-		2 + 1 + /* ds parms */
-		2 + 4 + /* tim */
 		/* 802.11g Information fields */
 		2 + WIFI_RATES_MAXSIZE + /* xrates */
 		0;
+
+	/* if this is a 11a channel the ds param is not needed */
+	if (channel > 14) {
+		max_len += 2 + 1; /* ds parms */
+	}
+
+	/* if this is a beacon the transmit TIM */
+	if (!probe) {
+		max_len += 2 + 4; /* tim */
+	}
 
 	/* check if this interface supports HT extensions */
 	ResourceElement *elm = _el->iface_to_element(iface_id);
@@ -175,23 +183,26 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 	ptr += 2 + WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 	actual_length += 2 + WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 
-	/* channel */
-	ptr[0] = WIFI_ELEMID_DSPARMS;
-	ptr[1] = 1;
-	ptr[2] = (uint8_t) channel;
-	ptr += 2 + 1;
-	actual_length += 2 + 1;
+	/* ds parameter set */
+	if (channel > 14) {
+		ptr[0] = WIFI_ELEMID_DSPARMS;
+		ptr[1] = 1;
+		ptr[2] = (uint8_t) channel;
+		ptr += 2 + 1;
+		actual_length += 2 + 1;
+	}
 
 	/* tim */
-	ptr[0] = WIFI_ELEMID_TIM;
-	ptr[1] = 4;
-
-	ptr[2] = 0; //count
-	ptr[3] = 1; //period
-	ptr[4] = 0; //bitmap control
-	ptr[5] = 0; //partial virtual bitmap
-	ptr += 2 + 4;
-	actual_length += 2 + 4;
+	if (!probe) {
+		ptr[0] = WIFI_ELEMID_TIM;
+		ptr[1] = 4;
+		ptr[2] = 0; //count
+		ptr[3] = 1; //period
+		ptr[4] = 0; //bitmap control
+		ptr[5] = 0; //partial virtual bitmap
+		ptr += 2 + 4;
+		actual_length += 2 + 4;
+	}
 
 	/* 802.11g fields */
 	/* extended supported rates */
@@ -236,7 +247,7 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		ht->rx_supported_mcs[0] = 0xff; /* MCS 0-7 */
 		ht->rx_supported_mcs[1] = 0xff; /* MCS 8-15 */
 
-		ht->rx_supported_mcs[12] |= WIFI_HT_CI_SM12_TX_MCS_SET_DEFINED;
+		ht->ampdu_params = 0x18; /* 8191 MPDU Length, 8usec density */
 
 		ptr += 2 + WIFI_HT_CAPS_SIZE;
 		actual_length += 2 + WIFI_HT_CAPS_SIZE;
@@ -249,6 +260,7 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		ht_info->primary_channel = (uint8_t) channel;
 		ht_info->ht_info_1_3 = 0x0d;
 		ht_info->ht_info_2_3 = 0x0004;
+		ht_info->ht_info_3_3 = 0x0;
 
 		ptr += 2 + WIFI_HT_INFO_SIZE;
 		actual_length += 2 + WIFI_HT_INFO_SIZE;
