@@ -92,7 +92,7 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		0;
 
 	/* if this is a 11a channel the ds param is not needed */
-	if (channel > 14) {
+	if (channel < 14) {
 		max_len += 2 + 1; /* ds parms */
 	}
 
@@ -184,7 +184,7 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 	actual_length += 2 + WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 
 	/* ds parameter set */
-	if (channel > 14) {
+	if (channel < 14) {
 		ptr[0] = WIFI_ELEMID_DSPARMS;
 		ptr[1] = 1;
 		ptr[2] = (uint8_t) channel;
