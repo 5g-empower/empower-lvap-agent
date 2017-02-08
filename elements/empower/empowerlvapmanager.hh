@@ -258,6 +258,7 @@ public:
 	int handle_add_busyness_trigger(Packet *, uint32_t);
 	int handle_del_busyness_trigger(Packet *, uint32_t);
 	int handle_busyness_request(Packet *, uint32_t);
+	int handle_wtp_counters_request(Packet *, uint32_t);
 
 	void send_hello();
 	void send_probe_request(EtherAddress, String, uint8_t);
@@ -279,6 +280,7 @@ public:
 	void send_summary_trigger(SummaryTrigger *);
 	void send_busyness_trigger(uint32_t, uint32_t, uint32_t);
 	void send_lvap_stats_response(EtherAddress, uint32_t);
+	void send_wtp_counters_response(uint32_t);
 
 	LVAP* lvaps() { return &_lvaps; }
 	VAP* vaps() { return &_vaps; }
