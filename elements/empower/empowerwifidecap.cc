@@ -157,6 +157,13 @@ EmpowerWifiDecap::push(int, Packet *p) {
 		return;
 	}
 
+
+	/* broadcast uplink only frame, silently ignore */
+	if ((dst.is_broadcast() || dst.is_group()) && !ess->_set_mask) {
+		p->kill();
+		return;
+	}
+
 	WritablePacket *p_out = p->uniqueify();
 	if (!p_out) {
 		return;
