@@ -814,8 +814,8 @@ void EmpowerLVAPManager::send_wtp_counters_response(uint32_t counters_id) {
 
 	for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
 		TxPolicyInfo * txp = get_txp(it.key());
-		len += txp->_tx.size() * 6; // the tx samples
-		len += txp->_rx.size() * 6; // the rx samples
+		len += txp->_tx.size() * 12; // the tx samples
+		len += txp->_rx.size() * 12; // the rx samples
 		nb_tx += txp->_tx.size();
 		nb_rx += txp->_rx.size();
 	}
