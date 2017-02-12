@@ -135,6 +135,7 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 
 	uint8_t *ssid_l = NULL;
 	uint8_t *rates_l = NULL;
+	uint8_t *rates_x = NULL;
 	uint8_t *htcaps = NULL;
 
 	while (ptr < end) {
@@ -144,6 +145,9 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 			break;
 		case WIFI_ELEMID_RATES:
 			rates_l = ptr;
+			break;
+		case WIFI_ELEMID_XRATES:
+			rates_x = ptr;
 			break;
 		case WIFI_ELEMID_HTCAPS:
 			htcaps = ptr;
@@ -161,18 +165,7 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 	}
 
 	Vector<int> ht_rates;
-	Vector<int> basic_rates;
 	Vector<int> rates;
-	if (rates_l) {
-		for (int x = 0; x < WIFI_MIN((int)rates_l[1], WIFI_RATES_MAXSIZE); x++) {
-			uint8_t rate = rates_l[x + 2];
-			if (rate & WIFI_RATE_BASIC) {
-				basic_rates.push_back((int) (rate & WIFI_RATE_VAL));
-			} else {
-				rates.push_back((int) (rate & WIFI_RATE_VAL));
-			}
-		}
-	}
 
 	String ssid;
 
@@ -192,11 +185,12 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 
 	StringAccum sa;
 
-	sa << "src " << src;
+	sa << "AssocReq: src " << src;
 	sa << " dst " << dst;
 	sa << " bssid " << bssid;
 	sa << " ssid " << ssid;
 	sa << " [ ";
+
 	if (capability & WIFI_CAPINFO_ESS) {
 		sa << "ESS ";
 	}
@@ -216,15 +210,35 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 
 	sa << "listen_int " << lint << " ";
 
-	sa << "( { ";
-	for (int x = 0; x < basic_rates.size(); x++) {
-		sa << basic_rates[x] << " ";
+	sa << " rates {";
+
+	if (rates_l) {
+	    int max_len =  WIFI_MIN((int)rates_l[1], WIFI_RATES_MAXSIZE);
+		for (int x = 0; x < max_len; x++) {
+			uint8_t rate = rates_l[x + 2];
+			rates.push_back((int)(rate & WIFI_RATE_VAL));
+			if (rate & WIFI_RATE_BASIC ) {
+				sa << " *" << (int) (rate ^ WIFI_RATE_BASIC);
+			} else {
+				sa << " " << (int) rate;
+			}
+		}
 	}
-	sa << "} ";
-	for (int x = 0; x < rates.size(); x++) {
-		sa << rates[x] << " ";
+
+	sa << " }";
+
+	if (rates_x) {
+	    int len = rates_x[1];
+		for (int x = 0; x < len; x++) {
+			uint8_t rate = rates_x[x + 2];
+			rates.push_back((int)(rate & WIFI_RATE_VAL));
+			if (rate & WIFI_RATE_BASIC ) {
+				sa << " *" << (int) (rate ^ WIFI_RATE_BASIC);
+			} else {
+				sa << " " << (int) rate;
+			}
+		}
 	}
-	sa << ")";
 
 	if (htcaps) {
 		struct click_wifi_ht_caps *ht = (struct click_wifi_ht_caps *) htcaps;
@@ -312,14 +326,14 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 		} else if (mpdu_density == 4) {
 			sa << " MPDU Density: 2us";
 		} else if (mpdu_density == 5) {
-			sa << " MPDU Density: 5us";
+			sa << " MPDU Density: 4us";
 		} else if (mpdu_density == 6) {
-			sa << " MPDU Density: 6us";
+			sa << " MPDU Density: 8us";
 		} else if (mpdu_density == 7) {
-			sa << " MPDU Density: 7us";
+			sa << " MPDU Density: 16us";
 		}
 
-		sa << " mcs {";
+		sa << " SUPPORTED MCSes {";
 		for (int i = 0; i < 76; i++) {
 			int c = (int) i / 8;
 			int d = i % 8;
@@ -382,7 +396,7 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 }
 
 void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
-		uint16_t status, int iface_id) {
+		uint16_t status, int channel, int iface_id) {
 
     EmpowerStationState *ess = _el->get_ess(dst);
 	ess->_association_status = true;
@@ -400,6 +414,8 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 											  2 + /* assoc_id */
 											  2 + WIFI_RATES_MAXSIZE + /* rates */
 											  2 + WIFI_RATES_MAXSIZE + /* xrates */
+											  2 + 26 + /* ht capabilities */
+											  2 + 22 + /* ht information */
 											  0;
 
 	WritablePacket *p = Packet::make(max_len);
@@ -413,8 +429,7 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 
 	struct click_wifi *w = (struct click_wifi *) p->data();
 
-	w->i_fc[0] = WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_MGT
-			| WIFI_FC0_SUBTYPE_ASSOC_RESP;
+	w->i_fc[0] = WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_MGT | WIFI_FC0_SUBTYPE_ASSOC_RESP;
 	w->i_fc[1] = WIFI_FC1_DIR_NODS;
 
 	memcpy(w->i_addr1, dst.data(), 6);
@@ -442,9 +457,7 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 	actual_length += 2;
 
 	/* rates */
-
 	TransmissionPolicies * tx_table = _el->get_tx_policies(iface_id);
-
 	Vector<int> rates = tx_table->lookup(ess->_sta)->_mcs;
 	ptr[0] = WIFI_ELEMID_RATES;
 	ptr[1] = WIFI_MIN(WIFI_RATE_SIZE, rates.size());
@@ -457,6 +470,7 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 	ptr += 2 + WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 	actual_length += 2 + WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 
+	/* extended supported rates */
 	int num_xrates = rates.size() - WIFI_RATE_SIZE;
 	if (num_xrates > 0) {
 		/* rates */
@@ -472,10 +486,55 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 		actual_length += 2 + num_xrates;
 	}
 
+	/* 802.11n fields */
+	ResourceElement *elm = _el->iface_to_element(iface_id);
+	if (elm->_band == EMPOWER_BT_HT20) {
+
+		/* ht capabilities */
+		struct click_wifi_ht_caps *ht = (struct click_wifi_ht_caps *) ptr;
+		ht->type = WIFI_HT_CAPS_TYPE;
+		ht->len = WIFI_HT_CAPS_SIZE;
+
+		//ht->ht_caps_info |= WIFI_HT_CI_LDPC;
+		//ht->ht_caps_info |= WIFI_HT_CI_CHANNEL_WIDTH_SET;
+		ht->ht_caps_info |= WIFI_HT_CI_SM_PS_DISABLED << WIFI_HT_CI_SM_PS_SHIFT;
+		ht->ht_caps_info |= WIFI_HT_CI_HT_GF;
+		ht->ht_caps_info |= WIFI_HT_CI_SGI_20;
+		ht->ht_caps_info |= WIFI_HT_CI_SGI_40;
+		//ht->ht_caps_info |= WIFI_HT_CI_TX_STBC;
+		//ht->ht_caps_info |= WIFI_HT_CI_RX_STBC_1SS << WIFI_HT_CI_RX_STBC_SHIFT;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_DBACK;
+		ht->ht_caps_info |= WIFI_HT_CI_HT_MAX_AMSDU; /* max A-MSDU length 7935 */
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_DSSS_CCK;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_PSMP;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_INTOLLERANT;
+		//ht->ht_caps_info |= WIFI_HT_CI_HT_LSIG_TXOP;
+
+		ht->ampdu_params = 0x1b; /* 8191 MPDU Length, 8usec density */
+
+		ht->rx_supported_mcs[0] = 0xff; /* MCS 0-7 */
+		ht->rx_supported_mcs[1] = 0xff; /* MCS 8-15 */
+
+		ptr += 2 + WIFI_HT_CAPS_SIZE;
+		actual_length += 2 + WIFI_HT_CAPS_SIZE;
+
+		/* ht information */
+		struct click_wifi_ht_info *ht_info = (struct click_wifi_ht_info *) ptr;
+		ht_info->type = WIFI_HT_INFO_TYPE;
+		ht_info->len = WIFI_HT_INFO_SIZE;
+
+		ht_info->primary_channel = (uint8_t) channel;
+		ht_info->ht_info_1_3 = 0x08;
+		ht_info->ht_info_2_3 = 0x0004;
+		ht_info->ht_info_3_3 = 0x0;
+
+		ptr += 2 + WIFI_HT_INFO_SIZE;
+		actual_length += 2 + WIFI_HT_INFO_SIZE;
+
+	}
+
 	p->take(max_len - actual_length);
-
 	_el->send_status_lvap(dst);
-
 	SET_PAINT_ANNO(p, iface_id);
 	output(0).push(p);
 

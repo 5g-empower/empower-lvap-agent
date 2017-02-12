@@ -1411,7 +1411,8 @@ int EmpowerLVAPManager::handle_assoc_response(Packet *p, uint32_t offset) {
 				      sta.unparse_colon().c_str());
 	}
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-	_eassor->send_association_response(ess->_sta, WIFI_STATUS_SUCCESS, ess->_iface_id);
+	int channel = ess->_channel;
+	_eassor->send_association_response(ess->_sta, WIFI_STATUS_SUCCESS, channel, ess->_iface_id);
 	return 0;
 }
 

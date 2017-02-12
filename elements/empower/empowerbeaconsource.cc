@@ -188,7 +188,6 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		actual_length += 2 + 4;
 	}
 
-	/* 802.11g fields */
 	/* extended supported rates */
 	int num_xrates = rates.size() - WIFI_RATE_SIZE;
 	if (num_xrates > 0) {
@@ -205,9 +204,8 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		actual_length += 2 + num_xrates;
 	}
 
-	ResourceElement *elm = _el->iface_to_element(iface_id);
-
 	/* 802.11n fields */
+	ResourceElement *elm = _el->iface_to_element(iface_id);
 	if (elm->_band == EMPOWER_BT_HT20) {
 
 		/* ht capabilities */
