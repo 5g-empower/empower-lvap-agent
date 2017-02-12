@@ -75,7 +75,6 @@ enum empower_lvap_flags {
 enum empower_bands_types {
     EMPOWER_BT_L20 = 0x0,
     EMPOWER_BT_HT20 = 0x1,
-    EMPOWER_BT_HT40 = 0x2,
 };
 
 typedef HashTable<uint16_t, uint32_t> CBytes;
@@ -199,9 +198,6 @@ public:
 		case EMPOWER_BT_HT20:
 			sa << "HT20";
 			break;
-		case EMPOWER_BT_HT40:
-			sa << "HT40";
-			break;
 		}
 		sa << ")";
 		return sa.take_string();
@@ -261,9 +257,9 @@ public:
 	int handle_wtp_counters_request(Packet *, uint32_t);
 
 	void send_hello();
-	void send_probe_request(EtherAddress, String, uint8_t);
+	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types);
 	void send_auth_request(EtherAddress, EtherAddress);
-	void send_association_request(EtherAddress, EtherAddress, String);
+	void send_association_request(EtherAddress, EtherAddress, String, EtherAddress, int, empower_bands_types);
 	void send_status_lvap(EtherAddress);
 	void send_status_vap(EtherAddress);
 

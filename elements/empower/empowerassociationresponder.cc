@@ -385,7 +385,11 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 	// if authenticated with the requested bssid then send request to the
 	// controller, otherwise ignore the message
 	if (ess->_authentication_status && ess->_lvap_bssid == bssid) {
-		_el->send_association_request(src, bssid, ssid);
+		if (htcaps) {
+			_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, EMPOWER_BT_HT20);
+		} else {
+			_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, EMPOWER_BT_L20);
+		}
 		p->kill();
 		return;
 	}

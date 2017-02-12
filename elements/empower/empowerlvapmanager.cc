@@ -139,8 +139,6 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			band = EMPOWER_BT_L20;
 		} else if (tokens_re[2] == "HT20") {
 			band = EMPOWER_BT_HT20;
-		} else if (tokens_re[2] == "HT40") {
-			band = EMPOWER_BT_HT40;
 		}
 
 		ResourceElement elm = ResourceElement(hwaddr, channel, band);
@@ -215,7 +213,7 @@ void EmpowerLVAPManager::send_rssi_trigger(uint32_t trigger_id, uint32_t iface, 
 
 }
 
-void EmpowerLVAPManager::send_association_request(EtherAddress src, EtherAddress bssid, String ssid) {
+void EmpowerLVAPManager::send_association_request(EtherAddress src, EtherAddress bssid, String ssid, EtherAddress hwaddr, int channel, empower_bands_types band) {
 
 	WritablePacket *p = Packet::make(sizeof(empower_assoc_request) + ssid.length());
 
@@ -237,6 +235,9 @@ void EmpowerLVAPManager::send_association_request(EtherAddress src, EtherAddress
 	request->set_sta(src);
 	request->set_bssid(bssid);
 	request->set_ssid(ssid);
+	request->set_channel(channel);
+	request->set_band(band);
+	request->set_hwaddr(hwaddr);
 
 	output(0).push(p);
 
@@ -268,7 +269,7 @@ void EmpowerLVAPManager::send_auth_request(EtherAddress src, EtherAddress bssid)
 
 }
 
-void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, uint8_t iface_id) {
+void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, EtherAddress hwaddr, int channel, empower_bands_types band) {
 
 	WritablePacket *p = Packet::make(sizeof(empower_probe_request) + ssid.length());
 
@@ -281,16 +282,6 @@ void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, uint8
 
 	memset(p->data(), 0, p->length());
 
-	const ResourceElement *re = iface_to_element(iface_id);
-
-	if (!re) {
-		click_chatter("%{element} :: %s :: invalid iface id %u!",
-					  this,
-					  __func__,
-					  iface_id);
-		return;
-	}
-
 	empower_probe_request *request = (struct empower_probe_request *) (p->data());
 	request->set_version(_empower_version);
 	request->set_length(sizeof(empower_probe_request) + ssid.length());
@@ -299,9 +290,9 @@ void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, uint8
 	request->set_wtp(_wtp);
 	request->set_sta(src);
 	request->set_ssid(ssid);
-	request->set_hwaddr(re->_hwaddr);
-	request->set_band(re->_band);
-	request->set_channel(re->_channel);
+	request->set_hwaddr(hwaddr);
+	request->set_band(band);
+	request->set_channel(channel);
 
 	output(0).push(p);
 

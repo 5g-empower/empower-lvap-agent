@@ -533,7 +533,12 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 					      __func__,
 					      src.unparse().c_str());
 		}
-		_el->send_probe_request(src, ssid, iface_id);
+		ResourceElement *el = _el->iface_to_element(iface_id);
+		if (htcaps) {
+			_el->send_probe_request(src, ssid, el->_hwaddr, el->_channel, EMPOWER_BT_HT20);
+		} else {
+			_el->send_probe_request(src, ssid, el->_hwaddr, el->_channel, EMPOWER_BT_L20);
+		}
 		p->kill();
 		return;
 	}

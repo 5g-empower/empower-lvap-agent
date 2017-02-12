@@ -159,12 +159,18 @@ struct empower_assoc_request : public empower_header {
     uint8_t _wtp[6];	/* EtherAddress */
     uint8_t _sta[6];	/* EtherAddress */
     uint8_t _bssid[6];	/* EtherAddress */
+    uint8_t _hwaddr[6]; /* EtherAddress */
+    uint8_t _channel;	/* WiFi channel (int) */
+    uint8_t _band;		/* WiFi band (empower_bands_types) */
     char    _ssid[];	/* SSID (String) */
   public:
     void set_wtp(EtherAddress wtp)     { memcpy(_wtp, wtp.data(), 6); }
     void set_sta(EtherAddress sta)     { memcpy(_sta, sta.data(), 6); }
     void set_bssid(EtherAddress bssid) { memcpy(_bssid, bssid.data(), 6); }
     void set_ssid(String ssid)         { memcpy(&_ssid, ssid.data(), ssid.length()); }
+    void set_hwaddr(EtherAddress hwaddr) { memcpy(_hwaddr, hwaddr.data(), 6); }
+    void set_band(uint8_t band)          { _band = band; }
+    void set_channel(uint8_t channel)    { _channel = channel; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* association response packet format */
