@@ -87,28 +87,12 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		2 + /* cap_info */
 		2 + ssid.length() + /* ssid */
 		2 + WIFI_RATES_MAXSIZE + /* rates */
-		/* 802.11g Information fields */
+		2 + 1 + /* ds param */
 		2 + WIFI_RATES_MAXSIZE + /* xrates */
+		2 + 4 + /* tim */
+		2 + 26 + /* ht capabilities */
+		2 + 22 + /* ht information */
 		0;
-
-	/* if this is a 11a channel the ds param is not needed */
-	if (channel < 14) {
-		max_len += 2 + 1; /* ds parms */
-	}
-
-	/* if this is a beacon the transmit TIM */
-	if (!probe) {
-		max_len += 2 + 4; /* tim */
-	}
-
-	/* check if this interface supports HT extensions */
-	ResourceElement *elm = _el->iface_to_element(iface_id);
-
-	if (elm->_band == EMPOWER_BT_HT20 || elm->_band == EMPOWER_BT_HT40) {
-		max_len += 2 + 26 + /* ht capabilities */
-			2 + 22 + /* ht information */
-			0;
-	}
 
 	WritablePacket *p = Packet::make(max_len);
 	memset(p->data(), 0, p->length());
@@ -148,11 +132,13 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 	ptr += 8;
 	actual_length += 8;
 
+	/* beacon period */
 	uint16_t beacon_int = (uint16_t) _period;
 	*(uint16_t *) ptr = cpu_to_le16(beacon_int);
 	ptr += 2;
 	actual_length += 2;
 
+	/* cap info */
 	uint16_t cap_info = 0;
 	cap_info |= WIFI_CAPINFO_ESS;
 	*(uint16_t *) ptr = cpu_to_le16(cap_info);
@@ -169,7 +155,6 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 
 	/* rates */
 	TransmissionPolicies * tx_table = _el->get_tx_policies(iface_id);
-
 	Vector<int> rates = tx_table->lookup(bssid)->_mcs;
 	ptr[0] = WIFI_ELEMID_RATES;
 	ptr[1] = WIFI_MIN(WIFI_RATE_SIZE, rates.size());
@@ -179,7 +164,6 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 			ptr[2 + x] |= WIFI_RATE_BASIC;
 		}
 	}
-
 	ptr += 2 + WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 	actual_length += 2 + WIFI_MIN(WIFI_RATE_SIZE, rates.size());
 
@@ -221,6 +205,8 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		actual_length += 2 + num_xrates;
 	}
 
+	ResourceElement *elm = _el->iface_to_element(iface_id);
+
 	/* 802.11n fields */
 	if (elm->_band == EMPOWER_BT_HT20) {
 
@@ -232,22 +218,22 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		//ht->ht_caps_info |= WIFI_HT_CI_LDPC;
 		//ht->ht_caps_info |= WIFI_HT_CI_CHANNEL_WIDTH_SET;
 		ht->ht_caps_info |= WIFI_HT_CI_SM_PS_DISABLED << WIFI_HT_CI_SM_PS_SHIFT;
-		//ht->ht_caps_info |= WIFI_HT_CI_HT_GF;
-		//ht->ht_caps_info |= WIFI_HT_CI_SGI_20;
-		//ht->ht_caps_info |= WIFI_HT_CI_SGI_40;
+		ht->ht_caps_info |= WIFI_HT_CI_HT_GF;
+		ht->ht_caps_info |= WIFI_HT_CI_SGI_20;
+		ht->ht_caps_info |= WIFI_HT_CI_SGI_40;
 		//ht->ht_caps_info |= WIFI_HT_CI_TX_STBC;
 		//ht->ht_caps_info |= WIFI_HT_CI_RX_STBC_1SS << WIFI_HT_CI_RX_STBC_SHIFT;
 		//ht->ht_caps_info |= WIFI_HT_CI_HT_DBACK;
-		//ht->ht_caps_info |= WIFI_HT_CI_HT_MAX_AMSDU;
+		ht->ht_caps_info |= WIFI_HT_CI_HT_MAX_AMSDU; /* max A-MSDU length 7935 */
 		//ht->ht_caps_info |= WIFI_HT_CI_HT_DSSS_CCK;
 		//ht->ht_caps_info |= WIFI_HT_CI_HT_PSMP;
 		//ht->ht_caps_info |= WIFI_HT_CI_HT_INTOLLERANT;
 		//ht->ht_caps_info |= WIFI_HT_CI_HT_LSIG_TXOP;
 
+		ht->ampdu_params = 0x1b; /* 8191 MPDU Length, 8usec density */
+
 		ht->rx_supported_mcs[0] = 0xff; /* MCS 0-7 */
 		ht->rx_supported_mcs[1] = 0xff; /* MCS 8-15 */
-
-		ht->ampdu_params = 0x18; /* 8191 MPDU Length, 8usec density */
 
 		ptr += 2 + WIFI_HT_CAPS_SIZE;
 		actual_length += 2 + WIFI_HT_CAPS_SIZE;
@@ -258,7 +244,7 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		ht_info->len = WIFI_HT_INFO_SIZE;
 
 		ht_info->primary_channel = (uint8_t) channel;
-		ht_info->ht_info_1_3 = 0x0d;
+		ht_info->ht_info_1_3 = 0x08;
 		ht_info->ht_info_2_3 = 0x0004;
 		ht_info->ht_info_3_3 = 0x0;
 
