@@ -1191,7 +1191,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 		/* add fair buffer queue */
 		if (_efb) {
-			_efb->request_queue(sta);
+			_efb->request_queue(lvap_bssid);
 		}
 
 		return 0;
@@ -1199,6 +1199,13 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	}
 
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
+
+	/* update fair buffer queue */
+	if (_efb && lvap_bssid != ess->_lvap_bssid) {
+		_efb->release_queue(ess->_lvap_bssid);
+		_efb->request_queue(lvap_bssid);
+	}
+
 	ess->_lvap_bssid = lvap_bssid;
 	ess->_ssids = ssids;
 	ess->_encap = encap;
@@ -1324,7 +1331,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 		return -1;
 	}
 
-	EmpowerStationState * ess = _lvaps.get_pointer(sta);
+	EmpowerStationState *ess = _lvaps.get_pointer(sta);
 
 	// If the bssids are different, this is a shared lvap and a deauth message should be sent before removing the lvap
 	if (ess->_lvap_bssid != ess->_net_bssid) {
@@ -1336,7 +1343,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 
 	// removing fair buffer queue
 	if (_efb) {
-		_efb->release_queue(sta);
+		_efb->release_queue(ess->_lvap_bssid);
 	}
 
 	// Forget station

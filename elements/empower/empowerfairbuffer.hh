@@ -153,6 +153,8 @@ class EmpowerFairBuffer : public SimpleQueue { public:
     uint32_t _drops; // packets dropped because of full queue
     uint32_t _bdrops; // bytes dropped
 
+	bool _debug;
+
     uint32_t compute_deficit(Packet*);
 
     static int write_handler(const String &, Element *, void *, ErrorHandler *);

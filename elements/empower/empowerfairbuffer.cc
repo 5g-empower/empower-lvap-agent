@@ -49,7 +49,8 @@ CLICK_DECLS
 enum { H_DROPS,
 	H_BYTEDROPS,
 	H_CAPACITY,
-	H_LIST_QUEUES
+	H_LIST_QUEUES,
+	H_DEBUG
 };
 
 EmpowerFairBuffer::EmpowerFairBuffer()
@@ -59,6 +60,7 @@ EmpowerFairBuffer::EmpowerFairBuffer()
   _sleepiness=0;
   _quantum=1470;
   _capacity=1000;
+  _debug=false;
 }
 
 EmpowerFairBuffer::~EmpowerFairBuffer()
@@ -91,7 +93,7 @@ EmpowerFairBuffer::compute_deficit(Packet* p)
 void *
 EmpowerFairBuffer::cast(const char *n)
 {
-    if (strcmp(n, "FairBuffer") == 0)
+    if (strcmp(n, "EmpowerFairBuffer") == 0)
 	return (EmpowerFairBuffer *) this;
     else if (strcmp(n, Notifier::EMPTY_NOTIFIER) == 0)
 	return static_cast<Notifier *>(&_empty_note);
@@ -125,23 +127,45 @@ EmpowerFairBuffer::push(int, Packet* p)
 
 	if (p->length() < sizeof(struct click_wifi)) {
 		click_chatter("%{element} :: %s :: packet too small: %d vs %d",
-				this,
-				__func__,
-				p->length(),
-				sizeof(struct click_ether));
+				      this,
+				      __func__,
+				      p->length(),
+				      sizeof(struct click_ether));
 		p->kill();
 		return;
 	}
 
 	struct click_wifi *w = (struct click_wifi *) p->data();
-	EtherAddress ra = EtherAddress(w->i_addr1);
+	uint8_t dir = w->i_fc[1] & WIFI_FC1_DIR_MASK;
+	EtherAddress bssid;
+
+	switch (dir) {
+	case WIFI_FC1_DIR_TODS:
+		bssid = EtherAddress(w->i_addr1);
+		break;
+	case WIFI_FC1_DIR_FROMDS:
+		bssid = EtherAddress(w->i_addr2);
+		break;
+	case WIFI_FC1_DIR_NODS:
+	case WIFI_FC1_DIR_DSTODS:
+		bssid = EtherAddress(w->i_addr3);
+		break;
+	default:
+		click_chatter("%{element} :: %s :: invalid dir %d",
+				      this,
+				      __func__,
+				      dir);
+		p->kill();
+		return;
+	}
 
 	// get queue for ra
-	FairBufferQueue* q = _fair_table.get(ra);
+	FairBufferQueue* q = _fair_table.get(bssid);
 
 	// push packet on queue or fail
 	if (q->push(p)) {
 		_empty_note.wake();
+		_sleepiness = 0;
 	} else {
 		// queue overflow, destroy the packet
 		if (_drops == 0) {
@@ -159,9 +183,7 @@ EmpowerFairBuffer::pull(int)
 {
 
 	if (_fair_table.empty()) {
-		if (++_sleepiness == SLEEPINESS_TRIGGER) {
-			_empty_note.sleep();
-		}
+		_empty_note.sleep();
 		return 0;
 	}
 
@@ -171,7 +193,7 @@ EmpowerFairBuffer::pull(int)
 	queue->_deficit += _quantum;
 
 	Packet *p = 0;
-	if (head.value()) {
+	if (head) {
 		p = head.value();
 		_head_table.erase(_next);
 	} else if (queue->top()) {
@@ -222,6 +244,12 @@ EmpowerFairBuffer::list_queues()
 void
 EmpowerFairBuffer::request_queue(EtherAddress dst)
 {
+	if (_debug) {
+		click_chatter("%{element} :: %s :: request new queue %s",
+				      this,
+				      __func__,
+				      dst.unparse().c_str());
+	}
 	FairBufferQueue* q = new FairBufferQueue(_capacity);
 	if (_fair_table.empty()) {
 		_next = dst;
@@ -234,6 +262,12 @@ EmpowerFairBuffer::request_queue(EtherAddress dst)
 void
 EmpowerFairBuffer::release_queue(EtherAddress dst)
 {
+	if (_debug) {
+		click_chatter("%{element} :: %s :: releasing queue %s",
+				      this,
+				      __func__,
+				      dst.unparse().c_str());
+	}
 	TableItr itr = _fair_table.find(dst);
 	// destroy queued packets
 	Packet* p = 0;
@@ -262,11 +296,13 @@ EmpowerFairBuffer::release_queue(EtherAddress dst)
 void
 EmpowerFairBuffer::add_handlers()
 {
+	add_read_handler("debug", read_handler, (void *) H_DEBUG);
 	add_read_handler("drops", read_handler, (void*)H_DROPS);
 	add_read_handler("byte_drops", read_handler, (void*)H_BYTEDROPS);
 	add_read_handler("capacity", read_handler, (void*)H_CAPACITY);
 	add_read_handler("list_queues", read_handler, (void*)H_LIST_QUEUES);
 	add_write_handler("capacity", write_handler, (void*)H_CAPACITY);
+	add_write_handler("debug", write_handler, (void *) H_DEBUG);
 }
 
 String
@@ -276,6 +312,8 @@ EmpowerFairBuffer::read_handler(Element *e, void *thunk)
 	switch ((intptr_t)thunk) {
 	case H_DROPS:
 		return(String(c->drops()) + "\n");
+	case H_DEBUG:
+		return String(c->_debug) + "\n";
 	case H_BYTEDROPS:
 		return(String(c->bdrops()) + "\n");
 	case H_CAPACITY:
@@ -292,6 +330,13 @@ int EmpowerFairBuffer::write_handler(const String &in_s, Element *e, void *vpara
 	EmpowerFairBuffer *d = (EmpowerFairBuffer *) e;
 	String s = cp_uncomment(in_s);
 	switch ((intptr_t) vparam) {
+	case H_DEBUG: {
+		bool _debug;
+		if (!cp_bool(s, &_debug))
+			return errh->error("debug parameter must be boolean");
+		d->_debug = _debug;
+		break;
+	}
 	case H_CAPACITY: {
 		uint32_t capacity;
 		if (!cp_unsigned(s, &capacity))
