@@ -334,6 +334,7 @@ private:
 	class EmpowerAssociationResponder *_eassor;
 	class EmpowerDeAuthResponder *_edeauthr;
 	class EmpowerRXStats *_ers;
+	class EmpowerFairBuffer *_efb;
 
 	String _empower_iface;
 	EtherAddress _empower_hwaddr;

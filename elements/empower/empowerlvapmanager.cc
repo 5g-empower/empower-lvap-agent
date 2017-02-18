@@ -32,10 +32,11 @@
 #include "empowerdeauthresponder.hh"
 #include "empowerdisassocresponder.hh"
 #include "empowerrxstats.hh"
+#include "empowerfairbuffer.hh"
 CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
-		_e11k(0), _ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0),
+		_e11k(0), _ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0), _efb(0),
 		_timer(this), _seq(0), _period(5000), _debug(false) {
 }
 
@@ -88,6 +89,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read_m("RCS", rcs_strings)
 			                    .read_m("RES", res_strings)
 			                    .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
+			                    .read("EFB", ElementCastArg("EmpowerFairBuffer"), _efb)
 								.read("PERIOD", _period)
 			                    .read("DEBUG", _debug)
 			                    .complete();
@@ -1187,6 +1189,11 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		/* Regenerate the BSSID mask */
 		compute_bssid_mask();
 
+		/* add fair buffer queue */
+		if (_efb) {
+			_efb->request_queue(sta);
+		}
+
 		return 0;
 
 	}
@@ -1324,7 +1331,13 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 		_edeauthr->send_deauth_request(sta, 0x0001, ess->_iface_id);
 	}
 
+	// erasing lvap
 	_lvaps.erase(_lvaps.find(sta));
+
+	// removing fair buffer queue
+	if (_efb) {
+		_efb->release_queue(sta);
+	}
 
 	// Forget station
 	int iface = ess->_iface_id;
