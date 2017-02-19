@@ -1123,6 +1123,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	String ssid = *ssids.begin();
 	ssids.erase(ssids.begin());
 
+	int group = add_lvap->group();
 	int assoc_id = add_lvap->assoc_id();
 	EtherAddress hwaddr = add_lvap->hwaddr();
 	int channel = add_lvap->channel();
@@ -1184,6 +1185,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._set_mask = set_mask;
 		state._ssid = ssid;
 		state._iface_id = iface;
+		state._group = group;
 		_lvaps.set(sta, state);
 
 		/* Regenerate the BSSID mask */
@@ -1210,6 +1212,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	ess->_ssids = ssids;
 	ess->_encap = encap;
 	ess->_assoc_id = assoc_id;
+	ess->_group = group;
 	ess->_authentication_status = authentication_state;
 	ess->_association_status = association_state;
 	ess->_set_mask = set_mask;
@@ -1766,6 +1769,8 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 			sa << it.value()._band;
 			sa << " iface_id ";
 			sa << it.value()._iface_id;
+			sa << " group ";
+			sa << it.value()._group;
 		    sa << "\n";
 		}
 		return sa.take_string();

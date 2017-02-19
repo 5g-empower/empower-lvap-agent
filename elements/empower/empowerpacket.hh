@@ -440,7 +440,8 @@ struct ssid_entry {
 /* add vap packet format */
 struct empower_add_lvap : public empower_header {
 private:
-    uint16_t     _flags;			/* Flags (empower_packet_flags) */
+    uint16_t	 _group;			/* lvap group */
+	uint16_t     _flags;			/* Flags (empower_packet_flags) */
     uint16_t     _assoc_id;			/* Association id */
     uint8_t      _hwaddr[6];		/* EtherAddress */
     uint8_t      _channel;			/* WiFi channel (int) */
@@ -451,6 +452,7 @@ private:
     uint8_t      _lvap_bssid[6];	/* EtherAddress */
     ssid_entry * _ssids[];			/* SSIDs (ssid_entry) */
 public:
+    uint16_t     group()      { return ntohs(_group); }
     uint8_t      band()       { return _band; }
     uint8_t      channel()    { return _channel; }
     bool         flag(int f)  { return ntohs(_flags) & f;  }
