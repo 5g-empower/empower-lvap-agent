@@ -174,7 +174,7 @@ EmpowerFairBuffer::push(int, Packet* p)
 		_bdrops += p->length();
 		_drops++;
 		p->kill();
-	} // end if
+	}
 
 }
 
@@ -276,7 +276,7 @@ EmpowerFairBuffer::release_queue(EtherAddress dst)
 		// flush
 		if (p) {
 			p->kill();
-		} // end if
+		}
 	} while (p);
 	// erase queue
 	_fair_table.erase(itr);
