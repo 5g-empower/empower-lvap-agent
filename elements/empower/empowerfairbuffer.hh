@@ -140,11 +140,7 @@ class EmpowerFairBuffer : public SimpleQueue { public:
     typedef HashTable<EtherAddress, FairBufferQueue*> FairTable;
     typedef FairTable::iterator TableItr;
 
-    typedef HashTable<EtherAddress, Packet*> HeadTable;
-    typedef HeadTable::iterator HeadItr;
-
     FairTable _fair_table;
-    HeadTable _head_table;
 
     EtherAddress _next;
     uint32_t _quantum;
@@ -155,7 +151,7 @@ class EmpowerFairBuffer : public SimpleQueue { public:
 
 	bool _debug;
 
-    uint32_t compute_deficit(Packet*);
+    uint32_t compute_deficit(const Packet *);
 
     static int write_handler(const String &, Element *, void *, ErrorHandler *);
     static String read_handler(Element *, void *);

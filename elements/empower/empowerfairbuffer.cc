@@ -46,59 +46,41 @@
 #include <elements/wifi/bitrate.hh>
 CLICK_DECLS
 
-enum { H_DROPS,
-	H_BYTEDROPS,
-	H_CAPACITY,
-	H_LIST_QUEUES,
-	H_DEBUG
+enum {
+	H_DROPS, H_BYTEDROPS, H_CAPACITY, H_LIST_QUEUES, H_DEBUG
 };
 
-EmpowerFairBuffer::EmpowerFairBuffer()
-{
-  _drops=0;
-  _bdrops=0;
-  _sleepiness=0;
-  _quantum=1470;
-  _capacity=1000;
-  _debug=false;
+EmpowerFairBuffer::EmpowerFairBuffer() {
+	_drops = 0;
+	_bdrops = 0;
+	_sleepiness = 0;
+	_quantum = 1470;
+	_capacity = 50;
+	_debug = false;
 }
 
-EmpowerFairBuffer::~EmpowerFairBuffer()
-{
-  // de-allocate fair-table
-  TableItr itr = _fair_table.begin();
-  while(itr != _fair_table.end()){
-    release_queue(itr.key());
-    itr++;
-  } // end while
-  _fair_table.clear();
-  // de-allocate head-table
-  HeadItr itr_head = _head_table.begin();
-  while(itr_head != _head_table.end()) {
-    Packet* p = itr_head.value();
-    if(p) {
-      p->kill();
-    }
-    itr_head++;
-  } // end while
-  _head_table.clear();
+EmpowerFairBuffer::~EmpowerFairBuffer() {
+	// de-allocate fair-table
+	TableItr itr = _fair_table.begin();
+	while (itr != _fair_table.end()) {
+		release_queue(itr.key());
+		itr++;
+	}
+	_fair_table.clear();
 }
 
-uint32_t
-EmpowerFairBuffer::compute_deficit(Packet* p)
-{
+uint32_t EmpowerFairBuffer::compute_deficit(const Packet* p) {
 	return p ? p->length() : 0;
 }
 
 void *
-EmpowerFairBuffer::cast(const char *n)
-{
-    if (strcmp(n, "EmpowerFairBuffer") == 0)
-	return (EmpowerFairBuffer *) this;
-    else if (strcmp(n, Notifier::EMPTY_NOTIFIER) == 0)
-	return static_cast<Notifier *>(&_empty_note);
-    else
-	return SimpleQueue::cast(n);
+EmpowerFairBuffer::cast(const char *n) {
+	if (strcmp(n, "EmpowerFairBuffer") == 0)
+		return (EmpowerFairBuffer *) this;
+	else if (strcmp(n, Notifier::EMPTY_NOTIFIER) == 0)
+		return static_cast<Notifier *>(&_empty_note);
+	else
+		return SimpleQueue::cast(n);
 }
 
 int
@@ -108,6 +90,7 @@ EmpowerFairBuffer::configure(Vector<String>& conf, ErrorHandler* errh)
   int res = cp_va_kparse(conf, this, errh,
 			"CAPACITY", 0, cpUnsigned, &_capacity,
 			"QUANTUM", 0, cpUnsigned, &_quantum,
+			"DEBUG", 0, cpBool, &_debug,
 			cpEnd);
 
   _empty_note.initialize(Notifier::EMPTY_NOTIFIER, router());
@@ -115,22 +98,18 @@ EmpowerFairBuffer::configure(Vector<String>& conf, ErrorHandler* errh)
 
 }
 
-int
-EmpowerFairBuffer::initialize(ErrorHandler *)
-{
+int EmpowerFairBuffer::initialize(ErrorHandler *) {
 	return 0;
 }
 
-void
-EmpowerFairBuffer::push(int, Packet* p)
-{
+void EmpowerFairBuffer::push(int, Packet* p) {
 
 	if (p->length() < sizeof(struct click_wifi)) {
 		click_chatter("%{element} :: %s :: packet too small: %d vs %d",
 				      this,
-				      __func__,
-				      p->length(),
-				      sizeof(struct click_ether));
+					  __func__,
+					  p->length(),
+					  sizeof(struct click_ether));
 		p->kill();
 		return;
 	}
@@ -153,14 +132,26 @@ EmpowerFairBuffer::push(int, Packet* p)
 	default:
 		click_chatter("%{element} :: %s :: invalid dir %d",
 				      this,
-				      __func__,
-				      dir);
+					  __func__,
+					  dir);
 		p->kill();
 		return;
 	}
 
-	// get queue for ra
+	// get queue for bssid
 	FairBufferQueue* q = _fair_table.get(bssid);
+
+	if (!q && _debug) {
+		request_queue(bssid);
+		q = _fair_table.get(bssid);
+	} else if (!q) {
+		click_chatter("%{element} :: %s :: bssid not found %s",
+				      this,
+					  __func__,
+					  bssid.unparse().c_str());
+		p->kill();
+		return;
+	}
 
 	// push packet on queue or fail
 	if (q->push(p)) {
@@ -179,8 +170,7 @@ EmpowerFairBuffer::push(int, Packet* p)
 }
 
 Packet *
-EmpowerFairBuffer::pull(int)
-{
+EmpowerFairBuffer::pull(int) {
 
 	if (_fair_table.empty()) {
 		_empty_note.sleep();
@@ -188,25 +178,17 @@ EmpowerFairBuffer::pull(int)
 	}
 
 	TableItr active = _fair_table.find(_next);
-	HeadItr head = _head_table.find(_next);
+
 	FairBufferQueue* queue = active.value();
 	queue->_deficit += _quantum;
 
-	Packet *p = 0;
-	if (head) {
-		p = head.value();
-		_head_table.erase(_next);
-	} else if (queue->top()) {
-		p = queue->pull();
-	}
+	const Packet *p = queue->top();
 
 	if (!p) {
 		queue->_deficit = 0;
 	} else if (compute_deficit(p) <= queue->_deficit) {
 		queue->_deficit -= compute_deficit(p);
-		return p;
-	} else {
-		_head_table.set(_next, p);
+		return queue->pull();
 	}
 
 	active++;
@@ -225,30 +207,23 @@ EmpowerFairBuffer::pull(int)
 
 }
 
-String
-EmpowerFairBuffer::list_queues()
-{
+String EmpowerFairBuffer::list_queues() {
 	StringAccum result;
 	TableItr itr = _fair_table.begin();
 	result << "Key,Capacity,Packets,Bytes\n";
-	while(itr != _fair_table.end()){
-		result << (itr.key()).unparse() << ","
-				<< itr.value()->_capacity << ","
-				<< itr.value()->_size << ","
-				<< itr.value()->_bsize << "\n";
+	while (itr != _fair_table.end()) {
+		result << (itr.key()).unparse() << "," << itr.value()->_capacity << "," << itr.value()->_size << "," << itr.value()->_bsize << "\n";
 		itr++;
-	} // end while
-	return(result.take_string());
+	}
+	return (result.take_string());
 }
 
-void
-EmpowerFairBuffer::request_queue(EtherAddress dst)
-{
+void EmpowerFairBuffer::request_queue(EtherAddress dst) {
 	if (_debug) {
 		click_chatter("%{element} :: %s :: request new queue %s",
 				      this,
-				      __func__,
-				      dst.unparse().c_str());
+					  __func__,
+					  dst.unparse().c_str());
 	}
 	FairBufferQueue* q = new FairBufferQueue(_capacity);
 	if (_fair_table.empty()) {
@@ -259,14 +234,12 @@ EmpowerFairBuffer::request_queue(EtherAddress dst)
 	_fair_table.set(dst, q);
 }
 
-void
-EmpowerFairBuffer::release_queue(EtherAddress dst)
-{
+void EmpowerFairBuffer::release_queue(EtherAddress dst) {
 	if (_debug) {
 		click_chatter("%{element} :: %s :: releasing queue %s",
 				      this,
-				      __func__,
-				      dst.unparse().c_str());
+					  __func__,
+					  dst.unparse().c_str());
 	}
 	TableItr itr = _fair_table.find(dst);
 	// destroy queued packets
@@ -293,40 +266,35 @@ EmpowerFairBuffer::release_queue(EtherAddress dst)
 	}
 }
 
-void
-EmpowerFairBuffer::add_handlers()
-{
+void EmpowerFairBuffer::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
-	add_read_handler("drops", read_handler, (void*)H_DROPS);
-	add_read_handler("byte_drops", read_handler, (void*)H_BYTEDROPS);
-	add_read_handler("capacity", read_handler, (void*)H_CAPACITY);
-	add_read_handler("list_queues", read_handler, (void*)H_LIST_QUEUES);
-	add_write_handler("capacity", write_handler, (void*)H_CAPACITY);
+	add_read_handler("drops", read_handler, (void*) H_DROPS);
+	add_read_handler("byte_drops", read_handler, (void*) H_BYTEDROPS);
+	add_read_handler("capacity", read_handler, (void*) H_CAPACITY);
+	add_read_handler("list_queues", read_handler, (void*) H_LIST_QUEUES);
+	add_write_handler("capacity", write_handler, (void*) H_CAPACITY);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
 }
 
-String
-EmpowerFairBuffer::read_handler(Element *e, void *thunk)
-{
-	EmpowerFairBuffer *c = (EmpowerFairBuffer *)e;
-	switch ((intptr_t)thunk) {
+String EmpowerFairBuffer::read_handler(Element *e, void *thunk) {
+	EmpowerFairBuffer *c = (EmpowerFairBuffer *) e;
+	switch ((intptr_t) thunk) {
 	case H_DROPS:
-		return(String(c->drops()) + "\n");
+		return (String(c->drops()) + "\n");
 	case H_DEBUG:
 		return String(c->_debug) + "\n";
 	case H_BYTEDROPS:
-		return(String(c->bdrops()) + "\n");
+		return (String(c->bdrops()) + "\n");
 	case H_CAPACITY:
-		return(String(c->capacity()) + "\n");
+		return (String(c->capacity()) + "\n");
 	case H_LIST_QUEUES:
-		return(c->list_queues());
+		return (c->list_queues());
 	default:
 		return "<error>\n";
 	}
 }
 
-int EmpowerFairBuffer::write_handler(const String &in_s, Element *e, void *vparam, ErrorHandler *errh)
-{
+int EmpowerFairBuffer::write_handler(const String &in_s, Element *e, void *vparam, ErrorHandler *errh) {
 	EmpowerFairBuffer *d = (EmpowerFairBuffer *) e;
 	String s = cp_uncomment(in_s);
 	switch ((intptr_t) vparam) {
