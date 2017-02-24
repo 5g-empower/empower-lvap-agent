@@ -115,28 +115,7 @@ void EmpowerFairBuffer::push(int, Packet* p) {
 	}
 
 	struct click_wifi *w = (struct click_wifi *) p->data();
-	uint8_t dir = w->i_fc[1] & WIFI_FC1_DIR_MASK;
-	EtherAddress bssid;
-
-	switch (dir) {
-	case WIFI_FC1_DIR_TODS:
-		bssid = EtherAddress(w->i_addr1);
-		break;
-	case WIFI_FC1_DIR_FROMDS:
-		bssid = EtherAddress(w->i_addr2);
-		break;
-	case WIFI_FC1_DIR_NODS:
-	case WIFI_FC1_DIR_DSTODS:
-		bssid = EtherAddress(w->i_addr3);
-		break;
-	default:
-		click_chatter("%{element} :: %s :: invalid dir %d",
-				      this,
-					  __func__,
-					  dir);
-		p->kill();
-		return;
-	}
+	EtherAddress bssid = EtherAddress(w->i_addr2);
 
 	// get queue for bssid
 	FairBufferQueue* q = _fair_table.get(bssid);
@@ -174,6 +153,7 @@ EmpowerFairBuffer::pull(int) {
 
 	if (_fair_table.empty()) {
 		_empty_note.sleep();
+		_sleepiness = 0;
 		return 0;
 	}
 

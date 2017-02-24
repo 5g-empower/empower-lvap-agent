@@ -71,8 +71,6 @@ EmpowerWifiEncap::push(int, Packet *p) {
 	if (!dst.is_broadcast() && !dst.is_group()) {
         EmpowerStationState *ess = _el->get_ess(dst);
         TxPolicyInfo *txp = _el->get_txp(dst);
-
-
         if (!ess) {
 			p->kill();
 			return;
