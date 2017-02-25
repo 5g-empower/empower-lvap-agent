@@ -120,18 +120,6 @@ void EmpowerFairBuffer::push(int, Packet* p) {
 	// get queue for bssid
 	FairBufferQueue* q = _fair_table.get(bssid);
 
-	if (!q && _debug) {
-		request_queue(bssid);
-		q = _fair_table.get(bssid);
-	} else if (!q) {
-		click_chatter("%{element} :: %s :: bssid not found %s",
-				      this,
-					  __func__,
-					  bssid.unparse().c_str());
-		p->kill();
-		return;
-	}
-
 	// push packet on queue or fail
 	if (q->push(p)) {
 		_empty_note.wake();
