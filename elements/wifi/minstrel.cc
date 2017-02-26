@@ -147,6 +147,16 @@ void Minstrel::process_feedback(Packet *p_in) {
 		}
 		return;
 	}
+	/* rate is HT but feedback is legacy */
+	if (nfo->ht && !(ceh->flags & WIFI_EXTRA_MCS)) {
+		if (_debug) {
+			click_chatter("%{element} :: %s :: rate is HT but feedback is legacy %u",
+					this,
+					__func__,
+					ceh->rate);
+		}
+		return;
+	}
 	nfo->add_result(ceh->rate, ceh->max_tries, success);
 	return;
 }
@@ -227,8 +237,13 @@ void Minstrel::assign_rate(Packet *p_in)
 			ceh->max_tries3 = 0;
 			return;
 		}
-		_neighbors.insert(dst, MinstrelDstInfo(dst, tx_policy->_mcs));
-		nfo = _neighbors.findp(dst);
+		if (tx_policy->_ht_mcs.size()) {
+			_neighbors.insert(dst, MinstrelDstInfo(dst, tx_policy->_ht_mcs, true));
+			nfo = _neighbors.findp(dst);
+		} else {
+			_neighbors.insert(dst, MinstrelDstInfo(dst, tx_policy->_mcs, false));
+			nfo = _neighbors.findp(dst);
+		}
 	}
 
 	int ndx;
@@ -266,6 +281,10 @@ void Minstrel::assign_rate(Packet *p_in)
 	}
 
 	ceh->magic = WIFI_EXTRA_MAGIC;
+
+	if (nfo->ht) {
+		ceh->flags |= WIFI_EXTRA_MCS;
+	}
 
 	if (sample) {
 		if (nfo->rates[ndx] < nfo->rates[nfo->max_tp_rate]) {
@@ -316,46 +335,9 @@ void Minstrel::push(int port, Packet *p_in)
 String Minstrel::print_rates()
 {
 	StringAccum sa;
-	int i, tp, prob, eprob;
-	char buffer[4096];
 	for (MinstrelIter iter = _neighbors.begin(); iter.live(); iter++) {
 		MinstrelDstInfo *nfo = &iter.value();
-		sa << nfo->eth << "\n";
-		sa << "rate    throughput    ewma prob    this prob    this success (attempts)    success    attempts\n";
-		for (i = 0; i < nfo->rates.size(); i++) {
-			tp = nfo->cur_tp[i] / ((18000 << 10) / 96);
-			prob = nfo->cur_prob[i] / 18;
-			eprob = nfo->probability[i] / 18;
-			sprintf(buffer, "%2d%s    %2u.%1u    %3u.%1u    %3u.%1u    %3u (%3u)    %8llu    %8llu\n",
-					nfo->rates[i] / 2,
-					(nfo->rates[i] & 1) ? ".5" : "  ",
-					tp / 10, tp % 10,
-					eprob / 10, eprob % 10,
-					prob / 10, prob % 10,
-					nfo->last_successes[i],
-					nfo->last_attempts[i],
-					(unsigned long long) nfo->hist_successes[i],
-					(unsigned long long) nfo->hist_attempts[i]);
-			if (i == nfo->max_tp_rate)
-				sa << 'T';
-			else if (i == nfo->max_tp_rate2)
-				sa << 't';
-			else
-				sa << ' ';
-			if (i == nfo->max_prob_rate)
-				sa << 'P';
-			else
-				sa << ' ';
-			sa << buffer;
-		}
-		sa << "\n"
-		   << "Total packet count: ideal " 
-		   << (nfo->packet_count - nfo->sample_count) 
-		   << " lookaround "
-		   << nfo->sample_count
-		   << " total "
-		   << nfo->packet_count
-		   << "\n\n";
+		sa << nfo->unparse();
 	}
 	return sa.take_string();
 }

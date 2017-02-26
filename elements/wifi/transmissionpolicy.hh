@@ -57,17 +57,6 @@ public:
 		_ur_mcast_count = 3;
 	}
 
-	TxPolicyInfo(Vector<int> mcs, bool no_ack, empower_tx_mcast_type tx_mcast,
-			int ur_mcast_count, int rts_cts) {
-
-		_mcs = mcs;
-		_ht_mcs = Vector<int>();
-		_no_ack = no_ack;
-		_tx_mcast = tx_mcast;
-		_rts_cts = rts_cts;
-		_ur_mcast_count = ur_mcast_count;
-	}
-
 	TxPolicyInfo(Vector<int> mcs, Vector<int> ht_mcs, bool no_ack, empower_tx_mcast_type tx_mcast,
 			int ur_mcast_count, int rts_cts) {
 

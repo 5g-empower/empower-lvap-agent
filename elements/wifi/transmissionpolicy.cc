@@ -44,7 +44,7 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 	Vector<int> ht_mcs;
 
 	res = Args(conf, this, errh).read_m("MCS", mcs_string)
-								.read_m("HT_MCS", mcs_string)
+								.read_m("HT_MCS", ht_mcs_string)
 								.read("NO_ACK", no_ack)
 								.read("TX_MCAST", tx_mcast_string)
 								.read("UR_MCAST_COUNT", ur_mcast_count)
@@ -70,15 +70,16 @@ int TransmissionPolicy::configure(Vector<String> &conf, ErrorHandler *errh) {
 		mcs.push_back(r);
 	}
 
-	cp_spacevec(ht_mcs_string, args);
+	Vector<String> ht_args;
+	cp_spacevec(ht_mcs_string, ht_args);
 
-	for (int x = 0; x < args.size(); x++) {
+	for (int x = 0; x < ht_args.size(); x++) {
 		int r = 0;
-		IntArg().parse(args[x], r);
+		IntArg().parse(ht_args[x], r);
 		ht_mcs.push_back(r);
 	}
 
-	_tx_policy = TxPolicyInfo(mcs, no_ack, tx_mcast, ur_mcast_count, rts_cts);
+	_tx_policy = TxPolicyInfo(mcs, ht_mcs, no_ack, tx_mcast, ur_mcast_count, rts_cts);
 	return res;
 
 }

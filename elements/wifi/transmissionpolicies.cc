@@ -118,11 +118,11 @@ TransmissionPolicies::supported(EtherAddress eth) {
 
 }
 
-int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs) {
-	return insert(eth, mcs, false, TX_MCAST_LEGACY, 3, 2436);
+int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> ht_mcs) {
+	return insert(eth, mcs, ht_mcs, false, TX_MCAST_LEGACY, 3, 2436);
 }
 
-int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, bool no_ack,
+int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> ht_mcs, bool no_ack,
 		empower_tx_mcast_type tx_mcast, int ur_mcast_count, int rts_cts) {
 
 	if (!(eth)) {
@@ -158,6 +158,19 @@ int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, bool no_ack,
 		dst->_mcs = mcs;
 	}
 
+	if (_default_tx_policy->_ht_mcs.size()) {
+		/* only add rates that are in the default rates */
+		for (int x = 0; x < ht_mcs.size(); x++) {
+			for (int y = 0; y < _default_tx_policy->_ht_mcs.size(); y++) {
+				if (ht_mcs[x] == _default_tx_policy->_ht_mcs[y]) {
+					dst->_ht_mcs.push_back(ht_mcs[x]);
+				}
+			}
+		}
+	} else {
+		dst->_ht_mcs = ht_mcs;
+	}
+
 	return 0;
 
 }
@@ -184,7 +197,7 @@ int TransmissionPolicies::remove(EtherAddress eth) {
 }
 
 enum {
-	H_INSERT, H_REMOVE, H_POLICIES
+	H_POLICIES
 };
 
 String TransmissionPolicies::read_handler(Element *e, void *thunk) {
@@ -203,65 +216,8 @@ String TransmissionPolicies::read_handler(Element *e, void *thunk) {
 	}
 }
 
-int TransmissionPolicies::write_handler(const String &in_s, Element *e,
-		void *vparam, ErrorHandler *errh) {
-
-	TransmissionPolicies *f = (TransmissionPolicies *) e;
-	String s = cp_uncomment(in_s);
-
-	switch ((intptr_t) vparam) {
-	case H_INSERT: {
-
-		Vector<String> tokens;
-		cp_spacevec(s, tokens);
-
-		if (tokens.size() < 2)
-			return errh->error("insert requires at least 2 parameters");
-
-		EtherAddress dst;
-		bool no_ack = false;
-		int rts_cts = 2436;
-		String mcs_string;
-		empower_tx_mcast_type tx_mcast = TX_MCAST_LEGACY;
-		int ur = 3;
-		Vector<int> mcs;
-
-		if (!EtherAddressArg().parse(tokens[0], dst)) {
-			return errh->error("error param %s: must start with an Ethernet address", s.c_str());
-		}
-
-		for (int x = 1; x < tokens.size(); x++) {
-			int r = 0;
-			IntArg().parse(tokens[x], r);
-			mcs.push_back(r);
-		}
-
-		f->insert(dst, mcs, no_ack, tx_mcast, ur, rts_cts);
-
-		break;
-
-	}
-	case H_REMOVE: {
-
-		EtherAddress dst;
-
-		if (!EtherAddressArg().parse(s, dst)) {
-			return errh->error("error param %s: must start with an Ethernet address", s.c_str());
-		}
-
-		f->remove(dst);
-
-		break;
-
-	}
-	}
-	return 0;
-}
-
 void TransmissionPolicies::add_handlers() {
 	add_read_handler("policies", read_handler, (void *) H_POLICIES);
-	add_write_handler("insert", write_handler, (void *) H_INSERT);
-	add_write_handler("remove", write_handler, (void *) H_REMOVE);
 }
 
 CLICK_ENDDECLS

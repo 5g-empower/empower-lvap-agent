@@ -472,7 +472,7 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta, int iface, EtherAddr
 
 	TxPolicyInfo * tx_policy = _rcs[iface]->tx_policies()->tx_table()->find(sta);
 
-	int len = sizeof(empower_status_port) + tx_policy->_mcs.size();
+	int len = sizeof(empower_status_port) + tx_policy->_mcs.size() + tx_policy->_ht_mcs.size();
 
 	WritablePacket *p = Packet::make(len);
 
@@ -496,6 +496,7 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta, int iface, EtherAddr
 	status->set_wtp(_wtp);
 	status->set_sta(sta);
 	status->set_nb_mcs(tx_policy->_mcs.size());
+	status->set_nb_ht_mcs(tx_policy->_ht_mcs.size());
 	status->set_hwaddr(hwaddr);
 	status->set_channel(channel);
 	status->set_band(band);
@@ -508,6 +509,12 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta, int iface, EtherAddr
 	for (int i = 0; i < tx_policy->_mcs.size(); i++) {
 		assert (ptr <= end);
 		*ptr = (uint8_t) tx_policy->_mcs[i];
+		ptr++;
+	}
+
+	for (int i = 0; i < tx_policy->_ht_mcs.size(); i++) {
+		assert (ptr <= end);
+		*ptr = (uint8_t) tx_policy->_ht_mcs[i];
 		ptr++;
 	}
 
@@ -1236,18 +1243,27 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 	empower_tx_mcast_type tx_mcast = q->tx_mcast();
 	uint8_t ur = q->ur_mcast_count();
 	Vector<int> mcs;
+	Vector<int> ht_mcs;
 
 	uint8_t *ptr = (uint8_t *) q;
 	ptr += sizeof(struct empower_set_port);
 	uint8_t *end = ptr + (q->length() - sizeof(struct empower_set_port));
 
-	while (ptr != end) {
+	for (int x = 0; x < q->nb_mcs(); x++) {
 		assert (ptr <= end);
 		mcs.push_back(*ptr);
 		ptr++;
 	}
 
 	assert(mcs.size() == q->nb_mcs());
+
+	for (int x = 0; x < q->nb_ht_mcs(); x++) {
+		assert (ptr <= end);
+		ht_mcs.push_back(*ptr);
+		ptr++;
+	}
+
+	assert(ht_mcs.size() == q->nb_ht_mcs());
 
 	int iface = element_to_iface(hwaddr, channel, band);
 
@@ -1261,7 +1277,7 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 		   return 0;
 	}
 
-	_rcs[iface]->tx_policies()->insert(addr, mcs, no_ack, tx_mcast, ur, rts_cts);
+	_rcs[iface]->tx_policies()->insert(addr, mcs, ht_mcs, no_ack, tx_mcast, ur, rts_cts);
 	_rcs[iface]->forget_station(addr);
 
 	return 0;

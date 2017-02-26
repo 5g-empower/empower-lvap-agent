@@ -54,8 +54,8 @@ class TransmissionPolicies : public Element { public:
   TxPolicyInfo * lookup(EtherAddress eth);
   TxPolicyInfo * supported(EtherAddress eth);
 
-  int insert(EtherAddress, Vector<int>, bool, empower_tx_mcast_type, int, int);
-  int insert(EtherAddress, Vector<int>);
+  int insert(EtherAddress, Vector<int>, Vector<int>, bool, empower_tx_mcast_type, int, int);
+  int insert(EtherAddress, Vector<int>, Vector<int>);
   int remove(EtherAddress);
 
 private:
@@ -63,7 +63,6 @@ private:
   TxTable _tx_table;
   TxPolicyInfo * _default_tx_policy;
 
-  static int write_handler(const String &, Element *, void *, ErrorHandler *);
   static String read_handler(Element *, void *);
 
 };
