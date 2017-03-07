@@ -616,7 +616,11 @@ void EmpowerLVAPManager::send_busyness_response(uint32_t busyness_id, EtherAddre
 		return;
 	}
 
+	_ers->lock.acquire_read();
 	BusynessInfo *nfo = _ers->busyness.get_pointer(iface_id);
+	uint32_t busyness = (uint32_t) nfo->_sma_busyness->avg();
+	_ers->lock.release_read();
+
 	int len = sizeof(empower_busyness_response);
 	WritablePacket *p = Packet::make(len);
 
@@ -636,7 +640,7 @@ void EmpowerLVAPManager::send_busyness_response(uint32_t busyness_id, EtherAddre
 	busy->set_seq(get_next_seq());
 	busy->set_busyness_id(busyness_id);
 	busy->set_wtp(_wtp);
-	busy->set_prob((uint32_t) nfo->_sma_busyness->avg());
+	busy->set_prob(busyness);
 
 	output(0).push(p);
 

@@ -75,7 +75,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 	double payload_efficiency = 0.6; // fraction of time spent sending payload in reference to the total time spent
 	uint32_t us_window_period = window_period * 1000; // us
 
-	if (window_count < 20) {
+	if (window_count < num_estimates) {
 
 		// Bayesian analysis: Update previous window posterior as prior for this window
 		rssiCdf_0 = rssiCdf;
@@ -121,9 +121,8 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 
 		}
 
-		// Print these values into a log file
 		if (debug) {
-			click_chatter("p_rssi:%f pdr:%f cbf:%f Th:%f avBW:%f", rssiCdf, pdr, channel_busy_fraction, throughput, available_BW);
+			click_chatter("rssiCdf:%f pdr:%f cbf:%f Th:%f avBW:%f", rssiCdf, pdr, channel_busy_fraction, throughput, available_BW);
 		}
 
 		//sics
@@ -143,6 +142,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 
 	} else {
 
+		// long window estimation to evaluate performance degradation
 		window_count = 0;
 		p_channel_busy_fraction = (double) p_channel_busy_fraction / (double) num_estimates;
 		p_throughput = (double) p_throughput / (double) num_estimates;
@@ -160,7 +160,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 
 		if (p_throughput > throughput_tolerance) {
 			// The throughput on this link has exceeded the set threshold by tolerance fraction.
-			// Trigger handover to a better link to an AP.
+			// Trigger hand over to a better link to an AP.
 		}
 
 		// The risk probabilities must be set to zero before evaluating the next window
@@ -168,7 +168,6 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		p_throughput = 0;
 		p_available_BW = 0;
 		p_pdr = 0;
-
 	}
 
 	window_count += 1;

@@ -30,9 +30,8 @@
 CLICK_DECLS
 
 EmpowerCQM::EmpowerCQM() :
-		_el(0), _timer(this), _signal_offset(0), _period(500),
-		_max_silent_window_count(10), _rssi_threshold(-70),
-		_debug(false) {
+		_el(0), _timer(this), _period(500), _max_silent_window_count(10),
+		_rssi_threshold(-70), _debug(false) {
 
 }
 
@@ -49,7 +48,6 @@ int EmpowerCQM::configure(Vector<String> &conf, ErrorHandler *errh) {
 
 	int ret = Args(conf, this, errh)
 			.read("EL", ElementCastArg("EmpowerLVAPManager"), _el)
-			.read("SIGNAL_OFFSET", _signal_offset)
 			.read("PERIOD", _period)
 			.read("DEBUG", _debug)
 			.complete();
@@ -160,7 +158,7 @@ EmpowerCQM::simple_action(Packet *p) {
 	// create frame meta-data
 	Frame *frame = new Frame(ra, ta, ceh->tsft, ceh->flags, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), retry, station, iface_id);
 
-	if (false) {
+	if (_debug) {
 		click_chatter("%{element} :: %s :: %s",
 				      this,
 					  __func__,
@@ -168,10 +166,7 @@ EmpowerCQM::simple_action(Packet *p) {
 	}
 
 	lock.acquire_write();
-
-	//update_link_table(frame);
-
-
+	update_link_table(frame);
 	lock.release_write();
 
 	return p;
@@ -203,8 +198,6 @@ void EmpowerCQM::update_link_table(Frame *frame) {
 enum {
 	H_DEBUG,
 	H_LINKS,
-	H_RESET,
-	H_SIGNAL_OFFSET,
 };
 
 String EmpowerCQM::read_handler(Element *e, void *thunk) {
@@ -234,13 +227,6 @@ int EmpowerCQM::write_handler(const String &in_s, Element *e, void *vparam,
 	String s = cp_uncomment(in_s);
 
 	switch ((intptr_t) vparam) {
-	case H_SIGNAL_OFFSET: {
-		int signal_offset;
-		if (!IntArg().parse(s, signal_offset))
-			return errh->error("signal _offset parameter must be integer");
-		f->_signal_offset = signal_offset;
-		break;
-	}
 	case H_DEBUG: {
 		bool debug;
 		if (!BoolArg().parse(s, debug))
@@ -255,8 +241,6 @@ int EmpowerCQM::write_handler(const String &in_s, Element *e, void *vparam,
 void EmpowerCQM::add_handlers() {
 	add_read_handler("links", read_handler, (void *) H_LINKS);
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
-	add_read_handler("signal_offset", read_handler, (void *) H_SIGNAL_OFFSET);
-	add_write_handler("signal_offset", write_handler, (void *) H_SIGNAL_OFFSET);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
 }
 

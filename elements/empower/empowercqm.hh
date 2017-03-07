@@ -71,7 +71,6 @@ private:
 	EmpowerLVAPManager *_el;
 	Timer _timer;
 
-	int _signal_offset;
 	unsigned _period; // in ms
 	unsigned _max_silent_window_count; // in number of windows
     double _rssi_threshold; // threshold for rssi cdf
