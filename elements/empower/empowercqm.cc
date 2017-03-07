@@ -245,5 +245,5 @@ void EmpowerCQM::add_handlers() {
 }
 
 EXPORT_ELEMENT(EmpowerCQM)
-ELEMENT_REQUIRES(bitrate Frame)
+ELEMENT_REQUIRES(bitrate Frame CqmLink)
 CLICK_ENDDECLS
