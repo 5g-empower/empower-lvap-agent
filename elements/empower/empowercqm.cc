@@ -97,57 +97,14 @@ EmpowerCQM::simple_action(Packet *p) {
 		return p;
 	}
 
-	int dir = w->i_fc[1] & WIFI_FC1_DIR_MASK;
 	int type = w->i_fc[0] & WIFI_FC0_TYPE_MASK;
-	int subtype = w->i_fc[0] & WIFI_FC0_SUBTYPE_MASK;
 	int retry = w->i_fc[1] & WIFI_FC1_RETRY;
-	bool station = false;
 
 	// Discard frames that do not have sequence numbers
 	if (type == WIFI_FC0_TYPE_CTL) {
 		return p;
 	}
 
-	switch (dir) {
-	case WIFI_FC1_DIR_TODS:
-		// TODS bit not set when TA is an access point, but only when TA is a station
-		station = true;
-		break;
-	case WIFI_FC1_DIR_NODS:
-		if (type == WIFI_FC0_TYPE_DATA) {
-			// NODS never set for data frames unless in ad-hoc mode
-			station = true;
-			break;
-		} else if (type == WIFI_FC0_TYPE_MGT) {
-			if (subtype == WIFI_FC0_SUBTYPE_BEACON
-					|| subtype == WIFI_FC0_SUBTYPE_PROBE_RESP) {
-				// NODS set for beacon frames and probe response from access points
-				station = false;
-				break;
-			} else if (subtype == WIFI_FC0_SUBTYPE_PROBE_REQ
-					|| subtype == WIFI_FC0_SUBTYPE_REASSOC_REQ
-					|| subtype == WIFI_FC0_SUBTYPE_ASSOC_REQ
-					|| subtype == WIFI_FC0_SUBTYPE_AUTH
-					|| subtype == WIFI_FC0_SUBTYPE_DISASSOC
-					|| subtype == WIFI_FC0_SUBTYPE_DEAUTH) {
-				// NODS set for beacon frames and probe response from access points
-				station = true;
-				break;
-			}
-		}
-		// no idea, ignore packet
-		return p;
-	case WIFI_FC1_DIR_FROMDS:
-		// FROMDS bit not set when TA is an station, but only when TA is an access point
-		station = false;
-		break;
-	case WIFI_FC1_DIR_DSTODS:
-		// DSTODS bit never set
-		station = false;
-		break;
-	}
-
-	EtherAddress ra = EtherAddress(w->i_addr1);
 	EtherAddress ta = EtherAddress(w->i_addr2);
 
 	int8_t rssi;
@@ -155,16 +112,13 @@ EmpowerCQM::simple_action(Packet *p) {
 
 	uint8_t iface_id = PAINT_ANNO(p);
 
-	// create frame meta-data
-	Frame *frame = new Frame(ra, ta, ceh->tsft, ceh->flags, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), retry, station, iface_id);
-
 	lock.acquire_write();
 
 	if (retry != 1) {
-		update_link_table(frame);
+		update_link_table(ta, iface_id, w->i_seq, p->length(), rssi);
 	}
 
-	update_channel_busy_time(frame);
+	update_channel_busy_time(iface_id, p->length(), ceh->rate);
 
 	lock.release_write();
 
@@ -172,35 +126,36 @@ EmpowerCQM::simple_action(Packet *p) {
 
 }
 
-void EmpowerCQM::update_channel_busy_time(Frame *frame) {
+void EmpowerCQM::update_channel_busy_time(uint8_t iface_id, uint32_t len, uint8_t rate) {
 	for (CLTIter iter = links.begin(); iter.live(); iter++) {
 		CqmLink *nfo = &iter.value();
-		if (nfo) {
-			nfo->add_cbt_sample(frame);
+		if (nfo && nfo->iface_id == iface_id) {
+			unsigned usec = calc_usecs_wifi_packet(len, rate, 0);
+			nfo->add_cbt_sample(usec);
 		}
 	}
 }
 
-void EmpowerCQM::update_link_table(Frame *frame) {
+void EmpowerCQM::update_link_table(EtherAddress ta, uint8_t iface_id, uint16_t seq, uint32_t len, uint8_t rssi) {
 
 	// Update channel quality map
 	CqmLink *nfo;
-	nfo = links.get_pointer(frame->_ta);
+	nfo = links.get_pointer(ta);
 	if (!nfo) {
-		links[frame->_ta] = CqmLink();
-		nfo = links.get_pointer(frame->_ta);
-		nfo->cqm = this;
-		nfo->sourceAddr = frame->_ta;
+		links[ta] = CqmLink();
+		nfo = links.get_pointer(ta);
+		nfo->sourceAddr = ta;
+		nfo->iface_id = iface_id;
 		nfo->lastEstimateTime = Timestamp::now();
 		nfo->currentTime = Timestamp::now();
-		nfo->lastSeqNum = frame->_seq - 1;
-		nfo->currentSeqNum = frame->_seq;
+		nfo->lastSeqNum = seq - 1;
+		nfo->currentSeqNum = seq;
 		nfo->xi = 0;
-		nfo->rssiThreshold = _rssi_threshold;
+		nfo->rssi_threshold = _rssi_threshold;
 	}
 
 	// Add sample
-	nfo->add_sample(frame);
+	nfo->add_sample(len, rssi,seq);
 
 }
 

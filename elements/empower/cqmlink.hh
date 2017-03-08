@@ -18,12 +18,12 @@ public:
 
 	void estimator(unsigned, bool);
 
-	void add_sample(Frame *);
-	void add_cbt_sample(Frame *);
+	void add_sample(uint32_t, uint8_t, uint16_t);
+	void add_cbt_sample(uint32_t);
 
 	String unparse();
 
-	EmpowerCQM *cqm;
+	int iface_id;
 
 	Timestamp lastEstimateTime;
 	Timestamp currentTime;
@@ -46,20 +46,19 @@ public:
 	uint16_t lastSeqNum;
 	uint16_t currentSeqNum;
 
-	double channel_busy_time;
-	double channel_busy_fraction;
 	double data_bits_recv;
+	double channel_busy_time;
+
 	double throughput;
-	double available_BW;
+	double channel_busy_fraction;
 
 	double p_pdr;
 	double p_channel_busy_fraction;
 	double p_throughput;
-	double p_available_BW;
 
 	double xi;
 
-	double rssiThreshold;
+	double rssi_threshold;
 	double rssi_tolerance;
 	double cbt_threshold;
 	double cbt_tolerance;

@@ -60,10 +60,10 @@ public:
 		_squares_rssi = 0;
 	}
 
-	void add_sample(Frame *frame) {
+	void add_sample(uint8_t rssi) {
 		_packets++;
-		_accum_rssi += frame->_rssi;
-		_squares_rssi += frame->_rssi * frame->_rssi;
+		_accum_rssi += rssi;
+		_squares_rssi += rssi * rssi;
 		_last_received.assign_now();
 	}
 

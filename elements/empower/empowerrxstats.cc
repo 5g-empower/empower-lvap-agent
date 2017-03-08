@@ -248,13 +248,10 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 	uint8_t iface_id = PAINT_ANNO(p);
 
-	// create frame meta-data
-	Frame *frame = new Frame(ra, ta, ceh->tsft, ceh->flags, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), retry, station, iface_id);
-
 	lock.acquire_write();
 
-	update_neighbor(frame);
-	update_channel_busyness_time(frame);
+	update_neighbor(ta, station, iface_id, rssi);
+	update_channel_busyness_time(iface_id, p->length(), ceh->rate);
 
 	// check if frame meta-data should be saved
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
@@ -262,6 +259,7 @@ EmpowerRXStats::simple_action(Packet *p) {
 			continue;
 		}
 		if ((*qi)->_eth == ta || (*qi)->_eth.is_broadcast()) {
+			Frame frame = Frame(ra, ta, ceh->tsft, ceh->flags, w->i_seq, rssi, ceh->rate, type, subtype, p->length(), retry, station, iface_id);
 			(*qi)->_frames.push_back(frame);
 		}
 	}
@@ -272,51 +270,51 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 }
 
-void EmpowerRXStats::update_channel_busyness_time(Frame *frame) {
+void EmpowerRXStats::update_channel_busyness_time(uint8_t iface_id, uint32_t len, uint8_t rate) {
 
 	// Update channel busyness time
 	BusynessInfo *nfo;
-	nfo = busyness.get_pointer(frame->_iface_id);
+	nfo = busyness.get_pointer(iface_id);
 	if (!nfo) {
-		busyness[frame->_iface_id] = BusynessInfo();
-		nfo = busyness.get_pointer(frame->_iface_id);
-		nfo->_iface_id = frame->_iface_id;
+		busyness[iface_id] = BusynessInfo();
+		nfo = busyness.get_pointer(iface_id);
+		nfo->_iface_id = iface_id;
 		nfo->_sma_busyness = new SMA(7);
 	}
 
 	// Add sample
-	nfo->add_sample(frame);
+	nfo->add_sample(len, rate);
 
 }
 
-void EmpowerRXStats::update_neighbor(Frame *frame) {
+void EmpowerRXStats::update_neighbor(EtherAddress ta, bool station, uint8_t iface_id, uint8_t rssi) {
 
 	DstInfo *nfo;
 
-	if (frame->_station) {
-		nfo = stas.get_pointer(frame->_ta);
+	if (station) {
+		nfo = stas.get_pointer(ta);
 	} else {
-		nfo = aps.get_pointer(frame->_ta);
+		nfo = aps.get_pointer(ta);
 	}
 
 	if (!nfo) {
-		if (frame->_station) {
-			stas[frame->_ta] = DstInfo();
-			nfo = stas.get_pointer(frame->_ta);
+		if (station) {
+			stas[ta] = DstInfo();
+			nfo = stas.get_pointer(ta);
 			nfo->_sma_rssi = new SMA(_sma_period);
-			nfo->_iface_id = frame->_iface_id;
-			nfo->_eth = frame->_ta;
+			nfo->_iface_id = iface_id;
+			nfo->_eth = ta;
 		} else {
-			aps[frame->_ta] = DstInfo();
-			nfo = aps.get_pointer(frame->_ta);
+			aps[ta] = DstInfo();
+			nfo = aps.get_pointer(ta);
 			nfo->_sma_rssi = new SMA(_sma_period);
-			nfo->_iface_id = frame->_iface_id;
-			nfo->_eth = frame->_ta;
+			nfo->_iface_id = iface_id;
+			nfo->_eth = ta;
 		}
 	}
 
 	// Add sample
-	nfo->add_sample(frame);
+	nfo->add_sample(rssi);
 
 }
 
@@ -433,7 +431,7 @@ enum {
 	H_BUSYNESS_MATCHES,
 	H_RSSI_TRIGGERS,
 	H_SUMMARY_TRIGGERS,
-	H_BUSYNESS_TRIGGERS
+	H_BUSYNESS_TRIGGERS,
 };
 
 String EmpowerRXStats::read_handler(Element *e, void *thunk) {

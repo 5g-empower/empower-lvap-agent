@@ -47,9 +47,9 @@ public:
 		_last_updated.assign_now();
 	}
 
-	void add_sample(Frame *frame) {
+	void add_sample(uint32_t len, uint8_t rate) {
 		_packets++;
-		_accum_busyness += calc_usecs_wifi_packet(frame->_length, frame->_rate, 0);
+		_accum_busyness += calc_usecs_wifi_packet(len, rate, 0);
 	}
 
 	String unparse() {

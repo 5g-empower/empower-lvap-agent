@@ -93,7 +93,6 @@ public:
 
 	NeighborTable aps;
 	NeighborTable stas;
-
 	ChannelBusynessFractionTable busyness;
 
 private:
@@ -115,8 +114,8 @@ private:
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);
 
-	void update_neighbor(Frame *);
-	void update_channel_busyness_time(Frame *);
+	void update_neighbor(EtherAddress, bool, uint8_t, uint8_t);
+	void update_channel_busyness_time(uint8_t, uint32_t, uint8_t);
 
 };
 

@@ -8,7 +8,7 @@
 #include "frame.hh"
 CLICK_DECLS
 
-typedef Vector<Frame *> FramesList;
+typedef Vector<Frame> FramesList;
 typedef FramesList::iterator FIter;
 
 class SummaryTrigger: public Trigger {

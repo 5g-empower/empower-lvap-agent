@@ -80,8 +80,8 @@ private:
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);
 
-	void update_link_table(Frame *);
-	void update_channel_busy_time(Frame *);
+	void update_link_table(EtherAddress, uint8_t, uint16_t, uint32_t, uint8_t);
+	void update_channel_busy_time(uint8_t, uint32_t, uint8_t);
 
 };
 
