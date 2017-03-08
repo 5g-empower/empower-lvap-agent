@@ -50,13 +50,13 @@ CqmLink::CqmLink() {
 	rssi_tolerance = 0.2;
 	cbt_threshold = 0.9;
 	cbt_tolerance = 0.2;
-	throughput_threshold = 10; // Mbps
+	throughput_threshold = 10;
 	throughput_tolerance = 0.2;
 	pdr_threshold = 0.9;
 	pdr_tolerance = 0.2;
 
 	p_pdr = 0;
-	p_channel_busy_fraction = 0; // risk of channel busy fraction exceeding set threshold.
+	p_channel_busy_fraction = 0;
 	p_throughput = 0;
 	p_available_BW = 0;
 
@@ -122,7 +122,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		}
 
 		if (debug) {
-			click_chatter("rssiCdf:%f pdr:%f cbf:%f Th:%f avBW:%f", rssiCdf, pdr, channel_busy_fraction, throughput, available_BW);
+			click_chatter("p_rssi:%f pdr:%f cbf:%f Th:%f avBW:%f", rssiCdf, pdr, channel_busy_fraction, throughput, available_BW);
 		}
 
 		//sics
@@ -157,10 +157,9 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 			// This channel is fully occupied. Admission control should not accept any more connections
 			// Trigger handover of a a few clients to another AP
 		}
-
 		if (p_throughput > throughput_tolerance) {
 			// The throughput on this link has exceeded the set threshold by tolerance fraction.
-			// Trigger hand over to a better link to an AP.
+			//  Trigger hand over to a better link to an AP.
 		}
 
 		// The risk probabilities must be set to zero before evaluating the next window

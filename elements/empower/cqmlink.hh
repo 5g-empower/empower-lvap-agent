@@ -8,64 +8,67 @@
 #include "frame.hh"
 CLICK_DECLS
 
+class EmpowerCQM;
+
 class CqmLink {
 public:
 
-    CqmLink();
-    ~CqmLink();
+	CqmLink();
+	~CqmLink();
 
-    void estimator(unsigned, bool);
+	void estimator(unsigned, bool);
 
-    void add_sample(Frame *);
-    void add_cbt_sample(Frame *);
+	void add_sample(Frame *);
+	void add_cbt_sample(Frame *);
 
-    String unparse();
+	String unparse();
 
-    Timestamp lastEstimateTime;
-    Timestamp currentTime;
+	EmpowerCQM *cqm;
 
-    EtherAddress sourceAddr;
+	Timestamp lastEstimateTime;
+	Timestamp currentTime;
 
-    double rssiCdf;
-    uint64_t numFramesCount;
-    double pdr;
+	EtherAddress sourceAddr;
 
-    double rssiCdf_0;
-    uint64_t numFramesCount_0;
-    double pdr_0;
+	double rssiCdf;
+	uint64_t numFramesCount;
+	double pdr;
 
-    uint64_t rssiCdfCount_l;
-    uint64_t numFramesCount_l;
-    double pdr_l;
+	double rssiCdf_0;
+	uint64_t numFramesCount_0;
+	double pdr_0;
 
-    uint16_t silentWindowCount;
-    uint16_t lastSeqNum;
-    uint16_t currentSeqNum;
+	uint64_t rssiCdfCount_l;
+	uint64_t numFramesCount_l;
+	double pdr_l;
 
-    double channel_busy_time;
-    double channel_busy_fraction;
-    double data_bits_recv;
-    double throughput;
-    double available_BW;
+	uint16_t silentWindowCount;
+	uint16_t lastSeqNum;
+	uint16_t currentSeqNum;
 
-    double p_pdr;
-    double p_channel_busy_fraction; // risk of channel busy fraction exceeding set threshold.
-    double p_throughput;
-    double p_available_BW;
+	double channel_busy_time;
+	double channel_busy_fraction;
+	double data_bits_recv;
+	double throughput;
+	double available_BW;
 
-    double xi;
+	double p_pdr;
+	double p_channel_busy_fraction;
+	double p_throughput;
+	double p_available_BW;
 
-    //sics
-    double rssiThreshold;
-    double rssi_tolerance;
-    double cbt_threshold;
-    double cbt_tolerance;
-    double throughput_threshold;
-    double throughput_tolerance;
-    double pdr_threshold;
-    double pdr_tolerance;
+	double xi;
 
-    uint16_t window_count;
+	double rssiThreshold;
+	double rssi_tolerance;
+	double cbt_threshold;
+	double cbt_tolerance;
+	double throughput_threshold;
+	double throughput_tolerance;
+	double pdr_threshold;
+	double pdr_tolerance;
+
+	uint16_t window_count;
 
 };
 

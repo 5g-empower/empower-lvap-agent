@@ -81,6 +81,7 @@ private:
 	static String read_handler(Element *, void *);
 
 	void update_link_table(Frame *);
+	void update_channel_busy_time(Frame *);
 
 };
 
