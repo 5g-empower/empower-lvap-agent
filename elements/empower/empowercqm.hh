@@ -1,4 +1,3 @@
-// -*- mode: c++; c-basic-offset: 2 -*-
 #ifndef CLICK_EMPOWERCQM_HH
 #define CLICK_EMPOWERCQM_HH
 #include <click/element.hh>
