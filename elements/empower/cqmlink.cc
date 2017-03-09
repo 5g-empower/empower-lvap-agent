@@ -43,25 +43,27 @@ CqmLink::CqmLink() {
 
 	xi = 0;
 
-	channel_busy_time = 0;
-	data_bits_recv = 0;
-	channel_busy_fraction = 0;
-	throughput = 0;
+    channel_busy_time = 0;
+    data_bits_recv = 0;
+    channel_busy_fraction = 0;
+    throughput = 0;
+    available_BW = 0;
 
-	rssi_threshold = -70;
-	rssi_tolerance = 0.2;
-	cbt_threshold = 0.9;
-	cbt_tolerance = 0.2;
-	throughput_threshold = 10;
-	throughput_tolerance = 0.2;
-	pdr_threshold = 0.9;
-	pdr_tolerance = 0.2;
+    rssi_threshold = -70;
+    rssi_tolerance = 0.2;
+    cbt_threshold = 0.9;
+    cbt_tolerance = 0.2;
+    throughput_threshold = 10; // Mbps
+    throughput_tolerance = 0.2;
+    pdr_threshold = 0.9;
+    pdr_tolerance = 0.2;
 
-	p_pdr = 0;
-	p_channel_busy_fraction = 0;
-	p_throughput = 0;
+    p_pdr = 0;
+    p_channel_busy_fraction = 0; // risk of channel busy fraction exceeding set threshold.
+    p_throughput = 0;
+    p_available_BW= 0;
 
-	window_count = 0;
+    window_count = 0;
 
 }
 
@@ -71,8 +73,10 @@ CqmLink::~CqmLink() {
 // short window estimation
 void CqmLink::estimator(unsigned window_period, bool debug) {
 
-	uint16_t num_estimates = 20;
-	uint32_t us_window_period = window_period * 1000; // us
+    uint16_t num_estimates = 20;
+    double raw_mcs_rate = 54; // in Mbps
+    double payload_efficiency = 0.6; // fraction of time spent sending payload in reference to the total time spent
+    uint32_t us_window_period = window_period * 1000; // us
 
 	if (window_count < num_estimates) {
 
@@ -84,6 +88,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		// this value if for when rts cts is disabled, the sending rate is 54Mbps, basic rate is 6Mbps, and data payload length is 1000B or 8000b
 		channel_busy_fraction = channel_busy_time / (double) us_window_period; //channel busy time is in micro s
 		throughput = (double) data_bits_recv / (double) us_window_period; // is in Mbps since window is in us units
+		available_BW = raw_mcs_rate * ( cbt_threshold - channel_busy_fraction) * payload_efficiency;
 
 		// Bayesian analysis: Compute Posterior
 		if (numFramesCount_l > 0) {
@@ -130,6 +135,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		//sics
 		p_channel_busy_fraction += (channel_busy_fraction > cbt_threshold ? 1 : 0); // risk of channel busy fraction exceeding set threshold.
 		p_throughput += (throughput < throughput_threshold ? 1 : 0);
+		p_available_BW += (available_BW < throughput_threshold ? 1 : 0);
 		p_pdr += (pdr > pdr_threshold ? 1 : 0);
 
 		numFramesCount_l = 0;
@@ -143,6 +149,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		window_count = 0;
 		p_channel_busy_fraction = (double) p_channel_busy_fraction / (double) num_estimates;
 		p_throughput = (double) p_throughput / (double) num_estimates;
+		p_available_BW = (double)p_available_BW/(double)num_estimates;
 		p_pdr = (double) p_pdr / (double) num_estimates;
 
 		if (debug) {
@@ -161,6 +168,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		// The risk probabilities must be set to zero before evaluating the next window
 		p_channel_busy_fraction = 0;
 		p_throughput = 0;
+		p_available_BW = 0;
 		p_pdr = 0;
 	}
 

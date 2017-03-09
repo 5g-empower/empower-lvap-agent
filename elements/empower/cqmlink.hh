@@ -46,15 +46,16 @@ public:
 	uint16_t lastSeqNum;
 	uint16_t currentSeqNum;
 
-	double data_bits_recv;
-	double channel_busy_time;
+    double channel_busy_time;
+    double channel_busy_fraction;
+    double data_bits_recv;
+    double throughput;
+    double available_BW;
 
-	double throughput;
-	double channel_busy_fraction;
-
-	double p_pdr;
-	double p_channel_busy_fraction;
-	double p_throughput;
+    double p_pdr;
+    double p_channel_busy_fraction; // risk of channel busy fraction exceeding set threshold.
+    double p_throughput;
+    double p_available_BW;
 
 	double xi;
 
