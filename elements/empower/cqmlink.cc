@@ -125,7 +125,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		}
 
 		if (debug) {
-			click_chatter("p_rssi:%f pdr:%f cbf:%f Th:%f", rssiCdf, pdr, channel_busy_fraction, throughput);
+			click_chatter("p_rssi:%f pdr:%f cbf:%f Th:%f avBW:%f", rssiCdf, pdr, channel_busy_fraction, throughput, available_BW);
 		}
 
 		//sics
@@ -149,11 +149,11 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		window_count = 0;
 		p_channel_busy_fraction = (double) p_channel_busy_fraction / (double) num_estimates;
 		p_throughput = (double) p_throughput / (double) num_estimates;
-		p_available_BW = (double)p_available_BW/(double)num_estimates;
+		p_available_BW = (double) p_available_BW/(double) num_estimates;
 		p_pdr = (double) p_pdr / (double) num_estimates;
 
 		if (debug) {
-			click_chatter("p_pdr:%f p_cbf:%f p_Th:%f", p_pdr, p_channel_busy_fraction, p_throughput);
+			click_chatter("p_pdr:%f p_cbf:%f p_Th:%f p_avBW:%f", p_pdr, p_channel_busy_fraction, p_throughput, p_available_BW);
 		}
 
 		if (p_channel_busy_fraction > cbt_tolerance) {
