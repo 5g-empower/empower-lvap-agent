@@ -17,11 +17,14 @@
 #include <click/config.h>
 #include <elements/wifi/bitrate.hh>
 #include "cqmlink.hh"
+#include "empowercqm.hh"
 CLICK_DECLS
 
 CqmLink::CqmLink() {
 
 	sourceAddr = EtherAddress();
+
+	cqm = 0;
 
 	iface_id = -1;
 
@@ -47,7 +50,7 @@ CqmLink::CqmLink() {
     data_bits_recv = 0;
     channel_busy_fraction = 0;
     throughput = 0;
-    available_BW = 0;
+    available_bw = 0;
 
     rssi_threshold = -70;
     rssi_tolerance = 0.2;
@@ -61,7 +64,7 @@ CqmLink::CqmLink() {
     p_pdr = 0;
     p_channel_busy_fraction = 0; // risk of channel busy fraction exceeding set threshold.
     p_throughput = 0;
-    p_available_BW= 0;
+    p_available_bw= 0;
 
     window_count = 0;
 
@@ -88,7 +91,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		// this value if for when rts cts is disabled, the sending rate is 54Mbps, basic rate is 6Mbps, and data payload length is 1000B or 8000b
 		channel_busy_fraction = channel_busy_time / (double) us_window_period; //channel busy time is in micro s
 		throughput = (double) data_bits_recv / (double) us_window_period; // is in Mbps since window is in us units
-		available_BW = raw_mcs_rate * ( cbt_threshold - channel_busy_fraction) * payload_efficiency;
+		available_bw = raw_mcs_rate * ( cbt_threshold - channel_busy_fraction) * payload_efficiency;
 
 		// Bayesian analysis: Compute Posterior
 		if (numFramesCount_l > 0) {
@@ -112,6 +115,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 
 			numFramesCount = numFramesCount_l;
 			lastSeqNum = currentSeqNum;
+			silentWindowCount = 0;
 
 		} else {
 
@@ -125,7 +129,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		}
 
 		if (debug) {
-			click_chatter("p_rssi:%f pdr:%f cbf:%f Th:%f avBW:%f", rssiCdf, pdr, channel_busy_fraction, throughput, available_BW);
+			click_chatter("p_rssi:%f pdr:%f cbf:%f Th:%f avBW:%f", rssiCdf, pdr, channel_busy_fraction, throughput, available_bw);
 		}
 
 		//sics
@@ -135,7 +139,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		//sics
 		p_channel_busy_fraction += (channel_busy_fraction > cbt_threshold ? 1 : 0); // risk of channel busy fraction exceeding set threshold.
 		p_throughput += (throughput < throughput_threshold ? 1 : 0);
-		p_available_BW += (available_BW < throughput_threshold ? 1 : 0);
+		p_available_bw += (available_bw < throughput_threshold ? 1 : 0);
 		p_pdr += (pdr > pdr_threshold ? 1 : 0);
 
 		numFramesCount_l = 0;
@@ -149,11 +153,11 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		window_count = 0;
 		p_channel_busy_fraction = (double) p_channel_busy_fraction / (double) num_estimates;
 		p_throughput = (double) p_throughput / (double) num_estimates;
-		p_available_BW = (double) p_available_BW/(double) num_estimates;
+		p_available_bw = (double) p_available_bw / (double) num_estimates;
 		p_pdr = (double) p_pdr / (double) num_estimates;
 
 		if (debug) {
-			click_chatter("p_pdr:%f p_cbf:%f p_Th:%f p_avBW:%f", p_pdr, p_channel_busy_fraction, p_throughput, p_available_BW);
+			click_chatter("p_pdr:%f p_cbf:%f p_Th:%f p_avBW:%f", p_pdr, p_channel_busy_fraction, p_throughput, p_available_bw);
 		}
 
 		if (p_channel_busy_fraction > cbt_tolerance) {
@@ -168,8 +172,9 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		// The risk probabilities must be set to zero before evaluating the next window
 		p_channel_busy_fraction = 0;
 		p_throughput = 0;
-		p_available_BW = 0;
+		p_available_bw = 0;
 		p_pdr = 0;
+
 	}
 
 	window_count += 1;

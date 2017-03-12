@@ -74,8 +74,12 @@ enum empower_packet_types {
     EMPOWER_PT_BUSYNESS_RESPONSE = 0x37,		// wtp -> ac
 
     // WTP Packet/Bytes counters
-    EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x41,         // ac -> wtp
-    EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x42,        // wtp -> ac
+    EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x41,     // ac -> wtp
+    EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x42,    // wtp -> ac
+
+	// P_CQM
+	EMPOWER_PT_CQM_LINKS_REQUEST = 0x43,        // ac -> wtp
+	EMPOWER_PT_CQM_LINKS_RESPONSE = 0x44,       // ac -> wtp
 
 };
 
@@ -752,6 +756,38 @@ public:
     void set_wtp(EtherAddress wtp)         { memcpy(_wtp, wtp.data(), 6); }
     void set_net_bssid(EtherAddress bssid) { memcpy(_net_bssid, bssid.data(), 6); }
     void set_ssid(String ssid)             { memcpy(&_ssid, ssid.data(), ssid.length()); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* cqm links request packet format */
+struct empower_cqm_links_request : public empower_header {
+private:
+  uint32_t  _cqm_links_id;	/* Module id (int) */
+public:
+    uint32_t cqm_links_id() { return ntohl(_cqm_links_id); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* counters response packet format */
+struct empower_cqm_links_response : public empower_header {
+private:
+  uint32_t _cqm_links_id;	/* Module id (int) */
+  uint8_t  _wtp[6];			/* EtherAddress */
+  uint16_t _nb_links;		/* Int */
+public:
+    void set_wtp(EtherAddress wtp)               { memcpy(_wtp, wtp.data(), 6); }
+    void set_nb_links(uint16_t nb_links)         { _nb_links = htons(nb_links); }
+    void set_cqm_links_id(uint32_t cqm_links_id) { _cqm_links_id = htonl(cqm_links_id); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* cqm link entry */
+struct empower_cqm_link {
+  private:
+    uint8_t  _ta[6]; 			/* EtherAddress */
+    uint32_t _p_pdr;  			/* ppdr [0-18000] */
+    uint32_t _p_available_bw;	/* p_available_bw [0-18000] */
+  public:
+    void set_p_pdr(uint32_t p_pdr) 						{ _p_pdr = htonl(p_pdr); }
+    void set_p_available_bw(uint32_t p_available_bw) 	{ _p_available_bw = htonl(p_available_bw); }
+    void set_ta(EtherAddress ta)   					    { memcpy(_ta, ta.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 

@@ -33,11 +33,12 @@
 #include "empowerdisassocresponder.hh"
 #include "empowerrxstats.hh"
 #include "empowerfairbuffer.hh"
+#include "empowercqm.hh"
 CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
 		_e11k(0), _ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0), _efb(0),
-		_timer(this), _seq(0), _period(5000), _debug(false) {
+		_cqm(0), _timer(this), _seq(0), _period(5000), _debug(false) {
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
@@ -89,6 +90,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read_m("RCS", rcs_strings)
 			                    .read_m("RES", res_strings)
 			                    .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
+			                    .read("CQM", ElementCastArg("EmpowerCQM"), _cqm)
 			                    .read("EFB", ElementCastArg("EmpowerFairBuffer"), _efb)
 								.read("PERIOD", _period)
 			                    .read("DEBUG", _debug)
@@ -878,6 +880,57 @@ void EmpowerLVAPManager::send_wtp_counters_response(uint32_t counters_id) {
 
 }
 
+
+void EmpowerLVAPManager::send_cqm_links_response(uint32_t cqm_links_id) {
+
+	_cqm->lock.acquire_read();
+
+	int nb_links = _cqm->links.size();
+	int len = sizeof(empower_cqm_links_response) + nb_links * sizeof(empower_cqm_link);
+
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	memset(p->data(), 0, p->length());
+
+	empower_cqm_links_response *counters = (struct empower_cqm_links_response *) (p->data());
+	counters->set_version(_empower_version);
+	counters->set_length(len);
+	counters->set_type(EMPOWER_PT_CQM_LINKS_RESPONSE);
+	counters->set_seq(get_next_seq());
+	counters->set_cqm_links_id(cqm_links_id);
+	counters->set_wtp(_wtp);
+	counters->set_nb_links(nb_links);
+
+	uint8_t *ptr = (uint8_t *) counters;
+	ptr += sizeof(struct empower_cqm_links_response);
+
+	uint8_t *end = ptr + (len - sizeof(struct empower_cqm_links_response));
+
+	for (CLTIter iter = _cqm->links.begin(); iter.live(); iter++) {
+		assert (ptr <= end);
+		EtherAddress ta = iter.value().sourceAddr;
+		uint32_t p_pdr = (uint32_t)(iter.value().p_pdr * 18000.0);
+		uint32_t p_available_bw = (uint32_t)(iter.value().p_available_bw * 18000.0);
+		empower_cqm_link *entry = (empower_cqm_link *) ptr;
+		entry->set_ta(ta);
+		entry->set_p_pdr(p_pdr);
+		entry->set_p_available_bw(p_available_bw);
+		ptr += sizeof(struct empower_cqm_link);
+	}
+
+	_cqm->lock.release_read();
+
+	output(0).push(p);
+
+}
+
 void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherAddress hwaddr, uint8_t channel, empower_bands_types band, EtherAddress mcast) {
 
 	int iface_id = element_to_iface(hwaddr, channel, band);
@@ -1473,6 +1526,12 @@ int EmpowerLVAPManager::handle_wtp_counters_request(Packet *p, uint32_t offset) 
 	return 0;
 }
 
+int EmpowerLVAPManager::handle_cqm_links_request(Packet *p, uint32_t offset) {
+	struct empower_cqm_links_request *q = (struct empower_cqm_links_request *) (p->data() + offset);
+	send_cqm_links_response(q->cqm_links_id());
+	return 0;
+}
+
 int EmpowerLVAPManager::handle_busyness_request(Packet *p, uint32_t offset) {
 	struct empower_busyness_request *q = (struct empower_busyness_request *) (p->data() + offset);
 	EtherAddress hwaddr = q->hwaddr();
@@ -1596,6 +1655,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_BUSYNESS_REQUEST:
 			handle_busyness_request(p, offset);
+			break;
+		case EMPOWER_PT_CQM_LINKS_REQUEST:
+			handle_cqm_links_request(p, offset);
 			break;
 		default:
 			click_chatter("%{element} :: %s :: Unknown packet type: %d",

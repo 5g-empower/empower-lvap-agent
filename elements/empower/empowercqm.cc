@@ -48,7 +48,7 @@ int EmpowerCQM::initialize(ErrorHandler *) {
 int EmpowerCQM::configure(Vector<String> &conf, ErrorHandler *errh) {
 
 	int ret = Args(conf, this, errh)
-			.read("EL", ElementCastArg("EmpowerLVAPManager"), _el)
+			.read_m("EL", ElementCastArg("EmpowerLVAPManager"), _el)
 			.read("PERIOD", _period)
 			.read("DEBUG", _debug)
 			.complete();
@@ -145,6 +145,7 @@ void EmpowerCQM::update_link_table(EtherAddress ta, uint8_t iface_id, uint16_t s
 	if (!nfo) {
 		links[ta] = CqmLink();
 		nfo = links.get_pointer(ta);
+		nfo->cqm = this;
 		nfo->sourceAddr = ta;
 		nfo->iface_id = iface_id;
 		nfo->lastEstimateTime = Timestamp::now();

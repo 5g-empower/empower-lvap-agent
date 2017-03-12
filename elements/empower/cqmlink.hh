@@ -23,6 +23,8 @@ public:
 
 	String unparse();
 
+	EmpowerCQM *cqm;
+
 	int iface_id;
 
 	Timestamp lastEstimateTime;
@@ -50,12 +52,12 @@ public:
     double channel_busy_fraction;
     double data_bits_recv;
     double throughput;
-    double available_BW;
+    double available_bw;
 
     double p_pdr;
     double p_channel_busy_fraction; // risk of channel busy fraction exceeding set threshold.
     double p_throughput;
-    double p_available_BW;
+    double p_available_bw;
 
 	double xi;
 
