@@ -157,7 +157,7 @@ void EmpowerCQM::update_link_table(EtherAddress ta, uint8_t iface_id, uint16_t s
 	}
 
 	// Add sample
-	nfo->add_sample(len, rssi,seq);
+	nfo->add_sample(len, rssi, seq);
 
 }
 

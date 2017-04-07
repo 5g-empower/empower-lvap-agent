@@ -40,7 +40,7 @@ public:
 	uint64_t numFramesCount_0;
 	double pdr_0;
 
-	uint64_t rssiCdfCount_l;
+	uint64_t rssiCdf_l;
 	uint64_t numFramesCount_l;
 	double pdr_l;
 
@@ -55,9 +55,14 @@ public:
     double available_bw;
 
     double p_pdr;
-    double p_channel_busy_fraction; // risk of channel busy fraction exceeding set threshold.
+    double p_channel_busy_fraction;
     double p_throughput;
     double p_available_bw;
+
+    double p_pdr_last;
+    double p_channel_busy_fraction_last;
+    double p_throughput_last;
+    double p_available_bw_last;
 
 	double xi;
 

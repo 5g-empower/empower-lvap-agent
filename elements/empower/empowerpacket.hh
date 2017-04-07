@@ -782,7 +782,7 @@ public:
 struct empower_cqm_link {
   private:
     uint8_t  _ta[6]; 			/* EtherAddress */
-    uint32_t _p_pdr;  			/* ppdr [0-18000] */
+    uint32_t _p_pdr;  			/* p_pdr [0-18000] */
     uint32_t _p_available_bw;	/* p_available_bw [0-18000] */
   public:
     void set_p_pdr(uint32_t p_pdr) 						{ _p_pdr = htonl(p_pdr); }

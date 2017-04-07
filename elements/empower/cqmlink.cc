@@ -36,7 +36,7 @@ CqmLink::CqmLink() {
 	numFramesCount_0 = 0;
 	pdr_0 = 0;
 
-	rssiCdfCount_l = 0;
+	rssiCdf_l = 0;
 	numFramesCount_l = 0;
 	pdr_l = 0;
 
@@ -62,9 +62,14 @@ CqmLink::CqmLink() {
     pdr_tolerance = 0.2;
 
     p_pdr = 0;
-    p_channel_busy_fraction = 0; // risk of channel busy fraction exceeding set threshold.
+    p_channel_busy_fraction = 0;
     p_throughput = 0;
-    p_available_bw= 0;
+    p_available_bw = 0;
+
+    p_pdr_last = 0;
+    p_channel_busy_fraction_last = 0;
+    p_throughput_last = 0;
+    p_available_bw_last = 0;
 
     window_count = 0;
 
@@ -98,7 +103,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 
 			// at least one frame received in window
 			rssiCdf = (double) (rssiCdf_0 * (double) numFramesCount_0
-					+ (double) rssiCdfCount_l)
+					+ (double) rssiCdf_l)
 					/ (double) (numFramesCount_0 + numFramesCount_l);
 
 			if ((currentSeqNum - lastSeqNum) < 0) {
@@ -143,7 +148,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		p_pdr += (pdr > pdr_threshold ? 1 : 0);
 
 		numFramesCount_l = 0;
-		rssiCdfCount_l = 0;
+		rssiCdf_l = 0;
 		xi = rssiCdf * pdr;
 		lastEstimateTime = currentTime;
 
@@ -166,8 +171,14 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		}
 		if (p_throughput > throughput_tolerance) {
 			// The throughput on this link has exceeded the set threshold by tolerance fraction.
-			//  Trigger hand over to a better link to an AP.
+			// Trigger hand over to a better link to an AP.
 		}
+
+		// save probabilities
+		p_channel_busy_fraction_last = p_channel_busy_fraction;
+		p_throughput_last = p_throughput;
+		p_available_bw_last = p_available_bw;
+		p_pdr_last = p_pdr;
 
 		// The risk probabilities must be set to zero before evaluating the next window
 		p_channel_busy_fraction = 0;
@@ -184,7 +195,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 void CqmLink::add_sample(uint32_t len, uint8_t rssi, uint16_t seq) {
 	data_bits_recv += 8 * len;
 	numFramesCount_l++;
-	rssiCdfCount_l = rssiCdfCount_l + (rssi > rssi_threshold ? 1 : 0);
+	rssiCdf_l = rssiCdf_l + (rssi > rssi_threshold ? 1 : 0);
 	currentSeqNum = seq;
 	currentTime.assign_now();
 }
