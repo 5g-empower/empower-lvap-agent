@@ -916,8 +916,8 @@ void EmpowerLVAPManager::send_cqm_links_response(uint32_t cqm_links_id) {
 	for (CLTIter iter = _cqm->links.begin(); iter.live(); iter++) {
 		assert (ptr <= end);
 		EtherAddress ta = iter.value().sourceAddr;
-		uint32_t p_pdr = (uint32_t)(iter.value().p_pdr * 18000.0);
-		uint32_t p_available_bw = (uint32_t)(iter.value().p_available_bw * 18000.0);
+		uint32_t p_pdr = (uint32_t)(iter.value().p_pdr_last * 18000.0);
+		uint32_t p_available_bw = (uint32_t)(iter.value().p_available_bw_last * 18000.0);
 		empower_cqm_link *entry = (empower_cqm_link *) ptr;
 		entry->set_ta(ta);
 		entry->set_p_pdr(p_pdr);
