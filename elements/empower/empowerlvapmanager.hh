@@ -340,7 +340,6 @@ private:
 	class EmpowerAssociationResponder *_eassor;
 	class EmpowerDeAuthResponder *_edeauthr;
 	class EmpowerRXStats *_ers;
-	class EmpowerFairBuffer *_efb;
 	class EmpowerCQM *_cqm;
 
 	String _empower_iface;
