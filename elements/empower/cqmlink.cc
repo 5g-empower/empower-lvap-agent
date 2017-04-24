@@ -156,6 +156,7 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 
 		// long window estimation to evaluate performance degradation
 		window_count = 0;
+
 		p_channel_busy_fraction = (double) p_channel_busy_fraction / (double) num_estimates;
 		p_throughput = (double) p_throughput / (double) num_estimates;
 		p_available_bw = (double) p_available_bw / (double) num_estimates;
