@@ -38,6 +38,12 @@ CLICK_DECLS
 EmpowerLVAPManager::EmpowerLVAPManager() :
 		_e11k(0), _ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0),
 		_cqm(0), _timer(this), _seq(0), _period(5000), _debug(false) {
+
+	if (!_cqm) {
+		click_chatter("%{element} :: %s :: please include CQM  in the click configuration",
+					  this,
+					  __func__);
+	}
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
