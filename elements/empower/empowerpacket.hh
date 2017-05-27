@@ -81,6 +81,15 @@ enum empower_packet_types {
 	EMPOWER_PT_CQM_LINKS_REQUEST = 0x43,        // ac -> wtp
 	EMPOWER_PT_CQM_LINKS_RESPONSE = 0x44,       // ac -> wtp
 
+	// Multicast address transmission policies
+	EMPOWER_PT_INCOM_MCAST_REQUEST = 0x45,		// wtp -> ac
+	EMPOWER_PT_INCOM_MCAST_RESPONSE = 0x46,		// ac -> wtp
+
+	// IGMP messages
+	EMPOWER_PT_IGMP_REQUEST = 0x47,				// wtp -> ac
+	EMPOWER_PT_DEL_MCAST_ADDR = 0x48,			// ac -> wtp
+	EMPOWER_PT_DEL_MCAST_RECEIVER = 0x49		// ac -> wtp
+
 };
 
 /* header format, common to all messages */
@@ -790,6 +799,68 @@ struct empower_cqm_link {
     void set_ta(EtherAddress ta)   					    { memcpy(_ta, ta.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
+/* incomming multicast address request format */
+struct empower_incom_mcast_addr : public empower_header {
+  private:
+    uint8_t  _wtp[6]; 			/* EtherAddress */
+    uint8_t  _mcast_addr[6]; 	/* EtherAddress */
+    uint8_t  _iface;			/* OVS interface name (String) */
+  public:
+    void set_mcast_addr(EtherAddress mcast_addr) 	{ memcpy(_mcast_addr, mcast_addr.data(), 6); }
+    void set_wtp(EtherAddress wtp)   				{ memcpy(_wtp, wtp.data(), 6); }
+    void set_iface(int iface)         				{ _iface = iface; }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* incomming multicast address response format */
+struct empower_incom_mcast_addr_response : public empower_header {
+  private:
+    uint8_t  _mcast_addr[6]; 	/* EtherAddress */
+    uint8_t  _iface;			/* OVS interface name (String) */
+  public:
+    EtherAddress mcast_addr() 	{ return EtherAddress(_mcast_addr); }
+    uint8_t iface()     		{ return _iface; }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+struct empower_igmp_request : public empower_header {
+  private:
+    uint8_t  _wtp[6]; 			/* EtherAddress */
+    uint8_t  _sta [6];			/* EtherAddress */
+    uint8_t  _mcast_addr[4]; 	/* IPAddress */
+    uint8_t  _igmp_type;		/* IGMP record type */
+  public:
+    void set_wtp(EtherAddress wtp)   				{ memcpy(_wtp, wtp.data(), 6); }
+    void set_sta(EtherAddress sta)                  { memcpy(_sta, sta.data(), 6); }
+    void set_mcast_addr(IPAddress mcast_addr) 		{ memcpy(_mcast_addr, mcast_addr.data(), 4); }
+    void set_igmp_type(int igmp_type)         		{ _igmp_type = igmp_type; }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* delete multicast address format */
+struct empower_del_mcast_addr : public empower_header {
+  private:
+    uint8_t  _mcast_addr[6]; 	/* EtherAddress */
+    uint8_t  _hwaddr[6];		/* EtherAddress */
+	uint8_t  _channel;			/* WiFi channel (int) */
+	uint8_t  _band;				/* WiFi band (empower_band_types) */
+  public:
+    EtherAddress mcast_addr() 	{ return EtherAddress(_mcast_addr); }
+    uint8_t      band()      	{ return _band; }
+	uint8_t      channel()   	{ return _channel; }
+	EtherAddress hwaddr()    	{ return EtherAddress(_hwaddr); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* delete multicast receiver format */
+struct empower_del_mcast_receiver : public empower_header {
+  private:
+	uint8_t  _sta[6]; 			/* EtherAddress */
+	uint8_t  _hwaddr[6];		/* EtherAddress */
+	uint8_t  _channel;			/* WiFi channel (int) */
+	uint8_t  _band;				/* WiFi band (empower_band_types) */
+  public:
+	EtherAddress sta()			{ return EtherAddress(_sta); }
+	uint8_t      band()			{ return _band; }
+	uint8_t      channel()		{ return _channel; }
+	EtherAddress hwaddr()		{ return EtherAddress(_hwaddr); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
 
 CLICK_ENDDECLS
 #endif /* CLICK_EMPOWERPACKET_HH */

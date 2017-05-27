@@ -37,7 +37,7 @@ CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
 		_e11k(0), _ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0),
-		_cqm(0), _timer(this), _seq(0), _period(5000), _debug(false) {
+		_cqm(0), _mtbl(0), _timer(this), _seq(0), _period(5000), _debug(false) {
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
@@ -85,6 +85,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
 			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
 								.read_m("EDEAUTHR", ElementCastArg("EmpowerDeAuthResponder"), _edeauthr)
+								.read_m("MTBL", ElementCastArg("EmpowerMulticastTable"), _mtbl)
 			                    .read_m("DEBUGFS", debugfs_strings)
 			                    .read_m("RCS", rcs_strings)
 			                    .read_m("RES", res_strings)
@@ -929,6 +930,79 @@ void EmpowerLVAPManager::send_cqm_links_response(uint32_t cqm_links_id) {
 
 }
 
+void EmpowerLVAPManager::send_incomming_mcast_address(EtherAddress mcast_address, int iface) {
+
+	int len = sizeof(empower_incom_mcast_addr);
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	memset(p->data(), 0, p->length());
+
+	struct empower_incom_mcast_addr *mcast_addr = (struct empower_incom_mcast_addr *) (p->data());
+
+	mcast_addr->set_version(_empower_version);
+	mcast_addr->set_length(sizeof(empower_incom_mcast_addr));
+	mcast_addr->set_type(EMPOWER_PT_INCOM_MCAST_REQUEST);
+	mcast_addr->set_seq(get_next_seq());
+	mcast_addr->set_mcast_addr(mcast_address);
+	mcast_addr->set_wtp(_wtp);
+	mcast_addr->set_iface(iface);
+
+	click_chatter("%{element} :: %s :: New mcast address %s address from iface %d in wtp %s",
+				  this,
+				  __func__, mcast_address.unparse().c_str(), iface, _wtp.unparse().c_str());
+
+	output(0).push(p);
+}
+
+void EmpowerLVAPManager::send_igmp_report(EtherAddress src, Vector<IPAddress>* mcast_addresses, Vector<enum empower_igmp_record_type>* igmp_types) {
+
+	int grouprecord_counter;
+
+	for (grouprecord_counter = 0; grouprecord_counter < mcast_addresses->size(); grouprecord_counter++) {
+
+		//send message to the controller
+		int len = sizeof(empower_igmp_request);
+		WritablePacket *p = Packet::make(len);
+
+		if (!p) {
+			click_chatter("%{element} :: %s :: cannot make packet!",
+						  this,
+						  __func__);
+			return;
+		}
+
+		memset(p->data(), 0, p->length());
+
+		struct empower_igmp_request *igmp_request = (struct empower_igmp_request *) (p->data());
+
+		igmp_request->set_version(_empower_version);
+		igmp_request->set_length(sizeof(empower_igmp_request));
+		igmp_request->set_type(EMPOWER_PT_IGMP_REQUEST);
+		igmp_request->set_seq(get_next_seq());
+		igmp_request->set_mcast_addr(mcast_addresses->at(grouprecord_counter));
+		igmp_request->set_wtp(_wtp);
+		igmp_request->set_sta(src);
+		igmp_request->set_igmp_type(igmp_types->at(grouprecord_counter));
+
+		click_chatter("%{element} :: %s :: IGMP request type %d from sta %s for the mcast address %s from wtp %s",
+					  this,
+					  __func__,
+					  igmp_types->at(grouprecord_counter),
+					  src.unparse().c_str(),
+					  mcast_addresses->at(grouprecord_counter).unparse().c_str(),
+					  _wtp.unparse().c_str());
+
+		output(0).push(p);
+	}
+}
+
 void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherAddress hwaddr, uint8_t channel, empower_bands_types band, EtherAddress mcast) {
 
 	int iface_id = element_to_iface(hwaddr, channel, band);
@@ -1399,6 +1473,8 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 	// If the bssids are different, this is a shared lvap and a deauth message should be sent before removing the lvap
 	if (ess->_lvap_bssid != ess->_net_bssid) {
 		_edeauthr->send_deauth_request(sta, 0x0001, ess->_iface_id);
+		// The receiver must me flush from all the groups in the multicast table
+		_mtbl->leaveallgroups(sta);
 	}
 
 	// erasing lvap
@@ -1554,6 +1630,67 @@ int EmpowerLVAPManager::handle_nimg_request(Packet *p, uint32_t offset) {
 	return 0;
 }
 
+int EmpowerLVAPManager::handle_incom_mcast_addr_response(Packet *p, uint32_t offset) {
+
+	struct empower_incom_mcast_addr_response *q = (struct empower_incom_mcast_addr_response *) (p->data() + offset);
+	EtherAddress mcast_addr = q->mcast_addr();
+	int iface = q->iface();
+
+	click_chatter("%{element} :: %s :: Receiving incom mcast address %s response for iface %d",
+				  this,
+				  __func__, mcast_addr.unparse().c_str(), iface);
+
+	TxPolicyInfo* def_tx_policy = _rcs[iface]->tx_policies()->default_tx_policy();
+
+	Vector<int> mcs;
+	mcs.push_back(*(def_tx_policy->_mcs.begin()));
+
+	Vector<int> ht_mcs;
+
+	_rcs[iface]->tx_policies()->insert(mcast_addr, mcs, ht_mcs, def_tx_policy->_no_ack, TX_MCAST_LEGACY, def_tx_policy->_ur_mcast_count, def_tx_policy->_rts_cts);
+
+	for (TxTableIter it_txp = _rcs[iface]->tx_policies()->tx_table()->begin(); it_txp.live(); it_txp++) {
+		click_chatter("%{element} :: %s :: Check policies %s, %d",
+					  this,
+					  __func__, it_txp.key().unparse().c_str(), it_txp.value()->_tx_mcast);
+				}
+
+	return 0;
+}
+
+int EmpowerLVAPManager::handle_del_mcast_addr(Packet *p, uint32_t offset) {
+
+	struct empower_del_mcast_addr *q = (struct empower_del_mcast_addr *) (p->data() + offset);
+	EtherAddress mcast_addr = q->mcast_addr();
+	EtherAddress hwaddr = q->hwaddr();
+	int channel = q->channel();
+	empower_bands_types band = (empower_bands_types) q->band();
+	int iface_id = element_to_iface(hwaddr, channel, band);
+
+	click_chatter("%{element} :: %s :: Receiving delete mcast address %s response",
+				  this,
+				  __func__, mcast_addr.unparse().c_str());
+
+	_rcs[iface_id]->tx_policies()->remove(mcast_addr);
+
+	return 0;
+}
+
+int EmpowerLVAPManager::handle_del_mcast_receiver(Packet *p, uint32_t offset) {
+
+	struct empower_del_mcast_receiver *q = (struct empower_del_mcast_receiver *) (p->data() + offset);
+	EtherAddress sta = q->sta();
+
+	click_chatter("%{element} :: %s :: Receiving delete mcast receiver %s response",
+				  this,
+				  __func__,
+				  sta.unparse().c_str());
+
+	_mtbl->leaveallgroups(sta);
+
+	return 0;
+}
+
 void EmpowerLVAPManager::push(int, Packet *p) {
 
 	/* This is a control packet coming from a Socket
@@ -1637,6 +1774,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_BUSYNESS_REQUEST:
 			handle_busyness_request(p, offset);
+			break;
+		case EMPOWER_PT_INCOM_MCAST_RESPONSE:
+			handle_incom_mcast_addr_response(p, offset);
 			break;
 		case EMPOWER_PT_CQM_LINKS_REQUEST:
 			handle_cqm_links_request(p, offset);

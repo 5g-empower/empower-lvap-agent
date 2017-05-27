@@ -122,8 +122,7 @@ int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> 
 	return insert(eth, mcs, ht_mcs, false, TX_MCAST_LEGACY, 3, 2436);
 }
 
-int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> ht_mcs, bool no_ack,
-		empower_tx_mcast_type tx_mcast, int ur_mcast_count, int rts_cts) {
+int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> ht_mcs, bool no_ack, empower_tx_mcast_type tx_mcast, int ur_mcast_count, int rts_cts) {
 
 	if (!(eth)) {
 		click_chatter("TransmissionPolicies %s: You fool, you tried to insert %s\n",
