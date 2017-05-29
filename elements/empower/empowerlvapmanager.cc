@@ -33,11 +33,12 @@
 #include "empowerdisassocresponder.hh"
 #include "empowerrxstats.hh"
 #include "empowercqm.hh"
+#include "empowerhypervisor.hh"
 CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
 		_e11k(0), _ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0),
-		_cqm(0), _mtbl(0), _timer(this), _seq(0), _period(5000), _debug(false) {
+		_cqm(0), _mtbl(0), _hv(0), _timer(this), _seq(0), _period(5000), _debug(false) {
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
@@ -91,6 +92,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read_m("RES", res_strings)
 			                    .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
 			                    .read("CQM", ElementCastArg("EmpowerCQM"), _cqm)
+			                    .read("HV", ElementCastArg("EmpowerHypervisor"), _hv)
 								.read("PERIOD", _period)
 			                    .read("DEBUG", _debug)
 			                    .complete();
@@ -1331,6 +1333,12 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		/* Regenerate the BSSID mask */
 		compute_bssid_mask();
 
+		/* Request HV queue */
+		if (_hv) {
+			EmpowerStationState *ess = _lvaps.get_pointer(sta);
+			_hv->request_queue(ess->_lvap_bssid, sta);
+		}
+
 		return 0;
 
 	}
@@ -1474,20 +1482,25 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
 
-	// If the bssids are different, this is a shared lvap and a deauth message should be sent before removing the lvap
+	// Release HV queue
+	if (_hv) {
+		_hv->release_queue(ess->_lvap_bssid);
+	}
+
+	// If the BSSIDs are different, this is a shared lvap and a deauth message should be sent before removing the lvap
 	if (ess->_lvap_bssid != ess->_net_bssid) {
 		_edeauthr->send_deauth_request(sta, 0x0001, ess->_iface_id);
 		// The receiver must me flush from all the groups in the multicast table
 		_mtbl->leaveallgroups(sta);
 	}
 
-	// erasing lvap
-	_lvaps.erase(_lvaps.find(sta));
-
 	// Forget station
 	int iface = ess->_iface_id;
 	_rcs[iface]->tx_policies()->tx_table()->erase(sta);
 	_rcs[iface]->forget_station(sta);
+
+	// erasing lvap
+	_lvaps.erase(_lvaps.find(sta));
 
 	// Remove this VAP's BSSID from the mask
 	compute_bssid_mask();
