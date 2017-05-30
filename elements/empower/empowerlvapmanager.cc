@@ -86,13 +86,13 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
 			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
 								.read_m("EDEAUTHR", ElementCastArg("EmpowerDeAuthResponder"), _edeauthr)
-								.read_m("MTBL", ElementCastArg("EmpowerMulticastTable"), _mtbl)
 			                    .read_m("DEBUGFS", debugfs_strings)
 			                    .read_m("RCS", rcs_strings)
 			                    .read_m("RES", res_strings)
 			                    .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
 			                    .read("CQM", ElementCastArg("EmpowerCQM"), _cqm)
 			                    .read("HV", ElementCastArg("EmpowerHypervisor"), _hv)
+								.read("MTBL", ElementCastArg("EmpowerMulticastTable"), _mtbl)
 								.read("PERIOD", _period)
 			                    .read("DEBUG", _debug)
 			                    .complete();
@@ -1491,7 +1491,9 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 	if (ess->_lvap_bssid != ess->_net_bssid) {
 		_edeauthr->send_deauth_request(sta, 0x0001, ess->_iface_id);
 		// The receiver must me flush from all the groups in the multicast table
-		_mtbl->leaveallgroups(sta);
+		if (_mtbl) {
+			_mtbl->leaveallgroups(sta);
+		}
 	}
 
 	// Forget station
@@ -1703,7 +1705,9 @@ int EmpowerLVAPManager::handle_del_mcast_receiver(Packet *p, uint32_t offset) {
 				  __func__,
 				  sta.unparse().c_str());
 
-	_mtbl->leaveallgroups(sta);
+	if (_mtbl) {
+		_mtbl->leaveallgroups(sta);
+	}
 
 	return 0;
 }
