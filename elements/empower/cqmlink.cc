@@ -136,9 +136,16 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 
 		}
 
+		// Print these values into a log file
 		if (debug) {
-			click_chatter("p_rssi:%f pdr:%f cbf:%f Th:%f avBW:%f", rssiCdf, pdr, channel_busy_fraction, throughput, available_bw);
+			click_chatter("p_rssi:%f pdr:%f cbf:%f Th:%f avBW:%f attThr:%f", rssiCdf, pdr, channel_busy_fraction, throughput, available_bw, attainable_throughput);
 		}
+
+		// this value if for when rts cts is disabled, the sending rate is 54Mbps, basic rate is 6Mbps, and data payload length is 1000B or 8000b
+		channel_busy_fraction = channel_busy_time / (double) us_window_period; //channel busy time is in micro s
+		throughput = (double) data_bits_recv / (double) us_window_period; // is in Mbps since window is in us units
+		available_bw = raw_mcs_rate * ( cbt_threshold - channel_busy_fraction) * payload_efficiency;
+		attainable_throughput = raw_mcs_rate * (cbt_threshold - channel_busy_fraction) * payload_efficiency * pdr; // in Mbps since the unit of raw_mcs_rate is in Mbps
 
 		//sics
 		channel_busy_time = 0;
