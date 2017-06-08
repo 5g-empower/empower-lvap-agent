@@ -71,6 +71,7 @@ private:
 	Timer _timer;
 
 	unsigned _period; // in ms
+	unsigned _samples; // in #
 	unsigned _max_silent_window_count; // in number of windows
     double _rssi_threshold; // threshold for rssi cdf
 

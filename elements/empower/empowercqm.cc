@@ -31,7 +31,7 @@
 CLICK_DECLS
 
 EmpowerCQM::EmpowerCQM() :
-		_el(0), _timer(this), _period(500), _max_silent_window_count(10),
+		_el(0), _timer(this), _period(50), _samples(40), _max_silent_window_count(10),
 		_rssi_threshold(-70), _debug(false) {
 
 }
@@ -50,6 +50,7 @@ int EmpowerCQM::configure(Vector<String> &conf, ErrorHandler *errh) {
 	int ret = Args(conf, this, errh)
 			.read_m("EL", ElementCastArg("EmpowerLVAPManager"), _el)
 			.read("PERIOD", _period)
+			.read("SAMPLES", _samples)
 			.read("DEBUG", _debug)
 			.complete();
 
@@ -148,6 +149,7 @@ void EmpowerCQM::update_link_table(EtherAddress ta, uint8_t iface_id, uint16_t s
 		nfo->cqm = this;
 		nfo->sourceAddr = ta;
 		nfo->iface_id = iface_id;
+		nfo->samples = _samples;
 		nfo->lastEstimateTime = Timestamp::now();
 		nfo->currentTime = Timestamp::now();
 		nfo->lastSeqNum = seq - 1;
