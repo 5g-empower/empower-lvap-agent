@@ -58,10 +58,10 @@ CqmLink::CqmLink() {
     rssi_tolerance = 0.2;
     cbt_threshold = 0.9;
     cbt_tolerance = 0.2;
-    throughput_threshold = 10; // Mbps
-    throughput_tolerance = 0.2;
+    throughput_threshold = 20; // Mbps
+    throughput_tolerance = 0.7;
     pdr_threshold = 0.9;
-    pdr_tolerance = 0.2;
+    pdr_tolerance = 0.7;
 
     p_pdr = 0;
     p_channel_busy_fraction = 0;
