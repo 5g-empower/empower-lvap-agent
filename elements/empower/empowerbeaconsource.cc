@@ -271,7 +271,6 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 
 	struct click_wifi *w = (struct click_wifi *) p->data();
 
-	uint8_t iface_id = PAINT_ANNO(p);
 	uint8_t type = w->i_fc[0] & WIFI_FC0_TYPE_MASK;
 
 	if (type != WIFI_FC0_TYPE_MGT) {
@@ -533,11 +532,10 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 					      __func__,
 					      src.unparse().c_str());
 		}
-		ResourceElement *el = _el->iface_to_element(iface_id);
-		if (htcaps && (el->_band == EMPOWER_BT_HT20)) {
-			_el->send_probe_request(src, ssid, el->_hwaddr, el->_channel, EMPOWER_BT_HT20);
+		if (htcaps && (ess->_band == EMPOWER_BT_HT20)) {
+			_el->send_probe_request(src, ssid, ess->_hwaddr, ess->_channel, EMPOWER_BT_HT20);
 		} else {
-			_el->send_probe_request(src, ssid, el->_hwaddr, el->_channel, EMPOWER_BT_L20);
+			_el->send_probe_request(src, ssid, ess->_hwaddr, ess->_channel, EMPOWER_BT_L20);
 		}
 		p->kill();
 		return;
