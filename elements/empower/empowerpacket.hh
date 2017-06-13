@@ -450,7 +450,7 @@ struct ssid_entry {
     void    set_ssid(String ssid)      { memset(_ssid, 0, _length); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* add vap packet format */
+/* add lvap packet format */
 struct empower_add_lvap : public empower_header {
 private:
     uint16_t	 _group;			/* lvap group */
@@ -459,6 +459,7 @@ private:
     uint8_t      _hwaddr[6];		/* EtherAddress */
     uint8_t      _channel;			/* WiFi channel (int) */
     uint8_t      _band;				/* WiFi band (empower_band_types) */
+    uint8_t      _lvap_band;           /* WiFi lvap band (empower_band_types) */
     uint8_t      _sta[6];			/* EtherAddress */
     uint8_t      _encap[6];			/* EtherAddress */
     uint8_t      _net_bssid[6];		/* EtherAddress */
@@ -467,6 +468,7 @@ private:
 public:
     uint16_t     group()      { return ntohs(_group); }
     uint8_t      band()       { return _band; }
+    uint8_t      lvap_band()  { return _lvap_band; }
     uint8_t      channel()    { return _channel; }
     bool         flag(int f)  { return ntohs(_flags) & f;  }
     uint16_t     assoc_id()   { return ntohs(_assoc_id); }
@@ -477,7 +479,7 @@ public:
     EtherAddress lvap_bssid() { return EtherAddress(_lvap_bssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* del vap packet format */
+/* del lvap packet format */
 struct empower_del_lvap : public empower_header {
   private:
     uint8_t _sta[6]; /* EtherAddress */
@@ -496,11 +498,13 @@ private:
     uint8_t      _hwaddr[6];		/* EtherAddress */
     uint8_t      _channel;			/* WiFi channel (int) */
     uint8_t      _band;				/* WiFi band (empower_band_types) */
+    uint8_t      _lvap_band;        /* WiFi lvap band (empower_band_types) */
     uint8_t      _net_bssid[6];		/* EtherAddress */
     uint8_t      _lvap_bssid[6];	/* EtherAddress */
     ssid_entry  *_ssids[];			/* SSIDs (ssid_entry) */
 public:
     void set_band(uint8_t band)             { _band = band; }
+    void set_lvap_band(uint8_t lvap_band)   { _lvap_band = lvap_band; }
     void set_channel(uint8_t channel)       { _channel = channel; }
     void set_flag(uint16_t f)               { _flags = htons(ntohs(_flags) | f); }
     void set_assoc_id(uint16_t assoc_id)    { _assoc_id = htons(assoc_id); }

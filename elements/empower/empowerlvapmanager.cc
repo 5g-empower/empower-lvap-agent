@@ -383,6 +383,7 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 	status->set_hwaddr(ess._hwaddr);
 	status->set_channel(ess._channel);
 	status->set_band(ess._band);
+	status->set_lvap_band(ess._lvap_band);
 
 	uint8_t *ptr = (uint8_t *) status;
 	ptr += sizeof(struct empower_status_lvap);
@@ -1270,6 +1271,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	EtherAddress hwaddr = add_lvap->hwaddr();
 	int channel = add_lvap->channel();
 	empower_bands_types band = (empower_bands_types) add_lvap->band();
+	empower_bands_types lvap_band = (empower_bands_types) add_lvap->lvap_band();
 	bool authentication_state = add_lvap->flag(EMPOWER_STATUS_LVAP_AUTHENTICATED);
 	bool association_state = add_lvap->flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
 	bool set_mask = add_lvap->flag(EMPOWER_STATUS_LVAP_SET_MASK);
@@ -1321,6 +1323,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._hwaddr = hwaddr;
 		state._channel = channel;
 		state._band = band;
+		state._lvap_band = lvap_band;
 		state._set_mask = set_mask;
 		state._authentication_status = authentication_state;
 		state._association_status = association_state;
@@ -1993,6 +1996,8 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 			sa << " band ";
 			sa << it.value()._band;
 			sa << " iface_id ";
+			sa << " lvap_band ";
+			sa << it.value()._lvap_band;
 			sa << it.value()._iface_id;
 			sa << " group ";
 			sa << it.value()._group;
