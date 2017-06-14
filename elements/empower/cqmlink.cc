@@ -186,8 +186,8 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		p_channel_busy_fraction_last = p_channel_busy_fraction;
 		p_throughput_last = p_throughput;
 		p_available_bw_last = p_available_bw;
-		p_attainable_throughput_last = 0;
 		p_pdr_last = p_pdr;
+		p_attainable_throughput_last = p_attainable_throughput;
 
 		if (debug) {
 			if (p_throughput < throughput_tolerance) {
@@ -199,8 +199,8 @@ void CqmLink::estimator(unsigned window_period, bool debug) {
 		p_channel_busy_fraction = 0;
 		p_throughput = 0;
 		p_available_bw = 0;
-		p_attainable_throughput = 0;
 		p_pdr = 0;
+		p_attainable_throughput = 0;
 
 	}
 

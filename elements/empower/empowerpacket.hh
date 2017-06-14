@@ -795,16 +795,16 @@ public:
 struct empower_cqm_link {
   private:
     uint8_t  _ta[6]; 					/* EtherAddress */
-    uint32_t _p_pdr;  					/* p_pdr [0-18000] */
+    uint32_t _p_channel_busy_fraction;	/* p_channel_busy_fraction [0-18000] */
+    uint32_t _p_throughput;				/* p_throughput [0-18000] */
     uint32_t _p_available_bw;			/* p_available_bw [0-18000] */
-    uint32_t _p_throughput;				/* p_available_bw [0-18000] */
-    uint32_t _p_channel_busy_fraction;	/* p_available_bw [0-18000] */
-    uint32_t _p_available_throughput;	/* p_available_bw [0-18000] */
+    uint32_t _p_pdr;  					/* p_pdr [0-18000] */
+    uint32_t _p_attainable_throughput;	/* p_available_bw [0-18000] */
   public:
     void set_p_pdr(uint32_t p_pdr) 										{ _p_pdr = htonl(p_pdr); }
     void set_p_available_bw(uint32_t p_available_bw) 					{ _p_available_bw = htonl(p_available_bw); }
     void set_p_throughput(uint32_t p_throughput) 						{ _p_throughput = htonl(p_throughput); }
-    void set_p_available_throughput(uint32_t p_available_throughput) 	{ _p_available_throughput = htonl(p_available_throughput); }
+    void set_p_attainable_throughput(uint32_t p_attainable_throughput) 	{ _p_attainable_throughput = htonl(p_attainable_throughput); }
     void set_p_channel_busy_fraction(uint32_t p_channel_busy_fraction) 	{ _p_channel_busy_fraction = htonl(p_channel_busy_fraction); }
     void set_ta(EtherAddress ta)   					   			 		{ memcpy(_ta, ta.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;

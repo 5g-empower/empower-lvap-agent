@@ -922,12 +922,14 @@ void EmpowerLVAPManager::send_cqm_links_response(uint32_t cqm_links_id) {
 		uint32_t p_available_bw = (uint32_t)(iter.value().p_available_bw_last * 18000.0);
 		uint32_t p_throughput = (uint32_t)(iter.value().p_throughput_last * 18000.0);
 		uint32_t p_channel_busy_fraction = (uint32_t)(iter.value().p_channel_busy_fraction_last * 18000.0);
+		uint32_t p_attainable_throughput = (uint32_t)(iter.value().p_attainable_throughput * 18000.0);
 		empower_cqm_link *entry = (empower_cqm_link *) ptr;
 		entry->set_ta(ta);
 		entry->set_p_pdr(p_pdr);
 		entry->set_p_available_bw(p_available_bw);
 		entry->set_p_throughput(p_throughput);
 		entry->set_p_channel_busy_fraction(p_channel_busy_fraction);
+		entry->set_p_attainable_throughput(p_attainable_throughput);
 		ptr += sizeof(struct empower_cqm_link);
 	}
 
