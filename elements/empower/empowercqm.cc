@@ -120,7 +120,7 @@ EmpowerCQM::simple_action(Packet *p) {
 		update_link_table(ta, iface_id, w->i_seq, p->length(), rssi);
 	}
 
-	update_channel_busy_time(iface_id, p->length(), ceh->rate);
+	update_channel_busy_time(iface_id, ta, p->length(), ceh->rate);
 
 	lock.release_write();
 
@@ -128,12 +128,14 @@ EmpowerCQM::simple_action(Packet *p) {
 
 }
 
-void EmpowerCQM::update_channel_busy_time(uint8_t iface_id, uint32_t len, uint8_t rate) {
+void EmpowerCQM::update_channel_busy_time(uint8_t iface_id, EtherAddress ta, uint32_t len, uint8_t rate) {
 	for (CLTIter iter = links.begin(); iter.live(); iter++) {
 		CqmLink *nfo = &iter.value();
 		if (nfo && nfo->iface_id == iface_id) {
-			unsigned usec = calc_usecs_wifi_packet(len, rate, 0);
-			nfo->add_cbt_sample(usec);
+			if(ta != nfo->sourceAddr) {
+				unsigned usec = calc_usecs_wifi_packet(len, rate, 0);
+				nfo->add_cbt_sample(usec);
+			}
 		}
 	}
 }
