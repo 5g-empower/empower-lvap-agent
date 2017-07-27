@@ -496,13 +496,11 @@ private:
     uint8_t      _hwaddr[6];		/* EtherAddress */
     uint8_t      _channel;			/* WiFi channel (int) */
     uint8_t      _band;				/* WiFi band (empower_band_types) */
-    uint8_t      _lvap_band;        /* WiFi lvap band (empower_band_types) */
     uint8_t      _net_bssid[6];		/* EtherAddress */
     uint8_t      _lvap_bssid[6];	/* EtherAddress */
     ssid_entry  *_ssids[];			/* SSIDs (ssid_entry) */
 public:
     void set_band(uint8_t band)             { _band = band; }
-    void set_lvap_band(uint8_t lvap_band)   { _lvap_band = lvap_band; }
     void set_channel(uint8_t channel)       { _channel = channel; }
     void set_flag(uint16_t f)               { _flags = htons(ntohs(_flags) | f); }
     void set_assoc_id(uint16_t assoc_id)    { _assoc_id = htons(assoc_id); }
