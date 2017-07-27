@@ -141,7 +141,6 @@ public:
 	EtherAddress _hwaddr;
 	int _channel;
 	empower_bands_types _band;
-	empower_bands_types _lvap_band;
 	int _iface_id;
 	int _group;
 	bool _set_mask;

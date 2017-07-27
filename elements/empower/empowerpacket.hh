@@ -459,7 +459,6 @@ private:
     uint8_t      _hwaddr[6];		/* EtherAddress */
     uint8_t      _channel;			/* WiFi channel (int) */
     uint8_t      _band;				/* WiFi band (empower_band_types) */
-    uint8_t      _lvap_band;           /* WiFi lvap band (empower_band_types) */
     uint8_t      _sta[6];			/* EtherAddress */
     uint8_t      _encap[6];			/* EtherAddress */
     uint8_t      _net_bssid[6];		/* EtherAddress */
@@ -468,7 +467,6 @@ private:
 public:
     uint16_t     group()      { return ntohs(_group); }
     uint8_t      band()       { return _band; }
-    uint8_t      lvap_band()  { return _lvap_band; }
     uint8_t      channel()    { return _channel; }
     bool         flag(int f)  { return ntohs(_flags) & f;  }
     uint16_t     assoc_id()   { return ntohs(_assoc_id); }
