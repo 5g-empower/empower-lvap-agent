@@ -144,9 +144,8 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			band = EMPOWER_BT_HT20;
 		}
 
-		ResourceElement elm = ResourceElement(hwaddr, channel, band);
+		ResourceElement *elm = new ResourceElement(hwaddr, channel, band);
 		_ifaces_to_elements.set(x, elm);
-		_elements_to_ifaces.set(elm, x);
 
 	}
 
@@ -1093,7 +1092,7 @@ void EmpowerLVAPManager::send_caps() {
 	_ports_lock.acquire_read();
 
 	int len = sizeof(empower_caps);
-	len += _elements_to_ifaces.size() * sizeof(struct resource_elements_entry);
+	len += _ifaces_to_elements.size() * sizeof(struct resource_elements_entry);
 	len += _ports.size() * sizeof(struct port_elements_entry);
 
 	WritablePacket *p = Packet::make(len);
@@ -1119,7 +1118,7 @@ void EmpowerLVAPManager::send_caps() {
 	caps->set_type(EMPOWER_PT_CAPS);
 	caps->set_seq(get_next_seq());
 	caps->set_wtp(_wtp);
-	caps->set_nb_resources_elements(_elements_to_ifaces.size());
+	caps->set_nb_resources_elements(_ifaces_to_elements.size());
 	caps->set_nb_ports_elements(_ports.size());
 
 	uint8_t *ptr = (uint8_t *) caps;
@@ -1127,12 +1126,13 @@ void EmpowerLVAPManager::send_caps() {
 
 	uint8_t *end = ptr + (len - sizeof(struct empower_caps));
 
-	for (IfIter iter = _elements_to_ifaces.begin(); iter.live(); iter++) {
+	for (REIter iter = _ifaces_to_elements.begin(); iter.live(); iter++) {
 		assert (ptr <= end);
+		ResourceElement *elm = iter.value();
 		resource_elements_entry *entry = (resource_elements_entry *) ptr;
-		entry->set_hwaddr(iter.key()._hwaddr);
-		entry->set_channel(iter.key()._channel);
-		entry->set_band(iter.key()._band);
+		entry->set_hwaddr(elm->_hwaddr);
+		entry->set_channel(elm->_channel);
+		entry->set_band(elm->_band);
 		ptr += sizeof(struct resource_elements_entry);
 	}
 
@@ -1871,7 +1871,7 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 			}
 			// add to mask
 			for (i = 0; i < 6; i++) {
-				const uint8_t *hw = (const uint8_t *) _ifaces_to_elements[iface_id]._hwaddr.data();
+				const uint8_t *hw = (const uint8_t *) _ifaces_to_elements[iface_id]->_hwaddr.data();
 				const uint8_t *bssid = (const uint8_t *) it.value()._net_bssid.data();
 				bssid_mask[i] &= ~(hw[i] ^ bssid[i]);
 			}
@@ -1887,7 +1887,7 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 			}
 			// add to mask
 			for (i = 0; i < 6; i++) {
-				const uint8_t *hw = (const uint8_t *) _ifaces_to_elements[iface_id]._hwaddr.data();
+				const uint8_t *hw = (const uint8_t *) _ifaces_to_elements[iface_id]->_hwaddr.data();
 				const uint8_t *bssid = (const uint8_t *) it.value()._net_bssid.data();
 				bssid_mask[i] &= ~(hw[i] ^ bssid[i]);
 			}
@@ -1935,7 +1935,6 @@ enum {
 	H_RECONNECT,
 	H_EMPOWER_IFACE,
 	H_EMPOWER_HWADDR,
-	H_ELEMENTS,
 	H_INTERFACES,
 };
 
@@ -2008,17 +2007,10 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 		}
 		return sa.take_string();
 	}
-	case H_ELEMENTS: {
-		StringAccum sa;
-		for (IfIter iter = td->_elements_to_ifaces.begin(); iter.live(); iter++) {
-			sa << iter.key().unparse() << " -> " << iter.value()  << "\n";
-		}
-		return sa.take_string();
-	}
 	case H_INTERFACES: {
 		StringAccum sa;
 		for (REIter iter = td->_ifaces_to_elements.begin(); iter.live(); iter++) {
-			sa << iter.key() << " -> " << iter.value().unparse()  << "\n";
+			sa << iter.key() << " -> " << iter.value()->unparse()  << "\n";
 		}
 		return sa.take_string();
 	}
@@ -2152,7 +2144,7 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 			int iface_id = it_re.key();
 			for (TxTableIter it_txp = f->get_tx_policies(iface_id)->tx_table()->begin(); it_txp.live(); it_txp++) {
 				EtherAddress sta = it_txp.key();
-				f->send_status_port(sta, iface_id, it_re.value()._hwaddr, it_re.value()._channel, it_re.value()._band);
+				f->send_status_port(sta, iface_id, it_re.value()->_hwaddr, it_re.value()->_channel, it_re.value()->_band);
 			}
 		}
 		break;
@@ -2170,7 +2162,6 @@ void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("bytes", read_handler, (void *) H_BYTES);
 	add_read_handler("empower_iface", read_handler, (void *) H_EMPOWER_IFACE);
 	add_read_handler("empower_hwaddr", read_handler, (void *) H_EMPOWER_HWADDR);
-	add_read_handler("elements", read_handler, (void *) H_ELEMENTS);
 	add_read_handler("interfaces", read_handler, (void *) H_INTERFACES);
 	add_write_handler("reconnect", write_handler, (void *) H_RECONNECT);
 	add_write_handler("ports", write_handler, (void *) H_PORTS);

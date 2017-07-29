@@ -220,10 +220,7 @@ inline bool operator==(const ResourceElement &a, const ResourceElement &b) {
 	return a._hwaddr == b._hwaddr && a._channel == b._channel && a._band == b._band;
 }
 
-typedef HashTable<ResourceElement, int> IfTable;
-typedef IfTable::const_iterator IfIter;
-
-typedef HashTable<int, ResourceElement> RETable;
+typedef HashTable<int, ResourceElement *> RETable;
 typedef RETable::const_iterator REIter;
 
 class EmpowerLVAPManager: public Element {
@@ -301,15 +298,16 @@ public:
 	uint32_t get_next_seq() { return ++_seq; }
 
 	int element_to_iface(EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
-		IfIter iter = _elements_to_ifaces.find(ResourceElement(hwaddr, channel, band));
-		if (iter == _elements_to_ifaces.end()) {
-			return -1;
+		for (REIter iter = _ifaces_to_elements.begin(); iter.live(); iter++) {
+			if (iter.value()->_hwaddr == hwaddr && iter.value()->_channel == channel && iter.value()->_band == band) {
+				return iter.key();
+			}
 		}
-		return iter.value();
+		return -1;
 	}
 
 	ResourceElement* iface_to_element(int iface) {
-		return _ifaces_to_elements.get_pointer(iface);
+		return _ifaces_to_elements.get(iface);
 	}
 
 	int num_ifaces() {
@@ -339,8 +337,6 @@ public:
 private:
 
 	ReadWriteLock _ports_lock;
-
-	IfTable _elements_to_ifaces;
 	RETable _ifaces_to_elements;
 
 	void compute_bssid_mask();
