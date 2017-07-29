@@ -353,7 +353,6 @@ private:
 	class EmpowerRXStats *_ers;
 	class EmpowerCQM *_cqm;
 	class EmpowerMulticastTable * _mtbl;
-	class EmpowerHypervisor *_hv;
 
 	String _empower_iface;
 	EtherAddress _empower_hwaddr;
