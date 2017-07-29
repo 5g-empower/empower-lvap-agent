@@ -1329,6 +1329,15 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._set_mask = set_mask;
 		state._ssid = ssid;
 		state._iface_id = iface;
+
+		// set the CSA values to their default
+		state._csa_active = false;
+		state._csa_switch_count = 0;
+		state._csa_switch_mode = 1;
+		state._target_hwaddr = EtherAddress::make_broadcast();
+		state._target_band = EMPOWER_BT_L20;
+		state._target_channel = 0;
+
 		state._group = group;
 		_lvaps.set(sta, state);
 
@@ -1411,6 +1420,19 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 
 	_rcs[iface]->tx_policies()->insert(addr, mcs, ht_mcs, no_ack, tx_mcast, ur, rts_cts);
 	_rcs[iface]->forget_station(addr);
+
+	MinstrelDstInfo *nfo = _rcs.at(iface)->neighbors()->findp(addr);
+
+	if (!nfo || !nfo->rates.size()) {
+		if (_debug) {
+			click_chatter("%{element} :: %s :: adding %s",
+					      this,
+						  __func__,
+						  addr.unparse().c_str());
+		}
+		TxPolicyInfo * txp = _rcs[iface]->tx_policies()->tx_table()->find(addr);
+		nfo = _rcs.at(iface)->insert_neighbor(addr, txp);
+	}
 
 	return 0;
 

@@ -146,6 +146,13 @@ public:
 	bool _set_mask;
 	bool _authentication_status;
 	bool _association_status;
+	// CSA entries
+	bool _csa_active;
+	int _csa_switch_mode;
+	int _csa_switch_count;
+	EtherAddress _target_hwaddr;
+	int _target_channel;
+	empower_bands_types _target_band;
 };
 
 // Cross structure mapping bssids to list of associated
@@ -185,7 +192,7 @@ public:
 	}
 
 	inline size_t hashcode() const {
-		return _channel | _band;
+		return _hwaddr.hashcode();
 	}
 
 	inline String unparse() const {

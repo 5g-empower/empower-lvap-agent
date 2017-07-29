@@ -480,9 +480,21 @@ public:
 /* del lvap packet format */
 struct empower_del_lvap : public empower_header {
   private:
-    uint8_t _sta[6]; /* EtherAddress */
+    uint8_t _sta[6]; 			/* EtherAddress */
+    uint8_t _target_hwaddr[6];	/* EtherAddress */
+    uint8_t _target_channel;	/* WiFi channel (int) */
+    uint8_t _target_band;		/* WiFi band (empower_band_types) */
+    uint8_t _csa_flags;
+    uint8_t _csa_switch_mode;
+    uint8_t _csa_switch_count;
   public:
-    EtherAddress sta() { return EtherAddress(_sta); }
+    EtherAddress sta() 				{ return EtherAddress(_sta); }
+    bool csa_active()				{ return _csa_flags & 0x01;  }
+    uint8_t csa_switch_mode()		{ return _csa_switch_mode; }
+    uint8_t csa_switch_count()		{ return _csa_switch_count; }
+    uint8_t target_band()       	{ return _target_band; }
+    uint8_t target_channel()    	{ return _target_channel; }
+    EtherAddress target_hwaddr()	{ return EtherAddress(_target_hwaddr); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap status packet format */
