@@ -291,6 +291,7 @@ public:
 	void send_igmp_report(EtherAddress, Vector<IPAddress>*, Vector<enum empower_igmp_record_type>*);
 	void send_cqm_links_response(uint32_t);
 
+	int remove_lvap(EmpowerStationState *);
 	LVAP* lvaps() { return &_lvaps; }
 	VAP* vaps() { return &_vaps; }
 	EtherAddress wtp() { return _wtp; }

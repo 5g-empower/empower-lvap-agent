@@ -1495,22 +1495,50 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
 
+	// if channel is different then start CSA procedure
+	if (q->target_channel() != ess->_channel) {
+
+		click_chatter("%{element} :: %s :: received target block with different channel (%u != %u)",
+				      this,
+				      __func__,
+					  q->target_channel(),
+					  ess->_channel);
+
+		ess->_csa_active = true;
+		ess->_csa_switch_count = q->csa_switch_count();
+		ess->_csa_switch_mode = q->csa_switch_mode();
+
+		ess->_target_band = (empower_bands_types) q->target_band();
+		ess->_target_channel = q->target_channel();
+		ess->_target_hwaddr = q->target_hwaddr();
+
+	}
+
+	// removing lvap
+	remove_lvap(ess);
+
+	return 0;
+
+}
+
+int EmpowerLVAPManager::remove_lvap(EmpowerStationState *ess) {
+
 	// If the BSSIDs are different, this is a shared lvap and a deauth message should be sent before removing the lvap
 	if (ess->_lvap_bssid != ess->_net_bssid) {
-		_edeauthr->send_deauth_request(sta, 0x0001, ess->_iface_id);
+		_edeauthr->send_deauth_request(ess->_sta, 0x0001, ess->_iface_id);
 		// The receiver must me flush from all the groups in the multicast table
 		if (_mtbl) {
-			_mtbl->leaveallgroups(sta);
+			_mtbl->leaveallgroups(ess->_sta);
 		}
 	}
 
 	// Forget station
 	int iface = ess->_iface_id;
-	_rcs[iface]->tx_policies()->tx_table()->erase(sta);
-	_rcs[iface]->forget_station(sta);
+	_rcs[iface]->tx_policies()->tx_table()->erase(ess->_sta);
+	_rcs[iface]->forget_station(ess->_sta);
 
 	// erasing lvap
-	_lvaps.erase(_lvaps.find(sta));
+	_lvaps.erase(_lvaps.find(ess->_sta));
 
 	// Remove this VAP's BSSID from the mask
 	compute_bssid_mask();
