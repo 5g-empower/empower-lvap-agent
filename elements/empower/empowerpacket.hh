@@ -142,8 +142,10 @@ struct empower_probe_request : public empower_header {
 struct empower_probe_response : public empower_header {
   private:
     uint8_t _sta[6]; /* EtherAddress */
+    char    _ssid[];    /* SSID (string) */
   public:
-    EtherAddress sta() { return EtherAddress(_sta); }
+    EtherAddress sta()	{ return EtherAddress(_sta); }
+    String ssid()		{ int len = length() - 16; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* auth request packet format */

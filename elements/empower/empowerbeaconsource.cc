@@ -56,17 +56,14 @@ void EmpowerBeaconSource::run_timer(Timer *) {
 
 	// send LVAP beacon
 	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-		for (int i = 0; i < it.value()._ssids.size(); i++) {
-			send_beacon(it.key(), it.value()._net_bssid, it.value()._ssids[i],
-					it.value()._channel, it.value()._iface_id, false);
-		}
+		send_lvap_csa_beacon(&it.value());
 	}
 
 	// send VAP beacons
 	for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
 		send_beacon(EtherAddress::make_broadcast(), it.value()._net_bssid,
 				it.value()._ssid, it.value()._channel, it.value()._iface_id,
-				false);
+				false, false, 0, 0, 0);
 	}
 
 	// re-schedule the timer with some jitter
@@ -74,11 +71,33 @@ void EmpowerBeaconSource::run_timer(Timer *) {
 
 }
 
-void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
-		String ssid, int channel, int iface_id, bool probe) {
+void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 
-	// This could be optimized later maybe
-	EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
+	if (!ess->_csa_active) {
+		for (int i = 0; i < ess->_ssids.size(); i++) {
+			send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i],
+					ess->_channel, ess->_iface_id, false, false, 0, 0, 0);
+		}
+		return;
+	}
+
+	for (int i = 0; i < ess->_ssids.size(); i++) {
+		send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i], ess->_channel,
+				ess->_iface_id, false, true, ess->_csa_switch_mode,
+				ess->_csa_switch_count, ess->_target_channel);
+	}
+
+	ess->_csa_switch_count--;
+
+	if (ess->_csa_switch_count < 0) {
+		_el->remove_lvap(ess);
+	}
+
+}
+
+void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
+		String ssid, int channel, int iface_id, bool probe, bool csa_active,
+		int csa_mode, int csa_count, int csa_channel) {
 
 	/* order elements by standard
 	 * needed by sloppy 802.11b driver implementations
@@ -99,7 +118,7 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 
 	// this is an actual LVAP and the CSA is active, notice that CSA will not
 	// be activated for LVAP attached to shared SSIDs
-	if (ess && ess->_csa_active) {
+	if (csa_active) {
 		max_len += 2 + 3; /* channel switch announcement */
 	}
 
@@ -200,16 +219,14 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 	/* Channel switch */
 	// channel switch mode mode: 0 = no requirements on the receiving STA, 1 = no further frames until the scheduled channel switch
 	// channel switch count count: 0 indicates at any time after the beacon frame. 1 indicates the switch occurs immediately before the next beacon
-	if (ess && ess->_csa_active) {
+	if (csa_active) {
 		ptr[0] = WIFI_ELEMID_CSA;
 		ptr[1] = 3; // length
-		ptr[2] = (uint8_t) ess->_csa_switch_mode;
-		ptr[3] = (uint8_t) ess->_target_channel;
-		ptr[4] = (uint8_t) ess->_csa_switch_count--;
+		ptr[2] = (uint8_t) csa_mode;
+		ptr[3] = (uint8_t) csa_channel;
+		ptr[4] = (uint8_t) csa_count;
 		ptr += 2 + 3;
 		actual_length += 2 + 3;
-		// decrease counter
-		ess->_csa_switch_count--;
 	}
 
 	/* extended supported rates */
@@ -279,10 +296,6 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 	SET_PAINT_ANNO(p, iface_id);
 	output(0).push(p);
 
-	// this was the last beacon before channel switch
-	if (ess && ess->_csa_active && ess->_csa_switch_count < 0) {
-		_el->remove_lvap(ess);
-	}
 }
 
 void EmpowerBeaconSource::push(int, Packet *p) {
@@ -584,18 +597,28 @@ void EmpowerBeaconSource::push(int, Packet *p) {
      * accordingly.
      */
 
+	send_probe_response(ess, ssid);
+
+	/* probe processed */
+	p->kill();
+
+}
+
+void EmpowerBeaconSource::send_probe_response(EmpowerStationState *ess, String ssid) {
+
 	if (ssid == "") {
 
 		// reply with lvap's ssid
 		for (int i = 0; i < ess->_ssids.size(); i++) {
-			send_beacon(src, ess->_net_bssid, ess->_ssids[i], ess->_channel,
-					ess->_iface_id, true);
+			send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i], ess->_channel,
+					ess->_iface_id, true, false, 0, 0, 0);
 		}
 
 		// reply also with all vaps
 		for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
-			send_beacon(src, it.value()._net_bssid, it.value()._ssid,
-					it.value()._channel, it.value()._iface_id, true);
+			send_beacon(ess->_sta, it.value()._net_bssid, it.value()._ssid,
+					it.value()._channel, it.value()._iface_id, true, false, 0,
+					0, 0);
 		}
 
 	} else {
@@ -603,8 +626,8 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 		// reply with lvap's ssid
 		for (int i = 0; i < ess->_ssids.size(); i++) {
 			if (ess->_ssids[i] == ssid) {
-				send_beacon(src, ess->_net_bssid, ssid, ess->_channel,
-						ess->_iface_id, true);
+				send_beacon(ess->_sta, ess->_net_bssid, ssid, ess->_channel,
+						ess->_iface_id, true, false, 0, 0, 0);
 				break;
 			}
 		}
@@ -612,15 +635,13 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 		// reply also with all vaps
 		for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
 			if (it.value()._ssid == ssid) {
-				send_beacon(src, it.value()._net_bssid, it.value()._ssid,
-						it.value()._channel, it.value()._iface_id, true);
+				send_beacon(ess->_sta, it.value()._net_bssid, it.value()._ssid,
+						it.value()._channel, it.value()._iface_id, true, false,
+						0, 0, 0);
 			}
 		}
 
 	}
-
-	/* probe processed */
-	p->kill();
 
 }
 

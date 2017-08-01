@@ -5,6 +5,7 @@
 #include <click/config.h>
 #include <click/timer.hh>
 #include <elements/wifi/availablerates.hh>
+#include "empowerlvapmanager.hh"
 CLICK_DECLS
 
 /*
@@ -62,7 +63,10 @@ public:
 	void add_handlers();
 	void run_timer(Timer *);
 
-	void send_beacon(EtherAddress, EtherAddress, String, int, int, bool);
+	void send_beacon(EtherAddress, EtherAddress, String, int, int, bool, bool, int, int, int);
+	void send_lvap_csa_beacon(EmpowerStationState *);
+
+	void send_probe_response(EmpowerStationState *, String);
 
 	void push(int, Packet *);
 

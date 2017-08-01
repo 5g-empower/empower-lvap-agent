@@ -1562,6 +1562,7 @@ int EmpowerLVAPManager::handle_probe_response(Packet *p, uint32_t offset) {
 
 	struct empower_probe_response *q = (struct empower_probe_response *) (p->data() + offset);
 	EtherAddress sta = q->sta();
+	String ssid = q->ssid();
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: sta %s",
@@ -1580,17 +1581,7 @@ int EmpowerLVAPManager::handle_probe_response(Packet *p, uint32_t offset) {
 		return 0;
 	}
 
-	// reply with lvap's ssdis
-	for (int i = 0; i < ess->_ssids.size(); i++) {
-		_ebs->send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i],
-				ess->_channel, ess->_iface_id, true);
-	}
-
-	// reply also with all vaps
-	for (VAPIter it = _vaps.begin(); it.live(); it++) {
-		_ebs->send_beacon(ess->_sta, it.value()._net_bssid, it.value()._ssid,
-				it.value()._channel, it.value()._iface_id, true);
-	}
+	_ebs->send_probe_response(ess, ssid);
 
 	return 0;
 
