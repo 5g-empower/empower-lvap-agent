@@ -97,7 +97,9 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		2 + 22 + /* ht information */
 		0;
 
-	if (ess->_csa_active) {
+	// this is an actual LVAP and the CSA is active, notice that CSA will not
+	// be activated for LVAP attached to shared SSIDs
+	if (ess && ess->_csa_active) {
 		max_len += 2 + 3; /* channel switch announcement */
 	}
 
@@ -198,7 +200,7 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 	/* Channel switch */
 	// channel switch mode mode: 0 = no requirements on the receiving STA, 1 = no further frames until the scheduled channel switch
 	// channel switch count count: 0 indicates at any time after the beacon frame. 1 indicates the switch occurs immediately before the next beacon
-	if (ess->_csa_active) {
+	if (ess && ess->_csa_active) {
 		ptr[0] = WIFI_ELEMID_CSA;
 		ptr[1] = 3; // length
 		ptr[2] = (uint8_t) ess->_csa_switch_mode;
@@ -278,7 +280,7 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 	output(0).push(p);
 
 	// this was the last beacon before channel switch
-	if (ess->_csa_active && ess->_csa_switch_count == 0) {
+	if (ess && ess->_csa_active && ess->_csa_switch_count < 0) {
 		_el->remove_lvap(ess);
 	}
 }
