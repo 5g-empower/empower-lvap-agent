@@ -77,6 +77,9 @@ void EmpowerBeaconSource::run_timer(Timer *) {
 void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		String ssid, int channel, int iface_id, bool probe) {
 
+	// This could be optimized later maybe
+	EmpowerStationState *ess = _el->lvaps()->get_pointer(dst);
+
 	/* order elements by standard
 	 * needed by sloppy 802.11b driver implementations
 	 * to be able to connect to 802.11g APs
@@ -93,6 +96,10 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		2 + 26 + /* ht capabilities */
 		2 + 22 + /* ht information */
 		0;
+
+	if (ess->_csa_active) {
+		max_len += 2 + 3; /* channel switch announcement */
+	}
 
 	WritablePacket *p = Packet::make(max_len);
 	memset(p->data(), 0, p->length());
@@ -188,6 +195,21 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		actual_length += 2 + 4;
 	}
 
+	/* Channel switch */
+	// channel switch mode mode: 0 = no requirements on the receiving STA, 1 = no further frames until the scheduled channel switch
+	// channel switch count count: 0 indicates at any time after the beacon frame. 1 indicates the switch occurs immediately before the next beacon
+	if (ess->_csa_active) {
+		ptr[0] = WIFI_ELEMID_CSA;
+		ptr[1] = 3; // length
+		ptr[2] = (uint8_t) ess->_csa_switch_mode;
+		ptr[3] = (uint8_t) ess->_target_channel;
+		ptr[4] = (uint8_t) ess->_csa_switch_count--;
+		ptr += 2 + 3;
+		actual_length += 2 + 3;
+		// decrease counter
+		ess->_csa_switch_count--;
+	}
+
 	/* extended supported rates */
 	int num_xrates = rates.size() - WIFI_RATE_SIZE;
 	if (num_xrates > 0) {
@@ -255,6 +277,10 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 	SET_PAINT_ANNO(p, iface_id);
 	output(0).push(p);
 
+	// this was the last beacon before channel switch
+	if (ess->_csa_active && ess->_csa_switch_count == 0) {
+		_el->remove_lvap(ess);
+	}
 }
 
 void EmpowerBeaconSource::push(int, Packet *p) {

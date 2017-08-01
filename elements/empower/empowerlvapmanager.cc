@@ -1509,8 +1509,16 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 		return 0;
 	}
 
-	// if channel is different then start CSA procedure
-	if (q->target_channel() != ess->_channel) {
+	// if this is an uplink onlu lvap the CSA is not needed
+	if (!ess->_set_mask) {
+		// remove lvap
+		remove_lvap(ess);
+		return 0;
+	}
+
+	// if channel is different then start CSA procedure, if target channel is zero it means
+	// that no target block is actually provided, ignore rest of the fields
+	if ((q->target_channel() !=0) && (q->target_channel() != ess->_channel)) {
 
 		click_chatter("%{element} :: %s :: received target block with different channel (%u != %u)",
 				      this,
