@@ -81,6 +81,15 @@ void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 		return;
 	}
 
+	click_chatter("%{element} :: %s :: sending CSA to %s current channel %u target channel %u csa mode %u csa count %u",
+			      this,
+			      __func__,
+				  ess->_sta.unparse().c_str(),
+				  ess->_channel,
+				  ess->_target_channel,
+				  ess->_csa_switch_mode,
+				  ess->_csa_switch_count);
+
 	for (int i = 0; i < ess->_ssids.size(); i++) {
 		send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i], ess->_channel,
 				ess->_iface_id, false, true, ess->_csa_switch_mode,
@@ -90,6 +99,10 @@ void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 	ess->_csa_switch_count--;
 
 	if (ess->_csa_switch_count < 0) {
+		click_chatter("%{element} :: %s :: CSA procedure for %s is over, removing LVAP",
+				      this,
+				      __func__,
+					  ess->_sta.unparse().c_str());
 		_el->remove_lvap(ess);
 	}
 
