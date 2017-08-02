@@ -1483,7 +1483,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 				      sta.unparse_colon().c_str());
 	}
 
-	// First make sure that this VAP isn't here already, in which
+	// First make sure that this LVAP isn't here already, in which
 	// case we'll just ignore the request
 	if (_lvaps.find(sta) == _lvaps.end()) {
 		click_chatter("%{element} :: %s :: Ignoring LVAP delete request because the agent isn't hosting the LVAP",
@@ -1509,7 +1509,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 		return 0;
 	}
 
-	// if this is an uplink onlu lvap the CSA is not needed
+	// if this is an uplink only LVAP the CSA is not needed
 	if (!ess->_set_mask) {
 		// remove lvap
 		remove_lvap(ess);
@@ -1518,7 +1518,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 
 	// if channel is different then start CSA procedure, if target channel is zero it means
 	// that no target block is actually provided, ignore rest of the fields
-	if ((q->target_channel() !=0) && (q->target_channel() != ess->_channel)) {
+	if ((q->target_channel() != 0) && (q->target_channel() != ess->_channel)) {
 
 		click_chatter("%{element} :: %s :: received target block with different channel (%u != %u)",
 				      this,
@@ -1533,6 +1533,8 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 		ess->_target_band = (empower_bands_types) q->target_band();
 		ess->_target_channel = q->target_channel();
 		ess->_target_hwaddr = q->target_hwaddr();
+
+		return 0;
 
 	}
 
@@ -2031,8 +2033,6 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 			sa << it.value()._band;
 			sa << " iface_id ";
 			sa << it.value()._iface_id;
-			sa << " group ";
-			sa << it.value()._group;
 		    sa << "\n";
 		}
 		return sa.take_string();

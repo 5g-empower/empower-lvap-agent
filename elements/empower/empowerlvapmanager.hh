@@ -142,7 +142,6 @@ public:
 	int _channel;
 	empower_bands_types _band;
 	int _iface_id;
-	int _group;
 	bool _set_mask;
 	bool _authentication_status;
 	bool _association_status;
