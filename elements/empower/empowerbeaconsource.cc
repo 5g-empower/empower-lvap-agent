@@ -120,6 +120,7 @@ void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 		ess->_hwaddr = ess->_target_hwaddr;
 		ess->_channel = ess->_target_channel;
 		ess->_band = ess->_target_band;
+		ess->_iface_id = target_iface;
 
 		// set the CSA values to their default
 		ess->_csa_active = false;

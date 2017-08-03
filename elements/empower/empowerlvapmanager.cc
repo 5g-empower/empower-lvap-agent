@@ -1350,18 +1350,14 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	// if a csa procedure is active, then the target block MUST be a block
 	// hosted by this WTP. If not then abort. Otherwise ignore add_lvap.
 	if (ess->_csa_active) {
-		click_chatter("%{element} :: %s :: sta %s csa active target hwaddr %s target channel %u target band %u",
+	    int target_iface = element_to_iface(ess->_target_hwaddr, ess->_target_channel, ess->_target_band);
+		click_chatter("%{element} :: %s :: sta %s csa active, target hwaddr %s target channel %u target band %u iface_id %u, ignoring message",
 					  this,
 					  __func__,
 					  ess->_sta.unparse_colon().c_str(),
 					  ess->_target_hwaddr.unparse().c_str(),
 					  ess->_target_channel,
-					  ess->_target_band);
-	    int target_iface = element_to_iface(ess->_target_hwaddr, ess->_target_channel, ess->_target_band);
-		click_chatter("%{element} :: %s :: sta %s csa active target iface %u",
-					  this,
-					  __func__,
-					  ess->_sta.unparse_colon().c_str(),
+					  ess->_target_band,
 					  target_iface);
 	    assert(target_iface >= 0);
 	    return 0;
@@ -1544,7 +1540,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 	// of the CSA procedure
 	if ((q->target_channel() != 0) && (q->target_channel() != ess->_channel)) {
 
-		click_chatter("%{element} :: %s :: received target block with different channel (%u != %u)",
+		click_chatter("%{element} :: %s :: target channel %s is different from current channel %u, starting csa",
 				      this,
 				      __func__,
 					  q->target_channel(),
