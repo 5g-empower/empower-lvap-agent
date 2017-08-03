@@ -99,11 +99,38 @@ void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 	ess->_csa_switch_count--;
 
 	if (ess->_csa_switch_count < 0) {
-		click_chatter("%{element} :: %s :: CSA procedure for %s is over, removing LVAP",
-				      this,
-				      __func__,
+
+		int target_iface = _el->element_to_iface(ess->_target_hwaddr, ess->_target_channel, ess->_target_band);
+
+		if (target_iface == -1) {
+			click_chatter("%{element} :: %s :: CSA procedure for %s is over, removing LVAP",
+						  this,
+						  __func__,
+						  ess->_sta.unparse().c_str());
+			_el->remove_lvap(ess);
+			return;
+		}
+
+		click_chatter("%{element} :: %s :: CSA procedure for %s is over, updating LVAP",
+					  this,
+					  __func__,
 					  ess->_sta.unparse().c_str());
-		_el->remove_lvap(ess);
+
+		// if target iface is found then this is a band steering operation, update LVAP
+		ess->_hwaddr = ess->_target_hwaddr;
+		ess->_channel = ess->_target_channel;
+		ess->_band = ess->_target_band;
+
+		// set the CSA values to their default
+		ess->_csa_active = false;
+		ess->_csa_switch_count = 0;
+		ess->_csa_switch_mode = 1;
+		ess->_target_hwaddr = EtherAddress::make_broadcast();
+		ess->_target_band = EMPOWER_BT_L20;
+		ess->_target_channel = 0;
+
+		// update lvap status
+		_el->send_status_lvap(ess->_sta);
 	}
 
 }
