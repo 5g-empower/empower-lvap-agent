@@ -1540,7 +1540,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 	// of the CSA procedure
 	if ((q->target_channel() != 0) && (q->target_channel() != ess->_channel)) {
 
-		click_chatter("%{element} :: %s :: target channel %s is different from current channel %u, starting csa",
+		click_chatter("%{element} :: %s :: target channel %u is different from current channel %u, starting csa",
 				      this,
 				      __func__,
 					  q->target_channel(),
