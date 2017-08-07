@@ -130,8 +130,6 @@ void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 		ess->_target_band = EMPOWER_BT_L20;
 		ess->_target_channel = 0;
 
-		// update lvap status
-		_el->send_status_lvap(ess->_sta);
 	}
 
 }
