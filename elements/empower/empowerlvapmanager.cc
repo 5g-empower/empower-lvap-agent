@@ -1351,7 +1351,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	// hosted by this WTP. If not then abort. Otherwise ignore add_lvap.
 	if (ess->_csa_active) {
 	    int target_iface = element_to_iface(ess->_target_hwaddr, ess->_target_channel, ess->_target_band);
-		click_chatter("%{element} :: %s :: sta %s csa active, target hwaddr %s target channel %u target band %u iface_id %u, ignoring message",
+		click_chatter("%{element} :: %s :: sta %s csa active, target hwaddr %s target channel %u target band %u iface_id %d, ignoring message",
 					  this,
 					  __func__,
 					  ess->_sta.unparse_colon().c_str(),
@@ -1540,9 +1540,10 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 	// of the CSA procedure
 	if ((q->target_channel() != 0) && (q->target_channel() != ess->_channel)) {
 
-		click_chatter("%{element} :: %s :: target channel %u is different from current channel %u, starting csa",
+		click_chatter("%{element} :: %s :: sta %s target channel %u is different from current channel %u, starting csa",
 				      this,
 				      __func__,
+					  ess->_sta.unparse().c_str(),
 					  q->target_channel(),
 					  ess->_channel);
 
