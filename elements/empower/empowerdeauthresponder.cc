@@ -98,6 +98,14 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 		return;
 	}
 
+    if (ess->_csa_active) {
+		click_chatter("%{element} :: %s :: lvap %s csa active ignoring request.",
+				      this,
+				      __func__,
+				      ess->_sta.unparse().c_str());
+    	return;
+    }
+
 	// if this is an uplink only lvap then ignore request
 	if (!ess->_set_mask) {
 		p->kill();

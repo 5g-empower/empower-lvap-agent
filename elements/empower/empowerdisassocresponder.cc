@@ -83,6 +83,14 @@ void EmpowerDisassocResponder::push(int, Packet *p) {
 	EtherAddress src = EtherAddress(w->i_addr2);
 	EmpowerStationState *ess = _el->get_ess(src);
 
+    if (ess->_csa_active) {
+		click_chatter("%{element} :: %s :: lvap %s csa active ignoring request.",
+				      this,
+				      __func__,
+				      ess->_sta.unparse().c_str());
+    	return;
+    }
+
     //If we're not aware of this LVAP, ignore
 	if (!ess) {
 		click_chatter("%{element} :: %s :: Unknown station %s",
