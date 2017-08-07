@@ -394,9 +394,9 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 	// controller, otherwise ignore the message
 	if (ess->_authentication_status && ess->_lvap_bssid == bssid) {
 		if (htcaps && (ess->_band == EMPOWER_BT_HT20)) {
-			_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, EMPOWER_BT_HT20);
+			_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, ess->_band, EMPOWER_BT_HT20);
 		} else {
-			_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, EMPOWER_BT_L20);
+			_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, ess->_band, EMPOWER_BT_L20);
 		}
 		p->kill();
 		return;

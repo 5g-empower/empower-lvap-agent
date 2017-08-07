@@ -141,6 +141,7 @@ public:
 	EtherAddress _hwaddr;
 	int _channel;
 	empower_bands_types _band;
+	empower_bands_types _supported_band;
 	int _iface_id;
 	bool _set_mask;
 	bool _authentication_status;
@@ -268,9 +269,9 @@ public:
 	int handle_cqm_links_request(Packet *, uint32_t);
 
 	void send_hello();
-	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types);
+	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
 	void send_auth_request(EtherAddress, EtherAddress);
-	void send_association_request(EtherAddress, EtherAddress, String, EtherAddress, int, empower_bands_types);
+	void send_association_request(EtherAddress, EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
 	void send_status_lvap(EtherAddress);
 	void send_status_vap(EtherAddress);
 	void send_status_port(EtherAddress, int);

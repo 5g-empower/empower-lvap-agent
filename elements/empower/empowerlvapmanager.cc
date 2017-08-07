@@ -215,7 +215,7 @@ void EmpowerLVAPManager::send_rssi_trigger(uint32_t trigger_id, uint32_t iface, 
 
 }
 
-void EmpowerLVAPManager::send_association_request(EtherAddress src, EtherAddress bssid, String ssid, EtherAddress hwaddr, int channel, empower_bands_types band) {
+void EmpowerLVAPManager::send_association_request(EtherAddress src, EtherAddress bssid, String ssid, EtherAddress hwaddr, int channel, empower_bands_types band, empower_bands_types supported_band) {
 
 	WritablePacket *p = Packet::make(sizeof(empower_assoc_request) + ssid.length());
 
@@ -239,6 +239,7 @@ void EmpowerLVAPManager::send_association_request(EtherAddress src, EtherAddress
 	request->set_ssid(ssid);
 	request->set_channel(channel);
 	request->set_band(band);
+	request->set_supported_band(supported_band);
 	request->set_hwaddr(hwaddr);
 
 	output(0).push(p);
@@ -271,7 +272,7 @@ void EmpowerLVAPManager::send_auth_request(EtherAddress src, EtherAddress bssid)
 
 }
 
-void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, EtherAddress hwaddr, int channel, empower_bands_types band) {
+void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, EtherAddress hwaddr, int channel, empower_bands_types band, empower_bands_types supported_band) {
 
 	WritablePacket *p = Packet::make(sizeof(empower_probe_request) + ssid.length());
 
@@ -295,6 +296,7 @@ void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, Ether
 	request->set_hwaddr(hwaddr);
 	request->set_band(band);
 	request->set_channel(channel);
+	request->set_supported_band(supported_band);
 
 	output(0).push(p);
 
@@ -380,6 +382,7 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 	status->set_hwaddr(ess._hwaddr);
 	status->set_channel(ess._channel);
 	status->set_band(ess._band);
+	status->set_supported_band(ess._supported_band);
 
 	uint8_t *ptr = (uint8_t *) status;
 	ptr += sizeof(struct empower_status_lvap);
@@ -1269,6 +1272,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	EtherAddress hwaddr = add_lvap->hwaddr();
 	int channel = add_lvap->channel();
 	empower_bands_types band = (empower_bands_types) add_lvap->band();
+	empower_bands_types supported_band = (empower_bands_types) add_lvap->supported_band();
 	bool authentication_state = add_lvap->flag(EMPOWER_STATUS_LVAP_AUTHENTICATED);
 	bool association_state = add_lvap->flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
 	bool set_mask = add_lvap->flag(EMPOWER_STATUS_LVAP_SET_MASK);
@@ -1321,6 +1325,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._hwaddr = hwaddr;
 		state._channel = channel;
 		state._band = band;
+		state._supported_band = supported_band;
 		state._set_mask = set_mask;
 		state._authentication_status = authentication_state;
 		state._association_status = association_state;
@@ -1369,6 +1374,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	ess->_assoc_id = assoc_id;
 	ess->_authentication_status = authentication_state;
 	ess->_association_status = association_state;
+	ess->_supported_band = supported_band;
 	ess->_set_mask = set_mask;
 	ess->_ssid = ssid;
 
