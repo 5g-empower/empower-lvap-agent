@@ -2060,7 +2060,9 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 			sa << it.value()._band;
 			sa << " iface_id ";
 			sa << it.value()._iface_id;
-		    sa << "\n";
+			sa << " supported_band ";
+			sa << it.value()._supported_band;
+			sa << "\n";
 		}
 		return sa.take_string();
 	}
