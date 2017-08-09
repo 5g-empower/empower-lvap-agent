@@ -1439,6 +1439,7 @@ void EmpowerLVAPManager::send_add_del_lvap_response(uint8_t type, EtherAddress s
 	resp->set_sta(sta);
 	resp->set_module_id(module_id);
 	resp->set_status(status);
+	resp->set_wtp(_wtp);
 
 	output(0).push(p);
 

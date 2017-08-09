@@ -512,6 +512,7 @@ struct empower_del_lvap : public empower_header {
 /* lvap add/del response packet format */
 struct empower_add_del_lvap_response : public empower_header {
 private:
+    uint8_t  _wtp[6];			/* EtherAddress */
     uint8_t  _sta[6];			/* EtherAddress */
 	uint32_t _module_id;		/* Transaction id */
 	uint32_t _status;			/* Status code */
@@ -519,6 +520,7 @@ public:
     void set_sta(EtherAddress sta)          { memcpy(_sta, sta.data(), 6); }
     void set_module_id(uint32_t module_id)	{ _module_id = htonl(module_id); }
     void set_status(uint32_t status)		{ _status = htonl(status); }
+    void set_wtp(EtherAddress wtp)          { memcpy(_wtp, wtp.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap status packet format */
