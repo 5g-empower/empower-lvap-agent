@@ -88,7 +88,11 @@ enum empower_packet_types {
 	// IGMP messages
 	EMPOWER_PT_IGMP_REQUEST = 0x47,				// wtp -> ac
 	EMPOWER_PT_DEL_MCAST_ADDR = 0x48,			// ac -> wtp
-	EMPOWER_PT_DEL_MCAST_RECEIVER = 0x49		// ac -> wtp
+	EMPOWER_PT_DEL_MCAST_RECEIVER = 0x49,		// ac -> wtp
+
+	// ADD/DEL response messages
+    EMPOWER_PT_ADD_LVAP_RESPONSE = 0x50,         // ac -> wtp
+    EMPOWER_PT_DEL_LVAP_RESPONSE = 0x51          // ac -> wtp
 
 };
 
@@ -459,6 +463,7 @@ struct ssid_entry {
 /* add lvap packet format */
 struct empower_add_lvap : public empower_header {
 private:
+	uint32_t	 _module_id;		/* Transaction id */
 	uint16_t     _flags;			/* Flags (empower_packet_flags) */
     uint16_t     _assoc_id;			/* Association id */
     uint8_t      _hwaddr[6];		/* EtherAddress */
@@ -471,21 +476,23 @@ private:
     uint8_t      _lvap_bssid[6];	/* EtherAddress */
     ssid_entry * _ssids[];			/* SSIDs (ssid_entry) */
 public:
-    uint8_t      band()       { return _band; }
-    uint8_t      supported_band()       { return _supported_band; }
-    uint8_t      channel()    { return _channel; }
-    bool         flag(int f)  { return ntohs(_flags) & f;  }
-    uint16_t     assoc_id()   { return ntohs(_assoc_id); }
-    EtherAddress sta()        { return EtherAddress(_sta); }
-    EtherAddress hwaddr()     { return EtherAddress(_hwaddr); }
-    EtherAddress encap()      { return EtherAddress(_encap); }
-    EtherAddress net_bssid()  { return EtherAddress(_net_bssid); }
-    EtherAddress lvap_bssid() { return EtherAddress(_lvap_bssid); }
+    uint32_t     module_id()   		{ return ntohl(_module_id); }
+    uint8_t      band()       		{ return _band; }
+    uint8_t      supported_band()	{ return _supported_band; }
+    uint8_t      channel()    		{ return _channel; }
+    bool         flag(int f)  		{ return ntohs(_flags) & f;  }
+    uint16_t     assoc_id()  		{ return ntohs(_assoc_id); }
+    EtherAddress sta()        		{ return EtherAddress(_sta); }
+    EtherAddress hwaddr()     		{ return EtherAddress(_hwaddr); }
+    EtherAddress encap()      		{ return EtherAddress(_encap); }
+    EtherAddress net_bssid()  		{ return EtherAddress(_net_bssid); }
+    EtherAddress lvap_bssid() 		{ return EtherAddress(_lvap_bssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del lvap packet format */
 struct empower_del_lvap : public empower_header {
   private:
+	uint32_t _module_id;		/* Transaction id */
     uint8_t _sta[6]; 			/* EtherAddress */
     uint8_t _target_hwaddr[6];	/* EtherAddress */
     uint8_t _target_channel;	/* WiFi channel (int) */
@@ -493,12 +500,25 @@ struct empower_del_lvap : public empower_header {
     uint8_t _csa_switch_mode;
     uint8_t _csa_switch_count;
   public:
+    uint32_t module_id()   			{ return ntohl(_module_id); }
     EtherAddress sta() 				{ return EtherAddress(_sta); }
     uint8_t csa_switch_mode()		{ return _csa_switch_mode; }
     uint8_t csa_switch_count()		{ return _csa_switch_count; }
     uint8_t target_band()       	{ return _target_band; }
     uint8_t target_channel()    	{ return _target_channel; }
     EtherAddress target_hwaddr()	{ return EtherAddress(_target_hwaddr); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* lvap add/del response packet format */
+struct empower_add_del_lvap_response : public empower_header {
+private:
+    uint8_t  _sta[6];			/* EtherAddress */
+	uint32_t _module_id;		/* Transaction id */
+	uint32_t _status;			/* Status code */
+public:
+    void set_sta(EtherAddress sta)          { memcpy(_sta, sta.data(), 6); }
+    void set_module_id(uint32_t module_id)	{ _module_id = htonl(module_id); }
+    void set_status(uint32_t status)		{ _status = htonl(status); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap status packet format */

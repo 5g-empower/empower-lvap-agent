@@ -142,6 +142,7 @@ public:
 	int _channel;
 	empower_bands_types _band;
 	empower_bands_types _supported_band;
+	empower_bands_types _target_band;
 	int _iface_id;
 	bool _set_mask;
 	bool _authentication_status;
@@ -152,7 +153,9 @@ public:
 	int _csa_switch_count;
 	EtherAddress _target_hwaddr;
 	int _target_channel;
-	empower_bands_types _target_band;
+	// ADD/DEL LVAP response entries
+	uint32_t _add_lvap_module_id;
+	uint32_t _del_lvap_module_id;
 };
 
 // Cross structure mapping bssids to list of associated
@@ -290,6 +293,7 @@ public:
 	void send_wtp_counters_response(uint32_t);
 	void send_igmp_report(EtherAddress, Vector<IPAddress>*, Vector<enum empower_igmp_record_type>*);
 	void send_cqm_links_response(uint32_t);
+	void send_add_del_lvap_response(uint8_t, EtherAddress, uint32_t, uint32_t);
 
 	int remove_lvap(EmpowerStationState *);
 	LVAP* lvaps() { return &_lvaps; }

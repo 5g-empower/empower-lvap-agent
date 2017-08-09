@@ -107,7 +107,11 @@ void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 						  this,
 						  __func__,
 						  ess->_sta.unparse().c_str());
+			// remove lvap
 			_el->remove_lvap(ess);
+			// send del lvap response
+			_el->send_add_del_lvap_response(EMPOWER_PT_DEL_LVAP_RESPONSE, ess->_sta, ess->_del_lvap_module_id, 0);
+			ess->_del_lvap_module_id = 0;
 			return;
 		}
 
@@ -129,6 +133,13 @@ void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 		ess->_target_hwaddr = EtherAddress::make_broadcast();
 		ess->_target_band = EMPOWER_BT_L20;
 		ess->_target_channel = 0;
+
+		// send del lvap response
+		_el->send_add_del_lvap_response(EMPOWER_PT_DEL_LVAP_RESPONSE, ess->_sta, ess->_del_lvap_module_id, 0);
+		ess->_del_lvap_module_id = 0;
+		// send add lvap response
+		_el->send_add_del_lvap_response(EMPOWER_PT_ADD_LVAP_RESPONSE, ess->_sta, ess->_add_lvap_module_id, 0);
+		ess->_add_lvap_module_id = 0;
 
 	}
 
