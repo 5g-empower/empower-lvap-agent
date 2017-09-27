@@ -139,6 +139,7 @@ int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> 
 	}
 
 	dst->_mcs.clear();
+	dst->_ht_mcs.clear();
 	dst->_no_ack = no_ack;
 	dst->_tx_mcast = tx_mcast;
 	dst->_ur_mcast_count = ur_mcast_count;
