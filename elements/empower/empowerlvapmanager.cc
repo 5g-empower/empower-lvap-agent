@@ -1805,6 +1805,7 @@ int EmpowerLVAPManager::handle_incom_mcast_addr_response(Packet *p, uint32_t off
 	mcs.push_back(*(def_tx_policy->_mcs.begin()));
 
 	Vector<int> ht_mcs;
+	ht_mcs.push_back(*(def_tx_policy->_ht_mcs.begin()));
 
 	_rcs[iface]->tx_policies()->insert(mcast_addr, mcs, ht_mcs, def_tx_policy->_no_ack, TX_MCAST_LEGACY, def_tx_policy->_ur_mcast_count, def_tx_policy->_rts_cts);
 
