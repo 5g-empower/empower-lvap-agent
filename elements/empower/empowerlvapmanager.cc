@@ -78,8 +78,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 	String rcs_strings;
 	String res_strings;
 
-	res = Args(conf, this, errh).read_m("EMPOWER_IFACE", _empower_iface)
-								.read_m("WTP", _wtp)
+	res = Args(conf, this, errh).read_m("WTP", _wtp)
 						        .read_m("E11K", ElementCastArg("Empower11k"), _e11k)
 						        .read_m("EBS", ElementCastArg("EmpowerBeaconSource"), _ebs)
 			                    .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
@@ -302,6 +301,17 @@ void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, Ether
 
 }
 
+void EmpowerLVAPManager::send_message(Packet *p) {
+	if (_ports.size() == 0) {
+		click_chatter("%{element} :: %s :: ports not set!",
+				      this,
+				      __func__);
+		p->kill();
+		return;
+	}
+	output(0).push(p);
+}
+
 void EmpowerLVAPManager::send_hello() {
 
 	WritablePacket *p = Packet::make(sizeof(empower_hello));
@@ -331,7 +341,7 @@ void EmpowerLVAPManager::send_hello() {
 					  hello->seq());
 	}
 
-	checked_output_push(0, p);
+	send_message(p);
 
 }
 
@@ -2065,8 +2075,6 @@ enum {
 	H_ADD_LVAP,
 	H_DEL_LVAP,
 	H_RECONNECT,
-	H_EMPOWER_IFACE,
-	H_EMPOWER_HWADDR,
 	H_INTERFACES,
 };
 
@@ -2085,8 +2093,6 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	}
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
-	case H_EMPOWER_IFACE:
-		return String(td->_empower_iface) + "\n";
 	case H_MASKS: {
 	    StringAccum sa;
 	    for (int i = 0; i < td->_masks.size(); i++) {
@@ -2165,8 +2171,6 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 		}
 		return sa.take_string();
 	}
-	case H_EMPOWER_HWADDR:
-		return td->_empower_hwaddr.unparse() + "\n";
 	case H_BYTES: {
 		StringAccum sa;
 		for (LVAPIter it = td->lvaps()->begin(); it.live(); it++) {
@@ -2221,36 +2225,33 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		Vector<String> tokens;
 		cp_spacevec(s, tokens);
 
-		if (tokens.size() != 3)
-			return errh->error("ports accepts 3 parameters");
+		if (tokens.size() == 0)
+			return errh->error("ports needs at least 3 parameters");
+
+		if (tokens.size() % 3 != 0)
+			return errh->error("ports parameters must be a multiple of 3");
 
 		EtherAddress hwaddr;
 		int port_id;
 		String iface;
 
-		if (!EtherAddressArg().parse(tokens[0], hwaddr)) {
-			return errh->error("error param %s: must start with an Ethernet address", tokens[0].c_str());
-		}
-
-		if (!IntArg().parse(tokens[1], port_id)) {
-			return errh->error("error param %s: must start with an int", tokens[1].c_str());
-		}
-
-		if (!StringArg().parse(tokens[2], iface)) {
-			return errh->error("error param %s: must start with a String", tokens[2].c_str());
-		}
-
-		NetworkPort port = NetworkPort(hwaddr, tokens[2], port_id);
 		f->_ports_lock.acquire_write();
-		f->_ports.find_insert(port_id, port);
-		f->_ports_lock.release_write();
+		f->_ports.clear();
 
-		if (iface == f->_empower_iface) {
-			f->_empower_hwaddr = hwaddr;
+		for (int i = 0; i < tokens.size(); i+=3) {
+			if (!EtherAddressArg().parse(tokens[i], hwaddr)) {
+				return errh->error("error param %s: must start with an Ethernet address", tokens[i].c_str());
+			}
+			if (!IntArg().parse(tokens[i+1], port_id)) {
+				return errh->error("error param %s: must start with an int", tokens[i+1].c_str());
+			}
+			if (!StringArg().parse(tokens[i+2], iface)) {
+				return errh->error("error param %s: must start with a String", tokens[i+2].c_str());
+			}
+			f->_ports.find_insert(port_id, NetworkPort(hwaddr, iface, port_id));
 		}
 
-		f->send_caps();
-
+		f->_ports_lock.release_write();
 		break;
 
 	}
@@ -2292,8 +2293,6 @@ void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("vaps", read_handler, (void *) H_VAPS);
 	add_read_handler("masks", read_handler, (void *) H_MASKS);
 	add_read_handler("bytes", read_handler, (void *) H_BYTES);
-	add_read_handler("empower_iface", read_handler, (void *) H_EMPOWER_IFACE);
-	add_read_handler("empower_hwaddr", read_handler, (void *) H_EMPOWER_HWADDR);
 	add_read_handler("interfaces", read_handler, (void *) H_INTERFACES);
 	add_write_handler("reconnect", write_handler, (void *) H_RECONNECT);
 	add_write_handler("ports", write_handler, (void *) H_PORTS);

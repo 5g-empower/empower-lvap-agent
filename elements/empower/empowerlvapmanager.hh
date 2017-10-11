@@ -346,6 +346,8 @@ private:
 
 	void compute_bssid_mask();
 
+	void send_message(Packet *);
+
 	class Empower11k *_e11k;
 	class EmpowerBeaconSource *_ebs;
 	class EmpowerOpenAuthResponder *_eauthr;
@@ -355,8 +357,6 @@ private:
 	class EmpowerCQM *_cqm;
 	class EmpowerMulticastTable * _mtbl;
 
-	String _empower_iface;
-	EtherAddress _empower_hwaddr;
 	LVAP _lvaps;
 	Ports _ports;
 	VAP _vaps;
