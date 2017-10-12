@@ -164,6 +164,7 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		2 + 4 + /* tim */
 		2 + 26 + /* ht capabilities */
 		2 + 22 + /* ht information */
+		2 + 24 + /* wmm parameter element */
 		0;
 
 	// this is an actual LVAP and the CSA is active, notice that CSA will not
@@ -324,12 +325,14 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		ht->rx_supported_mcs[0] = 0xff; /* MCS 0-7 */
 		ht->rx_supported_mcs[1] = 0xff; /* MCS 8-15 */
 
+		ht->ht_extended_caps = 0x0400;
+
 		ptr += 2 + WIFI_HT_CAPS_SIZE;
 		actual_length += 2 + WIFI_HT_CAPS_SIZE;
 
 		/* ht information */
 		struct click_wifi_ht_info *ht_info = (struct click_wifi_ht_info *) ptr;
-		ht_info->type = WIFI_HT_INFO_TYPE;
+		ht_info->type = WIFI_ELEMID_HTINFO;
 		ht_info->len = WIFI_HT_INFO_SIZE;
 
 		ht_info->primary_channel = (uint8_t) channel;
@@ -340,6 +343,38 @@ void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		ptr += 2 + WIFI_HT_INFO_SIZE;
 		actual_length += 2 + WIFI_HT_INFO_SIZE;
 
+		struct click_wifi_wmm *wmm_info = (struct click_wifi_wmm *) ptr;
+
+		wmm_info->tag_type = WIFI_ELEMID_VENDOR;
+		wmm_info->len = WIFI_WME_LEN;
+
+		const char* oui_temp = WIFI_WME_OUI;
+		memcpy(wmm_info->oui, oui_temp, WIFI_WME_OUI_LEN);
+
+		wmm_info->type = WIFI_WME_TYPE;
+		wmm_info->subtype = WIFI_WME_SUBTYPE;
+		wmm_info->version = WIFI_WME_VERSION;
+		wmm_info->qosinfo = (1 << WIFI_WME_APSD_SHIFT) | WIFI_WME_APSD_MASK;
+		wmm_info->reserved = 0x0;
+
+		wmm_info->acparam[0].aci = WIFI_WME_AC_BE_ACI;
+		wmm_info->acparam[0].ecw = WIFI_WME_AC_BE_ECW;
+		wmm_info->acparam[0].txop = WIFI_WME_AC_BE_TXOP;
+
+		wmm_info->acparam[1].aci = WIFI_WME_AC_BK_ACI;
+		wmm_info->acparam[1].ecw = WIFI_WME_AC_BK_ECW;
+		wmm_info->acparam[1].txop = WIFI_WME_AC_BK_TXOP;
+
+		wmm_info->acparam[2].aci = WIFI_WME_AC_VI_ACI;
+		wmm_info->acparam[2].ecw = WIFI_WME_AC_VI_ECW;
+		wmm_info->acparam[2].txop = WIFI_WME_AC_VI_TXOP;
+
+		wmm_info->acparam[3].aci = WIFI_WME_AC_VO_ACI;
+		wmm_info->acparam[3].ecw = WIFI_WME_AC_VO_ECW;
+		wmm_info->acparam[3].txop = WIFI_WME_AC_VO_TXOP;
+
+		ptr += 2 + WIFI_WME_LEN;
+		actual_length += 2 + WIFI_WME_LEN;
 	}
 
 	p->take(max_len - actual_length);
