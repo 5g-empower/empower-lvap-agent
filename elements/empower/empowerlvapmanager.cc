@@ -179,7 +179,7 @@ void EmpowerLVAPManager::send_busyness_trigger(uint32_t trigger_id, uint32_t ifa
     request->set_hwaddr(re->_hwaddr);
     request->set_current(current);
 
-    output(0).push(p);
+    send_message(p);
 
 }
 
@@ -210,7 +210,7 @@ void EmpowerLVAPManager::send_rssi_trigger(uint32_t trigger_id, uint32_t iface, 
 	request->set_hwaddr(re->_hwaddr);
 	request->set_current(current);
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -241,7 +241,7 @@ void EmpowerLVAPManager::send_association_request(EtherAddress src, EtherAddress
 	request->set_supported_band(supported_band);
 	request->set_hwaddr(hwaddr);
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -267,7 +267,7 @@ void EmpowerLVAPManager::send_auth_request(EtherAddress src, EtherAddress bssid)
 	request->set_sta(src);
 	request->set_bssid(bssid);
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -297,7 +297,7 @@ void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, Ether
 	request->set_channel(channel);
 	request->set_supported_band(supported_band);
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -309,7 +309,7 @@ void EmpowerLVAPManager::send_message(Packet *p) {
 		p->kill();
 		return;
 	}
-	output(0).push(p);
+	send_message(p);
 }
 
 void EmpowerLVAPManager::send_hello() {
@@ -406,7 +406,7 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 		ptr += entry->length() + 1;
 	}
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -441,7 +441,7 @@ void EmpowerLVAPManager::send_status_vap(EtherAddress bssid) {
 	status->set_band(evs._band);
 	status->set_ssid(evs._ssid);
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -531,7 +531,7 @@ void EmpowerLVAPManager::send_status_port(EtherAddress sta, int iface, EtherAddr
 		ptr++;
 	}
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -611,7 +611,7 @@ void EmpowerLVAPManager::send_img_response(int type, uint32_t graph_id,
 		ptr += sizeof(struct cqm_entry);
 	}
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -655,7 +655,7 @@ void EmpowerLVAPManager::send_busyness_response(uint32_t busyness_id, EtherAddre
 	busy->set_wtp(_wtp);
 	busy->set_prob(busyness);
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -704,7 +704,7 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
 	summary->_frames.clear();
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -755,7 +755,7 @@ void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lv
 		ptr += sizeof(struct lvap_stats_entry);
 	}
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -818,7 +818,7 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 		ptr += sizeof(struct counters_entry);
 	}
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -887,7 +887,7 @@ void EmpowerLVAPManager::send_wtp_counters_response(uint32_t counters_id) {
 		}
 	}
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -944,7 +944,7 @@ void EmpowerLVAPManager::send_cqm_links_response(uint32_t cqm_links_id) {
 
 	_cqm->lock.release_read();
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -976,7 +976,7 @@ void EmpowerLVAPManager::send_incomming_mcast_address(EtherAddress mcast_address
 				  this,
 				  __func__, mcast_address.unparse().c_str(), iface, _wtp.unparse().c_str());
 
-	output(0).push(p);
+	send_message(p);
 }
 
 void EmpowerLVAPManager::send_igmp_report(EtherAddress src, Vector<IPAddress>* mcast_addresses, Vector<enum empower_igmp_record_type>* igmp_types) {
@@ -1017,7 +1017,7 @@ void EmpowerLVAPManager::send_igmp_report(EtherAddress src, Vector<IPAddress>* m
 					  mcast_addresses->at(grouprecord_counter).unparse().c_str(),
 					  _wtp.unparse().c_str());
 
-		output(0).push(p);
+		send_message(p);
 	}
 }
 
@@ -1056,7 +1056,7 @@ void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherA
 		counters->set_counters_id(counters_id);
 		counters->set_wtp(_wtp);
 		counters->set_nb_tx(0);
-		output(0).push(p);
+		send_message(p);
 		return;
 	}
 
@@ -1096,7 +1096,7 @@ void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherA
 		ptr += sizeof(struct counters_entry);
 	}
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -1160,7 +1160,7 @@ void EmpowerLVAPManager::send_caps() {
 
 	_ports_lock.release_read();
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -1451,7 +1451,7 @@ void EmpowerLVAPManager::send_add_del_lvap_response(uint8_t type, EtherAddress s
 	resp->set_status(status);
 	resp->set_wtp(_wtp);
 
-	output(0).push(p);
+	send_message(p);
 
 }
 
@@ -2221,6 +2221,10 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		break;
 	}
 	case H_PORTS: {
+
+		if (f->_ports.size() > 0) {
+			return errh->error("error ports has already been set");
+		}
 
 		Vector<String> tokens;
 		cp_spacevec(s, tokens);
