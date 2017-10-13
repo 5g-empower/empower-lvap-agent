@@ -30,69 +30,70 @@ enum empower_packet_types {
     EMPOWER_PT_STATUS_LVAP = 0x13,      // wtp -> ac
     EMPOWER_PT_SET_PORT= 0x14,          // ac -> wtp
     EMPOWER_PT_STATUS_PORT = 0x15,      // wtp -> ac
-    EMPOWER_PT_CAPS = 0x16,             // wtp -> ac
+	EMPOWER_PT_CAPS_REQUEST = 0x16,     // ac -> wtp
+    EMPOWER_PT_CAPS_RESPONSE = 0x17,    // wtp -> ac
 
     // Packet/Bytes counters
-    EMPOWER_PT_COUNTERS_REQUEST = 0x17,         // ac -> wtp
-    EMPOWER_PT_COUNTERS_RESPONSE = 0x18,        // wtp -> ac
+    EMPOWER_PT_COUNTERS_REQUEST = 0x18,         // ac -> wtp
+    EMPOWER_PT_COUNTERS_RESPONSE = 0x19,        // wtp -> ac
 
     // Triggers
-    EMPOWER_PT_ADD_RSSI_TRIGGER = 0x19, 		// ac -> wtp
-    EMPOWER_PT_RSSI_TRIGGER = 0x20,     		// ac -> wtp
-    EMPOWER_PT_DEL_RSSI_TRIGGER = 0x21, 		// ac -> wtp
+    EMPOWER_PT_ADD_RSSI_TRIGGER = 0x20, 		// ac -> wtp
+    EMPOWER_PT_RSSI_TRIGGER = 0x21,     		// ac -> wtp
+    EMPOWER_PT_DEL_RSSI_TRIGGER = 0x22, 		// ac -> wtp
 
-    EMPOWER_PT_ADD_SUMMARY_TRIGGER = 0x22, 		// ac -> wtp
-    EMPOWER_PT_SUMMARY_TRIGGER = 0x23,     		// ac -> wtp
-    EMPOWER_PT_DEL_SUMMARY_TRIGGER = 0x24, 		// ac -> wtp
+    EMPOWER_PT_ADD_SUMMARY_TRIGGER = 0x23, 		// ac -> wtp
+    EMPOWER_PT_SUMMARY_TRIGGER = 0x24,     		// ac -> wtp
+    EMPOWER_PT_DEL_SUMMARY_TRIGGER = 0x25, 		// ac -> wtp
 
-    EMPOWER_PT_ADD_BUSYNESS_TRIGGER = 0x38, 	// ac -> wtp
-    EMPOWER_PT_BUSYNESS_TRIGGER = 0x39,     	// ac -> wtp
-    EMPOWER_PT_DEL_BUSYNESS_TRIGGER = 0x40, 	// ac -> wtp
+    EMPOWER_PT_ADD_BUSYNESS_TRIGGER = 0x39, 	// ac -> wtp
+    EMPOWER_PT_BUSYNESS_TRIGGER = 0x40,     	// ac -> wtp
+    EMPOWER_PT_DEL_BUSYNESS_TRIGGER = 0x41, 	// ac -> wtp
 
     // Channel Quality Maps
-    EMPOWER_PT_UCQM_REQUEST = 0x25,     		// ac -> wtp
-    EMPOWER_PT_UCQM_RESPONSE = 0x26,    		// wtp -> ac
+    EMPOWER_PT_UCQM_REQUEST = 0x26,     		// ac -> wtp
+    EMPOWER_PT_UCQM_RESPONSE = 0x27,    		// wtp -> ac
 
-    EMPOWER_PT_NCQM_REQUEST = 0x27,     		// ac -> wtp
-    EMPOWER_PT_NCQM_RESPONSE = 0x28,    		// wtp -> ac
+    EMPOWER_PT_NCQM_REQUEST = 0x28,     		// ac -> wtp
+    EMPOWER_PT_NCQM_RESPONSE = 0x29,    		// wtp -> ac
 
     // Link Stats
-    EMPOWER_PT_LVAP_STATS_REQUEST = 0x29,   	// ac -> wtp
-    EMPOWER_PT_LVAP_STATS_RESPONSE = 0x30,  	// wtp -> ac
+    EMPOWER_PT_LVAP_STATS_REQUEST = 0x30,   	// ac -> wtp
+    EMPOWER_PT_LVAP_STATS_RESPONSE = 0x31,  	// wtp -> ac
 
     // VAPs
-    EMPOWER_PT_ADD_VAP = 0x31,         			// ac -> wtp
-    EMPOWER_PT_DEL_VAP = 0x32,         			// ac -> wtp
-    EMPOWER_PT_STATUS_VAP = 0x33,      			// wtp -> ac
+    EMPOWER_PT_ADD_VAP = 0x32,         			// ac -> wtp
+    EMPOWER_PT_DEL_VAP = 0x33,         			// ac -> wtp
+    EMPOWER_PT_STATUS_VAP = 0x34,      			// wtp -> ac
 
     // MCAST Packet/Bytes counters
-    EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x34,		// ac -> wtp
-    EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x35,	// wtp -> ac
+    EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x35,		// ac -> wtp
+    EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x36,	// wtp -> ac
 
     // Busyness
-    EMPOWER_PT_BUSYNESS_REQUEST = 0x36,			// ac -> wtp
-    EMPOWER_PT_BUSYNESS_RESPONSE = 0x37,		// wtp -> ac
+    EMPOWER_PT_BUSYNESS_REQUEST = 0x37,			// ac -> wtp
+    EMPOWER_PT_BUSYNESS_RESPONSE = 0x38,		// wtp -> ac
 
     // WTP Packet/Bytes counters
-    EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x41,     // ac -> wtp
-    EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x42,    // wtp -> ac
+    EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x42,     // ac -> wtp
+    EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x43,    // wtp -> ac
 
 	// P_CQM
-	EMPOWER_PT_CQM_LINKS_REQUEST = 0x43,        // ac -> wtp
-	EMPOWER_PT_CQM_LINKS_RESPONSE = 0x44,       // ac -> wtp
+	EMPOWER_PT_CQM_LINKS_REQUEST = 0x44,        // ac -> wtp
+	EMPOWER_PT_CQM_LINKS_RESPONSE = 0x45,       // ac -> wtp
 
 	// Multicast address transmission policies
-	EMPOWER_PT_INCOM_MCAST_REQUEST = 0x45,		// wtp -> ac
-	EMPOWER_PT_INCOM_MCAST_RESPONSE = 0x46,		// ac -> wtp
+	EMPOWER_PT_INCOM_MCAST_REQUEST = 0x46,		// wtp -> ac
+	EMPOWER_PT_INCOM_MCAST_RESPONSE = 0x47,		// ac -> wtp
 
 	// IGMP messages
-	EMPOWER_PT_IGMP_REQUEST = 0x47,				// wtp -> ac
-	EMPOWER_PT_DEL_MCAST_ADDR = 0x48,			// ac -> wtp
-	EMPOWER_PT_DEL_MCAST_RECEIVER = 0x49,		// ac -> wtp
+	EMPOWER_PT_IGMP_REQUEST = 0x48,				// wtp -> ac
+	EMPOWER_PT_DEL_MCAST_ADDR = 0x49,			// ac -> wtp
+	EMPOWER_PT_DEL_MCAST_RECEIVER = 0x50,		// ac -> wtp
 
 	// ADD/DEL response messages
-    EMPOWER_PT_ADD_LVAP_RESPONSE = 0x50,         // ac -> wtp
-    EMPOWER_PT_DEL_LVAP_RESPONSE = 0x51          // ac -> wtp
+    EMPOWER_PT_ADD_LVAP_RESPONSE = 0x51,        // ac -> wtp
+    EMPOWER_PT_DEL_LVAP_RESPONSE = 0x52         // ac -> wtp
 
 };
 

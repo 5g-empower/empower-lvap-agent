@@ -309,7 +309,7 @@ void EmpowerLVAPManager::send_message(Packet *p) {
 		p->kill();
 		return;
 	}
-	send_message(p);
+	output(0).push(p);
 }
 
 void EmpowerLVAPManager::send_hello() {
@@ -1128,7 +1128,7 @@ void EmpowerLVAPManager::send_caps() {
 	empower_caps *caps = (struct empower_caps *) (p->data());
 	caps->set_version(_empower_version);
 	caps->set_length(len);
-	caps->set_type(EMPOWER_PT_CAPS);
+	caps->set_type(EMPOWER_PT_CAPS_RESPONSE);
 	caps->set_seq(get_next_seq());
 	caps->set_wtp(_wtp);
 	caps->set_nb_resources_elements(_ifaces_to_elements.size());
@@ -1161,6 +1161,14 @@ void EmpowerLVAPManager::send_caps() {
 	_ports_lock.release_read();
 
 	send_message(p);
+
+}
+
+int EmpowerLVAPManager::handle_caps_request(Packet *p, uint32_t offset) {
+
+	send_caps();
+
+	return 0;
 
 }
 
@@ -1953,6 +1961,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 		case EMPOWER_PT_CQM_LINKS_REQUEST:
 			handle_cqm_links_request(p, offset);
 			break;
+		case EMPOWER_PT_CAPS_REQUEST:
+			handle_caps_request(p, offset);
+			break;
 		default:
 			click_chatter("%{element} :: %s :: Unknown packet type: %d",
 					      this,
@@ -2265,10 +2276,6 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		if (f->_ers) {
 			f->_ers->clear_triggers();
 		}
-		// send hello
-		f->send_hello();
-		// send caps
-		f->send_caps();
 		// send LVAP status update messages
 		for (LVAPIter it = f->_lvaps.begin(); it.live(); it++) {
 			f->send_status_lvap(it.key());
