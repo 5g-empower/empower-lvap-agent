@@ -270,6 +270,7 @@ public:
 	int handle_del_mcast_addr(Packet *, uint32_t);
 	int handle_del_mcast_receiver(Packet *, uint32_t);
 	int handle_cqm_links_request(Packet *, uint32_t);
+	int handle_caps_request(Packet *, uint32_t);
 
 	void send_hello();
 	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
