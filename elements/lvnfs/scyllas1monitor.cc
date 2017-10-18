@@ -10,21 +10,6 @@
 #include "scyllas1monitor.hh"
 CLICK_DECLS
 
-uint8_t sctp_pt = 0x84;
-
-struct click_sctp {
-private:
-    uint16_t _src_port;
-    uint16_t _dst_port;
-    uint32_t _tag;
-    uint32_t _checksum;
-public:
-    uint16_t src_port()                 { return ntohs(_src_port); }
-    uint16_t dst_port()                 { return ntohs(_dst_port); }
-    uint32_t tag()                      { return ntohl(_tag); }
-    uint32_t checksum()                 { return ntohl(_checksum); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
 ScyllaS1Monitor::ScyllaS1Monitor() :
 		_debug(false), _offset(12) {
 }
@@ -43,16 +28,41 @@ ScyllaS1Monitor::simple_action(Packet *p) {
 
 	struct click_ip *ip = (struct click_ip *) (p->data() + _offset);
 
-	if (ip->ip_p != sctp_pt) {
+	if (ip->ip_p != 132) {
 		return p;
 	}
 
 	struct click_sctp *sctp = (struct click_sctp *) (p->data() + _offset + ip->ip_hl * 4);
 
-	click_chatter("src port %u", sctp->src_port());
-	click_chatter("dst port %u", sctp->dst_port());
+	uint8_t *ptr =  (uint8_t *) sctp;
+	uint8_t *end = ptr + (p->length() - _offset - ip->ip_hl * 4);
+
+	ptr += sizeof(struct click_sctp);
+
+	while (ptr < end) {
+		struct click_sctp_chunk *chunk = (struct click_sctp_chunk *) ptr;
+		if (chunk->type() == 0) {
+			struct click_sctp_data_chunk *data = (struct click_sctp_data_chunk *) ptr;
+			if (data->ppi() == 18) {
+				parse_s1ap(data);
+			}
+		}
+		if (chunk->length() % 4 == 0) {
+			ptr += chunk->length();
+		} else {
+			ptr += (chunk->length() + 4 - chunk->length() % 4);
+		}
+	}
 
 	return p;
+
+}
+
+void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
+
+	click_chatter("s1ap");
+	click_chatter("ppi %u", data->ppi());
+	click_chatter("len %u", data->length());
 
 }
 

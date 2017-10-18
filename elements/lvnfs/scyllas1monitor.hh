@@ -5,6 +5,47 @@
 #include <click/hashmap.hh>
 CLICK_DECLS
 
+struct click_sctp {
+private:
+    uint16_t _src_port;
+    uint16_t _dst_port;
+    uint32_t _tag;
+    uint32_t _checksum;
+public:
+    uint16_t src_port()                 { return ntohs(_src_port); }
+    uint16_t dst_port()                 { return ntohs(_dst_port); }
+    uint32_t tag()                      { return ntohl(_tag); }
+    uint32_t checksum()                 { return ntohl(_checksum); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+struct click_sctp_chunk {
+private:
+    uint8_t _type;
+    uint8_t _flags;
+    uint16_t _length;
+public:
+    uint8_t type()                 { return _type; }
+    uint8_t flags()                { return _flags; }
+    uint16_t length()              { return ntohs(_length); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+struct click_sctp_data_chunk {
+private:
+    uint8_t _type;
+    uint8_t _flags;
+    uint16_t _length;
+    uint32_t _tsn;
+    uint16_t _sid;
+    uint16_t _ssn;
+    uint32_t _ppi;
+public:
+    uint8_t type()                 { return _type; }
+    uint8_t flags()                { return _flags; }
+    uint16_t length()              { return ntohs(_length); }
+    uint32_t ppi()                 { return ntohl(_ppi); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+
 class ScyllaS1Monitor : public Element {
 
  public:
@@ -20,6 +61,7 @@ class ScyllaS1Monitor : public Element {
   bool can_live_reconfigure() const	{ return true; }
 
   Packet *simple_action(Packet *);
+  void parse_s1ap(click_sctp_data_chunk *);
 
   void add_handlers();
 
