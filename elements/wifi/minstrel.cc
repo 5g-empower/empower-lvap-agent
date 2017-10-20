@@ -186,10 +186,18 @@ void Minstrel::assign_rate(Packet *p_in)
 	memset((void*)ceh, 0, sizeof(struct click_wifi_extra));
 
 	TxPolicyInfo * tx_policy = _tx_policies->supported(dst);
-		if (dst.is_group() && !tx_policy) {
+	if (dst.is_group()) {
 		ceh->flags |= WIFI_EXTRA_TX_NOACK;
-		Vector<int> rates = _tx_policies->lookup(dst)->_mcs;
-		ceh->rate = (rates.size()) ? rates[0] : 2;
+		if(!tx_policy || tx_policy->_ht_mcs.size() == 0) {
+			Vector<int> rates = _tx_policies->lookup(dst)->_mcs;
+			ceh->rate = (rates.size()) ? rates[0] : 2;
+		}
+		else {
+			Vector<int> ht_rates = _tx_policies->lookup(dst)->_ht_mcs;
+			ceh->rate = (ht_rates.size()) ? ht_rates[0] : 2;
+			ceh->flags |= WIFI_EXTRA_MCS;
+		}
+
 		ceh->rate1 = -1;
 		ceh->rate2 = -1;
 		ceh->rate3 = -1;
@@ -230,7 +238,6 @@ void Minstrel::assign_rate(Packet *p_in)
 					__func__,
 					dst.unparse().c_str());
 		}
-		TxPolicyInfo * tx_policy = _tx_policies->supported(dst);
 		if (!tx_policy) {
 			if (_debug) {
 				click_chatter("%{element} :: %s :: rate info not found for %s",
