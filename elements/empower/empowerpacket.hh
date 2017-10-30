@@ -93,7 +93,12 @@ enum empower_packet_types {
 
 	// ADD/DEL response messages
     EMPOWER_PT_ADD_LVAP_RESPONSE = 0x51,        // ac -> wtp
-    EMPOWER_PT_DEL_LVAP_RESPONSE = 0x52         // ac -> wtp
+    EMPOWER_PT_DEL_LVAP_RESPONSE = 0x52,        // ac -> wtp
+
+	// STATUSES requests
+	EMPOWER_PT_LVAP_STATUS_REQ = 0x53,			// ac -> wtp
+	EMPOWER_PT_VAP_STATUS_REQ = 0x54,			// ac -> wtp
+	EMPOWER_PT_PORT_STATUS_REQ = 0x55,			// ac -> wtp
 
 };
 
