@@ -46,7 +46,18 @@ void Minstrel::run_timer(Timer *)
 		int i;
 		uint32_t p;
 		for (i = 0; i < nfo->rates.size(); i++) {
-			usecs = calc_usecs_wifi_packet(1500, nfo->rates[i], 0);
+			if (_transm_time.find(nfo->rates[i]) == _transm_time.end()) {
+				if (nfo->ht)
+					usecs = calc_usecs_wifi_packet_ht(1500, nfo->rates[i], 0);
+				else
+					usecs = calc_usecs_wifi_packet(1500, nfo->rates[i], 0);
+
+				_transm_time.set(nfo->rates[i], usecs);
+			}
+			else
+			{
+				usecs = _transm_time.get(nfo->rates[i]);
+			}
 			if (!usecs) {
 				usecs = 1000000;
 			}
@@ -174,10 +185,19 @@ void Minstrel::assign_rate(Packet *p_in)
 
 	memset((void*)ceh, 0, sizeof(struct click_wifi_extra));
 
+	TxPolicyInfo * tx_policy = _tx_policies->supported(dst);
 	if (dst.is_group()) {
 		ceh->flags |= WIFI_EXTRA_TX_NOACK;
-		Vector<int> rates = _tx_policies->lookup(dst)->_mcs;
-		ceh->rate = (rates.size()) ? rates[0] : 2;
+		if(!tx_policy || tx_policy->_ht_mcs.size() == 0) {
+			Vector<int> rates = _tx_policies->lookup(dst)->_mcs;
+			ceh->rate = (rates.size()) ? rates[0] : 2;
+		}
+		else {
+			Vector<int> ht_rates = _tx_policies->lookup(dst)->_ht_mcs;
+			ceh->rate = (ht_rates.size()) ? ht_rates[0] : 2;
+			ceh->flags |= WIFI_EXTRA_MCS;
+		}
+
 		ceh->rate1 = -1;
 		ceh->rate2 = -1;
 		ceh->rate3 = -1;
@@ -218,7 +238,6 @@ void Minstrel::assign_rate(Packet *p_in)
 					__func__,
 					dst.unparse().c_str());
 		}
-		TxPolicyInfo * tx_policy = _tx_policies->supported(dst);
 		if (!tx_policy) {
 			if (_debug) {
 				click_chatter("%{element} :: %s :: rate info not found for %s",
@@ -259,7 +278,7 @@ void Minstrel::assign_rate(Packet *p_in)
 		if (nfo->packet_count >= 10000) {
 			nfo->sample_count = 0;
 			nfo->packet_count = 0;
-		} 
+		}
 		if (nfo->rates.size() > 0) {
 			int sample_ndx = click_random(0, nfo->rates.size() - 1);
 			if (nfo->sample_limit[sample_ndx] != 0) {
@@ -269,11 +288,11 @@ void Minstrel::assign_rate(Packet *p_in)
 				if (nfo->sample_limit[sample_ndx] > 0) {
 					nfo->sample_limit[sample_ndx]--;
 				}
-			} 
+			}
 		}
 	}
-	/* If the sampling rate already has a probability 
-	 * of >95%, we shouldn't be attempting to use it, 
+	/* If the sampling rate already has a probability
+	 * of >95%, we shouldn't be attempting to use it,
 	 * as this only wastes precious airtime */
 	if (sample && (nfo->probability[ndx] > 17100)) {
 		ndx = nfo->max_tp_rate;
