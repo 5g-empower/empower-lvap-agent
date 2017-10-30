@@ -342,7 +342,6 @@ public:
 
 private:
 
-	ReadWriteLock _ports_lock;
 	RETable _ifaces_to_elements;
 
 	void compute_bssid_mask();

@@ -1102,8 +1102,6 @@ void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherA
 
 void EmpowerLVAPManager::send_caps() {
 
-	_ports_lock.acquire_read();
-
 	int len = sizeof(empower_caps);
 	len += _ifaces_to_elements.size() * sizeof(struct resource_elements_entry);
 	len += _ports.size() * sizeof(struct port_elements_entry);
@@ -1158,15 +1156,23 @@ void EmpowerLVAPManager::send_caps() {
 		ptr += sizeof(struct port_elements_entry);
 	}
 
-	_ports_lock.release_read();
-
 	send_message(p);
 
 }
 
 int EmpowerLVAPManager::handle_caps_request(Packet *p, uint32_t offset) {
 
+	// send caps response
 	send_caps();
+
+	// send LVAP status update messages
+	for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
+		send_status_lvap(it.key());
+	}
+	// send VAP status update messages
+	for (VAPIter it = _vaps.begin(); it.live(); it++) {
+		send_status_vap(it.key());
+	}
 
 	return 0;
 
@@ -2094,13 +2100,11 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	EmpowerLVAPManager *td = (EmpowerLVAPManager *) e;
 	switch ((uintptr_t) thunk) {
 	case H_PORTS: {
-	    td->_ports_lock.acquire_read();
 	    StringAccum sa;
 		for (PortsIter it = td->_ports.begin(); it.live(); it++) {
 		    sa << it.value().unparse();
 		    sa << "\n";
 		}
-	    td->_ports_lock.release_read();
 		return sa.take_string();
 	}
 	case H_DEBUG:
@@ -2251,7 +2255,6 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		int port_id;
 		String iface;
 
-		f->_ports_lock.acquire_write();
 		f->_ports.clear();
 
 		for (int i = 0; i < tokens.size(); i+=3) {
@@ -2267,7 +2270,6 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 			f->_ports.find_insert(port_id, NetworkPort(hwaddr, iface, port_id));
 		}
 
-		f->_ports_lock.release_write();
 		break;
 
 	}
@@ -2275,14 +2277,6 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 		// clear triggers
 		if (f->_ers) {
 			f->_ers->clear_triggers();
-		}
-		// send LVAP status update messages
-		for (LVAPIter it = f->_lvaps.begin(); it.live(); it++) {
-			f->send_status_lvap(it.key());
-		}
-		// send VAP status update messages
-		for (VAPIter it = f->_vaps.begin(); it.live(); it++) {
-			f->send_status_vap(it.key());
 		}
 		// send tx policies
 		for (REIter it_re = f->_ifaces_to_elements.begin(); it_re.live(); it_re++) {
