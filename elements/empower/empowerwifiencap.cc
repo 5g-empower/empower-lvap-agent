@@ -118,18 +118,18 @@ EmpowerWifiEncap::push(int, Packet *p) {
 
 			Vector<EtherAddress> sent;
 
-			for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-				EtherAddress sta = it.value()._sta;
-				if (it.value()._iface_id != i) {
+			for (LVAPIter it = _el->sta2lvaps()->begin(); it.live(); it++) {
+				EtherAddress sta = it.value()->_sta;
+				if (it.value()->_iface_id != i) {
 					continue;
 				}
-				if (!it.value()._set_mask) {
+				if (!it.value()->_set_mask) {
 					continue;
 				}
-				if (!it.value()._authentication_status) {
+				if (!it.value()->_authentication_status) {
 					continue;
 				}
-				if (!it.value()._association_status) {
+				if (!it.value()->_association_status) {
 					continue;
 				}
 				if (find(sent.begin(), sent.end(), sta) != sent.end()) {
@@ -140,7 +140,7 @@ EmpowerWifiEncap::push(int, Packet *p) {
 				if (!q) {
 					continue;
 				}
-				Packet * p_out = wifi_encap(q, sta, src, it.value()._lvap_bssid);
+				Packet * p_out = wifi_encap(q, sta, src, it.value()->_lvap_bssid);
 				tx_policy->update_tx(p->length());
 				SET_PAINT_ANNO(p_out, i);
 				output(0).push(p_out);
@@ -157,18 +157,18 @@ EmpowerWifiEncap::push(int, Packet *p) {
 
 			Vector<EtherAddress> sent;
 
-			for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-				EtherAddress bssid = it.value()._lvap_bssid;
-				if (it.value()._iface_id != i) {
+			for (LVAPIter it = _el->sta2lvaps()->begin(); it.live(); it++) {
+				EtherAddress bssid = it.value()->_lvap_bssid;
+				if (it.value()->_iface_id != i) {
 					continue;
 				}
-				if (!it.value()._set_mask) {
+				if (!it.value()->_set_mask) {
 					continue;
 				}
-				if (!it.value()._authentication_status) {
+				if (!it.value()->_authentication_status) {
 					continue;
 				}
-				if (!it.value()._association_status) {
+				if (!it.value()->_association_status) {
 					continue;
 				}
 				if (find(sent.begin(), sent.end(), bssid) != sent.end()) {
