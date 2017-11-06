@@ -1,3 +1,3 @@
-FromDump(./elements/lvnfs/examples/s1traffic.pcap)
+FromDump(./elements/lvnfs/examples/two_ue_crash.pcap)
   -> ScyllaS1Monitor(OFFSET 16)
   -> Discard();

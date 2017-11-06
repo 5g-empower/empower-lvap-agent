@@ -45,6 +45,24 @@ public:
     uint32_t ppi()                 { return ntohl(_ppi); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
+struct S1APMonitorElement {
+    /* eNB UE S1AP Id. */
+    uint32_t eNB_UE_S1AP_ID;
+    /* MME UE S1AP Id. */
+    uint32_t MME_UE_S1AP_ID;
+    /* eRAB Id. */
+    uint8_t e_RAB_ID;
+    /* EPC IP address. */
+    String EPC_IP;
+    /* eNB IP address. */
+    String eNB_IP;
+    /* UE IP address. */
+    String UE_IP;
+    /* Tunnel End Point Id used for GTP traffic from UE to EPC. */
+    String UE2EPC_teid;
+    /* Tunnel End Point Id used for GTP traffic from EPC to UE. */
+    String EPC2UE_teid;
+};
 
 class ScyllaS1Monitor : public Element {
 
