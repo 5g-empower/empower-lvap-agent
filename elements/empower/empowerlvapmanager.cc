@@ -2261,6 +2261,8 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 	case H_RECONNECT: {
 		// clear triggers
 		f->_ers->clear_triggers();
+		// send hello
+		f->send_hello();
 		break;
 	}
 	}
