@@ -173,7 +173,7 @@ typedef InfoBssids::iterator IBIter;
 typedef HashTable<EtherAddress, EmpowerVAPState> VAP;
 typedef VAP::iterator VAPIter;
 
-typedef HashTable<EtherAddress, EmpowerStationState> LVAP;
+typedef HashTable<EtherAddress, EmpowerStationState *> LVAP;
 typedef LVAP::iterator LVAPIter;
 
 typedef HashTable<int, NetworkPort> Ports;
@@ -298,7 +298,8 @@ public:
 	void send_add_del_lvap_response(uint8_t, EtherAddress, uint32_t, uint32_t);
 
 	int remove_lvap(EmpowerStationState *);
-	LVAP* lvaps() { return &_lvaps; }
+	LVAP* sta2lvaps() { return &_sta2lvaps; }
+	LVAP* bssid2lvaps() { return &_bssid2lvaps; }
 	VAP* vaps() { return &_vaps; }
 	EtherAddress wtp() { return _wtp; }
 
@@ -322,12 +323,12 @@ public:
 	}
 
 	EmpowerStationState * get_ess(EtherAddress sta) {
-		EmpowerStationState *ess = _lvaps.get_pointer(sta);
+		EmpowerStationState *ess = _sta2lvaps.get(sta);
 		return ess;
 	}
 
 	TxPolicyInfo * get_txp(EtherAddress sta) {
-		EmpowerStationState *ess = _lvaps.get_pointer(sta);
+		EmpowerStationState *ess = _sta2lvaps.get(sta);
 		if (!ess) {
 			return 0;
 		}
@@ -358,7 +359,9 @@ private:
 	class EmpowerCQM *_cqm;
 	class EmpowerMulticastTable * _mtbl;
 
-	LVAP _lvaps;
+	
+	LVAP _sta2lvaps;
+	LVAP _bssid2lvaps;
 	Ports _ports;
 	VAP _vaps;
 	Vector<EtherAddress> _masks;

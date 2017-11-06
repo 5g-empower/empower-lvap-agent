@@ -55,8 +55,8 @@ int EmpowerBeaconSource::initialize(ErrorHandler *) {
 void EmpowerBeaconSource::run_timer(Timer *) {
 
 	// send LVAP beacon
-	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-		send_lvap_csa_beacon(&it.value());
+	for (LVAPIter it = _el->sta2lvaps()->begin(); it.live(); it++) {
+		send_lvap_csa_beacon(it.value());
 	}
 
 	// send VAP beacons
