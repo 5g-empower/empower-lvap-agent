@@ -141,11 +141,21 @@ public:
 	EtherAddress _hwaddr;
 	int _channel;
 	empower_bands_types _band;
+	empower_bands_types _supported_band;
+	empower_bands_types _target_band;
 	int _iface_id;
-	int _group;
 	bool _set_mask;
 	bool _authentication_status;
 	bool _association_status;
+	// CSA entries
+	bool _csa_active;
+	int _csa_switch_mode;
+	int _csa_switch_count;
+	EtherAddress _target_hwaddr;
+	int _target_channel;
+	// ADD/DEL LVAP response entries
+	uint32_t _add_lvap_module_id;
+	uint32_t _del_lvap_module_id;
 };
 
 // Cross structure mapping bssids to list of associated
@@ -185,7 +195,7 @@ public:
 	}
 
 	inline size_t hashcode() const {
-		return _channel | _band;
+		return _hwaddr.hashcode();
 	}
 
 	inline String unparse() const {
@@ -213,10 +223,7 @@ inline bool operator==(const ResourceElement &a, const ResourceElement &b) {
 	return a._hwaddr == b._hwaddr && a._channel == b._channel && a._band == b._band;
 }
 
-typedef HashTable<ResourceElement, int> IfTable;
-typedef IfTable::const_iterator IfIter;
-
-typedef HashTable<int, ResourceElement> RETable;
+typedef HashTable<int, ResourceElement *> RETable;
 typedef RETable::const_iterator REIter;
 
 class EmpowerLVAPManager: public Element {
@@ -263,16 +270,18 @@ public:
 	int handle_del_mcast_addr(Packet *, uint32_t);
 	int handle_del_mcast_receiver(Packet *, uint32_t);
 	int handle_cqm_links_request(Packet *, uint32_t);
+	int handle_caps_request(Packet *, uint32_t);
+	int handle_lvap_status_request(Packet *, uint32_t);
+	int handle_vap_status_request(Packet *, uint32_t);
+	int handle_port_status_request(Packet *, uint32_t);
 
 	void send_hello();
-	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types);
+	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
 	void send_auth_request(EtherAddress, EtherAddress);
-	void send_association_request(EtherAddress, EtherAddress, String, EtherAddress, int, empower_bands_types);
+	void send_association_request(EtherAddress, EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
 	void send_status_lvap(EtherAddress);
 	void send_status_vap(EtherAddress);
 	void send_status_port(EtherAddress, int);
-	void send_status_port(EtherAddress, EtherAddress, int, empower_bands_types);
-	void send_status_port(EtherAddress, int, EtherAddress, int, empower_bands_types);
 	void send_counters_response(EtherAddress, uint32_t);
 	void send_txp_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, EtherAddress);
 	void send_img_response(int, uint32_t, EtherAddress, uint8_t, empower_bands_types);
@@ -286,7 +295,9 @@ public:
 	void send_wtp_counters_response(uint32_t);
 	void send_igmp_report(EtherAddress, Vector<IPAddress>*, Vector<enum empower_igmp_record_type>*);
 	void send_cqm_links_response(uint32_t);
+	void send_add_del_lvap_response(uint8_t, EtherAddress, uint32_t, uint32_t);
 
+	int remove_lvap(EmpowerStationState *);
 	LVAP* lvaps() { return &_lvaps; }
 	VAP* vaps() { return &_vaps; }
 	EtherAddress wtp() { return _wtp; }
@@ -294,15 +305,16 @@ public:
 	uint32_t get_next_seq() { return ++_seq; }
 
 	int element_to_iface(EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
-		IfIter iter = _elements_to_ifaces.find(ResourceElement(hwaddr, channel, band));
-		if (iter == _elements_to_ifaces.end()) {
-			return -1;
+		for (REIter iter = _ifaces_to_elements.begin(); iter.live(); iter++) {
+			if (iter.value()->_hwaddr == hwaddr && iter.value()->_channel == channel && iter.value()->_band == band) {
+				return iter.key();
+			}
 		}
-		return iter.value();
+		return -1;
 	}
 
 	ResourceElement* iface_to_element(int iface) {
-		return _ifaces_to_elements.get_pointer(iface);
+		return _ifaces_to_elements.get(iface);
 	}
 
 	int num_ifaces() {
@@ -331,12 +343,11 @@ public:
 
 private:
 
-	ReadWriteLock _ports_lock;
-
-	IfTable _elements_to_ifaces;
 	RETable _ifaces_to_elements;
 
 	void compute_bssid_mask();
+
+	void send_message(Packet *);
 
 	class Empower11k *_e11k;
 	class EmpowerBeaconSource *_ebs;
@@ -346,10 +357,7 @@ private:
 	class EmpowerRXStats *_ers;
 	class EmpowerCQM *_cqm;
 	class EmpowerMulticastTable * _mtbl;
-	class EmpowerHypervisor *_hv;
 
-	String _empower_iface;
-	EtherAddress _empower_hwaddr;
 	LVAP _lvaps;
 	Ports _ports;
 	VAP _vaps;

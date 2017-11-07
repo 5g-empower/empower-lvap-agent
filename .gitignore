@@ -24,3 +24,7 @@ share/click/elementmap.xml
 share/click/pkg-config.mk
 stamp-egroup
 stamp-h
+.DS_Store
+.cproject
+.project
+.settings/

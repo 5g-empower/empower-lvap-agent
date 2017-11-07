@@ -267,6 +267,66 @@ struct click_wifi_ht_info {
 	uint8_t		rx_supported_mcs[16];
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
+
+/*
+ * WMM/WME Information Element
+ */
+
+/* WMM/WME Elements */
+#define WIFI_WME_LEN				24
+#define WIFI_WME_OUI				"\x00\x50\xf2"
+#define WIFI_WME_OUI_LEN			3
+#define WIFI_WME_TYPE				0x02
+#define WIFI_WME_SUBTYPE			1
+#define WIFI_WME_VERSION			1
+
+/* EDCA categories */
+#define AC_BE			0
+#define AC_BK			1
+#define AC_VI			2
+#define AC_VO			3
+#define AC_COUNT		4
+
+/* EDCA Values */
+#define WIFI_WME_AC_BE_ACI      	0x03
+#define WIFI_WME_AC_BE_ECW  		0xA4
+#define WIFI_WME_AC_BE_TXOP      	0x0000
+
+#define WIFI_WME_AC_BK_ACI      	0x27
+#define WIFI_WME_AC_BK_ECW       	0xA4
+#define WIFI_WME_AC_BK_TXOP        	0x0000
+
+#define WIFI_WME_AC_VI_ACI         	0x42
+#define WIFI_WME_AC_VI_ECW         	0x43
+#define WIFI_WME_AC_VI_TXOP       	0x005E
+
+#define WIFI_WME_AC_VO_ACI        	0x62
+#define WIFI_WME_AC_VO_ECW        	0x32
+#define WIFI_WME_AC_VO_TXOP       	0x002F
+
+/* WME QoS Info */
+#define WIFI_WME_APSD_MASK         	0x80
+#define WIFI_WME_APSD_SHIFT        	7
+
+struct edca_ac_param {
+	uint8_t   		aci;
+	uint8_t   		ecw;
+	uint16_t  		txop;
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* WMM/WME Parameter Element */
+struct click_wifi_wmm {
+	uint8_t			tag_type;
+	uint8_t			len;
+	char			oui[WIFI_WME_OUI_LEN];
+	uint8_t 		type;
+	uint8_t 		subtype;
+	uint8_t 		version;
+	uint8_t 		qosinfo;
+	uint8_t 		reserved;
+	edca_ac_param 	acparam[AC_COUNT];
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
 #define WIFI_RATES_MAXSIZE	15
 #define WIFI_NWID_MAXSIZE	32
 
@@ -279,6 +339,7 @@ enum {
   WIFI_ELEMID_TIM			= 5,
   WIFI_ELEMID_IBSSPARMS		= 6,
   WIFI_ELEMID_CHALLENGE		= 16,
+  WIFI_ELEMID_CSA	        = 37,
   WIFI_ELEMID_ERP			= 42,
   WIFI_ELEMID_HTCAPS		= 45,
   WIFI_ELEMID_XRATES		= 50,

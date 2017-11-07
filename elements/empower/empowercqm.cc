@@ -31,7 +31,7 @@
 CLICK_DECLS
 
 EmpowerCQM::EmpowerCQM() :
-		_el(0), _timer(this), _period(500), _max_silent_window_count(10),
+		_el(0), _timer(this), _period(50), _samples(40), _max_silent_window_count(10),
 		_rssi_threshold(-70), _debug(false) {
 
 }
@@ -50,6 +50,7 @@ int EmpowerCQM::configure(Vector<String> &conf, ErrorHandler *errh) {
 	int ret = Args(conf, this, errh)
 			.read_m("EL", ElementCastArg("EmpowerLVAPManager"), _el)
 			.read("PERIOD", _period)
+			.read("SAMPLES", _samples)
 			.read("DEBUG", _debug)
 			.complete();
 
@@ -119,7 +120,7 @@ EmpowerCQM::simple_action(Packet *p) {
 		update_link_table(ta, iface_id, w->i_seq, p->length(), rssi);
 	}
 
-	update_channel_busy_time(iface_id, p->length(), ceh->rate);
+	update_channel_busy_time(iface_id, ta, p->length(), ceh->rate);
 
 	lock.release_write();
 
@@ -127,12 +128,14 @@ EmpowerCQM::simple_action(Packet *p) {
 
 }
 
-void EmpowerCQM::update_channel_busy_time(uint8_t iface_id, uint32_t len, uint8_t rate) {
+void EmpowerCQM::update_channel_busy_time(uint8_t iface_id, EtherAddress ta, uint32_t len, uint8_t rate) {
 	for (CLTIter iter = links.begin(); iter.live(); iter++) {
 		CqmLink *nfo = &iter.value();
 		if (nfo && nfo->iface_id == iface_id) {
-			unsigned usec = calc_usecs_wifi_packet(len, rate, 0);
-			nfo->add_cbt_sample(usec);
+			if(ta != nfo->sourceAddr) {
+				unsigned usec = calc_usecs_wifi_packet(len, rate, 0);
+				nfo->add_cbt_sample(usec);
+			}
 		}
 	}
 }
@@ -148,6 +151,7 @@ void EmpowerCQM::update_link_table(EtherAddress ta, uint8_t iface_id, uint16_t s
 		nfo->cqm = this;
 		nfo->sourceAddr = ta;
 		nfo->iface_id = iface_id;
+		nfo->samples = _samples;
 		nfo->lastEstimateTime = Timestamp::now();
 		nfo->currentTime = Timestamp::now();
 		nfo->lastSeqNum = seq - 1;

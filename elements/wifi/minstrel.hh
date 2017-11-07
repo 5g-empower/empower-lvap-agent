@@ -5,6 +5,7 @@
 #include <click/bighashmap.hh>
 #include <click/glue.hh>
 #include <click/timer.hh>
+#include <click/hashtable.hh>
 #include <elements/wifi/bitrate.hh>
 #include "transmissionpolicies.hh"
 CLICK_DECLS
@@ -149,6 +150,9 @@ public:
 typedef HashMap<EtherAddress, MinstrelDstInfo> MinstrelNeighborTable;
 typedef MinstrelNeighborTable::iterator MinstrelIter;
 
+typedef HashTable<uint8_t, uint32_t> TTime;
+typedef TTime::iterator TTimeIter;
+
 class Minstrel : public Element { public:
 
 	Minstrel();
@@ -177,11 +181,24 @@ class Minstrel : public Element { public:
 	TransmissionPolicies * tx_policies() { return _tx_policies; }
 	bool forget_station(EtherAddress addr) { return _neighbors.erase(addr); }
 
+	MinstrelDstInfo * insert_neighbor(EtherAddress dst, TxPolicyInfo * txp) {
+		MinstrelDstInfo *nfo;
+		if (txp->_ht_mcs.size()) {
+			_neighbors.insert(dst, MinstrelDstInfo(dst, txp->_ht_mcs, true));
+			nfo = _neighbors.findp(dst);
+		} else {
+			_neighbors.insert(dst, MinstrelDstInfo(dst, txp->_mcs, false));
+			nfo = _neighbors.findp(dst);
+		}
+		return nfo;
+	}
+
 private:
 
 	MinstrelNeighborTable _neighbors;
 	TransmissionPolicies * _tx_policies;
 	Timer _timer;
+	TTime _transm_time;
 
 	unsigned _lookaround_rate;
 	unsigned _offset;

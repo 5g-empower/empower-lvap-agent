@@ -30,65 +30,75 @@ enum empower_packet_types {
     EMPOWER_PT_STATUS_LVAP = 0x13,      // wtp -> ac
     EMPOWER_PT_SET_PORT= 0x14,          // ac -> wtp
     EMPOWER_PT_STATUS_PORT = 0x15,      // wtp -> ac
-    EMPOWER_PT_CAPS = 0x16,             // wtp -> ac
+	EMPOWER_PT_CAPS_REQUEST = 0x16,     // ac -> wtp
+    EMPOWER_PT_CAPS_RESPONSE = 0x17,    // wtp -> ac
 
     // Packet/Bytes counters
-    EMPOWER_PT_COUNTERS_REQUEST = 0x17,         // ac -> wtp
-    EMPOWER_PT_COUNTERS_RESPONSE = 0x18,        // wtp -> ac
+    EMPOWER_PT_COUNTERS_REQUEST = 0x18,         // ac -> wtp
+    EMPOWER_PT_COUNTERS_RESPONSE = 0x19,        // wtp -> ac
 
     // Triggers
-    EMPOWER_PT_ADD_RSSI_TRIGGER = 0x19, 		// ac -> wtp
-    EMPOWER_PT_RSSI_TRIGGER = 0x20,     		// ac -> wtp
-    EMPOWER_PT_DEL_RSSI_TRIGGER = 0x21, 		// ac -> wtp
+    EMPOWER_PT_ADD_RSSI_TRIGGER = 0x20, 		// ac -> wtp
+    EMPOWER_PT_RSSI_TRIGGER = 0x21,     		// ac -> wtp
+    EMPOWER_PT_DEL_RSSI_TRIGGER = 0x22, 		// ac -> wtp
 
-    EMPOWER_PT_ADD_SUMMARY_TRIGGER = 0x22, 		// ac -> wtp
-    EMPOWER_PT_SUMMARY_TRIGGER = 0x23,     		// ac -> wtp
-    EMPOWER_PT_DEL_SUMMARY_TRIGGER = 0x24, 		// ac -> wtp
+    EMPOWER_PT_ADD_SUMMARY_TRIGGER = 0x23, 		// ac -> wtp
+    EMPOWER_PT_SUMMARY_TRIGGER = 0x24,     		// ac -> wtp
+    EMPOWER_PT_DEL_SUMMARY_TRIGGER = 0x25, 		// ac -> wtp
 
-    EMPOWER_PT_ADD_BUSYNESS_TRIGGER = 0x38, 	// ac -> wtp
-    EMPOWER_PT_BUSYNESS_TRIGGER = 0x39,     	// ac -> wtp
-    EMPOWER_PT_DEL_BUSYNESS_TRIGGER = 0x40, 	// ac -> wtp
+    EMPOWER_PT_ADD_BUSYNESS_TRIGGER = 0x39, 	// ac -> wtp
+    EMPOWER_PT_BUSYNESS_TRIGGER = 0x40,     	// ac -> wtp
+    EMPOWER_PT_DEL_BUSYNESS_TRIGGER = 0x41, 	// ac -> wtp
 
     // Channel Quality Maps
-    EMPOWER_PT_UCQM_REQUEST = 0x25,     		// ac -> wtp
-    EMPOWER_PT_UCQM_RESPONSE = 0x26,    		// wtp -> ac
+    EMPOWER_PT_UCQM_REQUEST = 0x26,     		// ac -> wtp
+    EMPOWER_PT_UCQM_RESPONSE = 0x27,    		// wtp -> ac
 
-    EMPOWER_PT_NCQM_REQUEST = 0x27,     		// ac -> wtp
-    EMPOWER_PT_NCQM_RESPONSE = 0x28,    		// wtp -> ac
+    EMPOWER_PT_NCQM_REQUEST = 0x28,     		// ac -> wtp
+    EMPOWER_PT_NCQM_RESPONSE = 0x29,    		// wtp -> ac
 
     // Link Stats
-    EMPOWER_PT_LVAP_STATS_REQUEST = 0x29,   	// ac -> wtp
-    EMPOWER_PT_LVAP_STATS_RESPONSE = 0x30,  	// wtp -> ac
+    EMPOWER_PT_LVAP_STATS_REQUEST = 0x30,   	// ac -> wtp
+    EMPOWER_PT_LVAP_STATS_RESPONSE = 0x31,  	// wtp -> ac
 
     // VAPs
-    EMPOWER_PT_ADD_VAP = 0x31,         			// ac -> wtp
-    EMPOWER_PT_DEL_VAP = 0x32,         			// ac -> wtp
-    EMPOWER_PT_STATUS_VAP = 0x33,      			// wtp -> ac
+    EMPOWER_PT_ADD_VAP = 0x32,         			// ac -> wtp
+    EMPOWER_PT_DEL_VAP = 0x33,         			// ac -> wtp
+    EMPOWER_PT_STATUS_VAP = 0x34,      			// wtp -> ac
 
     // MCAST Packet/Bytes counters
-    EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x34,		// ac -> wtp
-    EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x35,	// wtp -> ac
+    EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x35,		// ac -> wtp
+    EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x36,	// wtp -> ac
 
     // Busyness
-    EMPOWER_PT_BUSYNESS_REQUEST = 0x36,			// ac -> wtp
-    EMPOWER_PT_BUSYNESS_RESPONSE = 0x37,		// wtp -> ac
+    EMPOWER_PT_BUSYNESS_REQUEST = 0x37,			// ac -> wtp
+    EMPOWER_PT_BUSYNESS_RESPONSE = 0x38,		// wtp -> ac
 
     // WTP Packet/Bytes counters
-    EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x41,     // ac -> wtp
-    EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x42,    // wtp -> ac
+    EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x42,     // ac -> wtp
+    EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x43,    // wtp -> ac
 
 	// P_CQM
-	EMPOWER_PT_CQM_LINKS_REQUEST = 0x43,        // ac -> wtp
-	EMPOWER_PT_CQM_LINKS_RESPONSE = 0x44,       // ac -> wtp
+	EMPOWER_PT_CQM_LINKS_REQUEST = 0x44,        // ac -> wtp
+	EMPOWER_PT_CQM_LINKS_RESPONSE = 0x45,       // ac -> wtp
 
 	// Multicast address transmission policies
-	EMPOWER_PT_INCOM_MCAST_REQUEST = 0x45,		// wtp -> ac
-	EMPOWER_PT_INCOM_MCAST_RESPONSE = 0x46,		// ac -> wtp
+	EMPOWER_PT_INCOM_MCAST_REQUEST = 0x46,		// wtp -> ac
+	EMPOWER_PT_INCOM_MCAST_RESPONSE = 0x47,		// ac -> wtp
 
 	// IGMP messages
-	EMPOWER_PT_IGMP_REQUEST = 0x47,				// wtp -> ac
-	EMPOWER_PT_DEL_MCAST_ADDR = 0x48,			// ac -> wtp
-	EMPOWER_PT_DEL_MCAST_RECEIVER = 0x49		// ac -> wtp
+	EMPOWER_PT_IGMP_REQUEST = 0x48,				// wtp -> ac
+	EMPOWER_PT_DEL_MCAST_ADDR = 0x49,			// ac -> wtp
+	EMPOWER_PT_DEL_MCAST_RECEIVER = 0x50,		// ac -> wtp
+
+	// ADD/DEL response messages
+    EMPOWER_PT_ADD_LVAP_RESPONSE = 0x51,        // ac -> wtp
+    EMPOWER_PT_DEL_LVAP_RESPONSE = 0x52,        // ac -> wtp
+
+	// STATUSES requests
+	EMPOWER_PT_LVAP_STATUS_REQ = 0x53,			// ac -> wtp
+	EMPOWER_PT_VAP_STATUS_REQ = 0x54,			// ac -> wtp
+	EMPOWER_PT_PORT_STATUS_REQ = 0x55,			// ac -> wtp
 
 };
 
@@ -123,27 +133,31 @@ struct empower_hello : public empower_header {
 /* probe request packet format */
 struct empower_probe_request : public empower_header {
   private:
-    uint8_t _wtp[6];	/* EtherAddress */
-    uint8_t _sta[6];	/* EtherAddress */
-    uint8_t _hwaddr[6]; /* EtherAddress */
-    uint8_t _channel;	/* WiFi channel (int) */
-    uint8_t _band;		/* WiFi band (empower_bands_types) */
-    char    _ssid[];    /* SSID (string) */
+    uint8_t _wtp[6];			/* EtherAddress */
+    uint8_t _sta[6];			/* EtherAddress */
+    uint8_t _hwaddr[6];			/* EtherAddress */
+    uint8_t _channel;			/* WiFi channel (int) */
+    uint8_t _band;				/* WiFi band (empower_bands_types) */
+    uint8_t _supported_band;	/* WiFi band supported by client (empower_bands_types) */
+    char    _ssid[];    		/* SSID (string) */
   public:
-    void set_hwaddr(EtherAddress hwaddr) { memcpy(_hwaddr, hwaddr.data(), 6); }
-    void set_band(uint8_t band)          { _band = band; }
-    void set_channel(uint8_t channel)    { _channel = channel; }
-    void set_wtp(EtherAddress wtp)       { memcpy(_wtp, wtp.data(), 6); }
-    void set_sta(EtherAddress sta)       { memcpy(_sta, sta.data(), 6); }
-    void set_ssid(String ssid)           { memcpy(&_ssid, ssid.data(), ssid.length()); }
+    void set_hwaddr(EtherAddress hwaddr) 			{ memcpy(_hwaddr, hwaddr.data(), 6); }
+    void set_band(uint8_t band)          			{ _band = band; }
+    void set_supported_band(uint8_t supported_band)	{ _supported_band = supported_band; }
+    void set_channel(uint8_t channel)    			{ _channel = channel; }
+    void set_wtp(EtherAddress wtp)       			{ memcpy(_wtp, wtp.data(), 6); }
+    void set_sta(EtherAddress sta)       			{ memcpy(_sta, sta.data(), 6); }
+    void set_ssid(String ssid)           			{ memcpy(&_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* probe response packet format */
 struct empower_probe_response : public empower_header {
   private:
     uint8_t _sta[6]; /* EtherAddress */
+    char    _ssid[];    /* SSID (string) */
   public:
-    EtherAddress sta() { return EtherAddress(_sta); }
+    EtherAddress sta()	{ return EtherAddress(_sta); }
+    String ssid()		{ int len = length() - 16; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* auth request packet format */
@@ -175,6 +189,7 @@ struct empower_assoc_request : public empower_header {
     uint8_t _hwaddr[6]; /* EtherAddress */
     uint8_t _channel;	/* WiFi channel (int) */
     uint8_t _band;		/* WiFi band (empower_bands_types) */
+    uint8_t _supported_band;	/* WiFi band supported by client (empower_bands_types) */
     char    _ssid[];	/* SSID (String) */
   public:
     void set_wtp(EtherAddress wtp)     { memcpy(_wtp, wtp.data(), 6); }
@@ -184,6 +199,7 @@ struct empower_assoc_request : public empower_header {
     void set_hwaddr(EtherAddress hwaddr) { memcpy(_hwaddr, hwaddr.data(), 6); }
     void set_band(uint8_t band)          { _band = band; }
     void set_channel(uint8_t channel)    { _channel = channel; }
+    void set_supported_band(uint8_t supported_band)	{ _supported_band = supported_band; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* association response packet format */
@@ -450,39 +466,67 @@ struct ssid_entry {
     void    set_ssid(String ssid)      { memset(_ssid, 0, _length); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* add vap packet format */
+/* add lvap packet format */
 struct empower_add_lvap : public empower_header {
 private:
-    uint16_t	 _group;			/* lvap group */
+	uint32_t	 _module_id;		/* Transaction id */
 	uint16_t     _flags;			/* Flags (empower_packet_flags) */
     uint16_t     _assoc_id;			/* Association id */
     uint8_t      _hwaddr[6];		/* EtherAddress */
     uint8_t      _channel;			/* WiFi channel (int) */
     uint8_t      _band;				/* WiFi band (empower_band_types) */
+    uint8_t      _supported_band;	/* WiFi band supported by client(empower_band_types) */
     uint8_t      _sta[6];			/* EtherAddress */
     uint8_t      _encap[6];			/* EtherAddress */
     uint8_t      _net_bssid[6];		/* EtherAddress */
     uint8_t      _lvap_bssid[6];	/* EtherAddress */
     ssid_entry * _ssids[];			/* SSIDs (ssid_entry) */
 public:
-    uint16_t     group()      { return ntohs(_group); }
-    uint8_t      band()       { return _band; }
-    uint8_t      channel()    { return _channel; }
-    bool         flag(int f)  { return ntohs(_flags) & f;  }
-    uint16_t     assoc_id()   { return ntohs(_assoc_id); }
-    EtherAddress sta()        { return EtherAddress(_sta); }
-    EtherAddress hwaddr()     { return EtherAddress(_hwaddr); }
-    EtherAddress encap()      { return EtherAddress(_encap); }
-    EtherAddress net_bssid()  { return EtherAddress(_net_bssid); }
-    EtherAddress lvap_bssid() { return EtherAddress(_lvap_bssid); }
+    uint32_t     module_id()   		{ return ntohl(_module_id); }
+    uint8_t      band()       		{ return _band; }
+    uint8_t      supported_band()	{ return _supported_band; }
+    uint8_t      channel()    		{ return _channel; }
+    bool         flag(int f)  		{ return ntohs(_flags) & f;  }
+    uint16_t     assoc_id()  		{ return ntohs(_assoc_id); }
+    EtherAddress sta()        		{ return EtherAddress(_sta); }
+    EtherAddress hwaddr()     		{ return EtherAddress(_hwaddr); }
+    EtherAddress encap()      		{ return EtherAddress(_encap); }
+    EtherAddress net_bssid()  		{ return EtherAddress(_net_bssid); }
+    EtherAddress lvap_bssid() 		{ return EtherAddress(_lvap_bssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* del vap packet format */
+/* del lvap packet format */
 struct empower_del_lvap : public empower_header {
   private:
-    uint8_t _sta[6]; /* EtherAddress */
+	uint32_t _module_id;		/* Transaction id */
+    uint8_t _sta[6]; 			/* EtherAddress */
+    uint8_t _target_hwaddr[6];	/* EtherAddress */
+    uint8_t _target_channel;	/* WiFi channel (int) */
+    uint8_t _target_band;		/* WiFi band (empower_band_types) */
+    uint8_t _csa_switch_mode;
+    uint8_t _csa_switch_count;
   public:
-    EtherAddress sta() { return EtherAddress(_sta); }
+    uint32_t module_id()   			{ return ntohl(_module_id); }
+    EtherAddress sta() 				{ return EtherAddress(_sta); }
+    uint8_t csa_switch_mode()		{ return _csa_switch_mode; }
+    uint8_t csa_switch_count()		{ return _csa_switch_count; }
+    uint8_t target_band()       	{ return _target_band; }
+    uint8_t target_channel()    	{ return _target_channel; }
+    EtherAddress target_hwaddr()	{ return EtherAddress(_target_hwaddr); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* lvap add/del response packet format */
+struct empower_add_del_lvap_response : public empower_header {
+private:
+    uint8_t  _wtp[6];			/* EtherAddress */
+    uint8_t  _sta[6];			/* EtherAddress */
+	uint32_t _module_id;		/* Transaction id */
+	uint32_t _status;			/* Status code */
+public:
+    void set_sta(EtherAddress sta)          { memcpy(_sta, sta.data(), 6); }
+    void set_module_id(uint32_t module_id)	{ _module_id = htonl(module_id); }
+    void set_status(uint32_t status)		{ _status = htonl(status); }
+    void set_wtp(EtherAddress wtp)          { memcpy(_wtp, wtp.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap status packet format */
@@ -496,6 +540,7 @@ private:
     uint8_t      _hwaddr[6];		/* EtherAddress */
     uint8_t      _channel;			/* WiFi channel (int) */
     uint8_t      _band;				/* WiFi band (empower_band_types) */
+    uint8_t      _supported_band;	/* WiFi band supported by client (empower_band_types) */
     uint8_t      _net_bssid[6];		/* EtherAddress */
     uint8_t      _lvap_bssid[6];	/* EtherAddress */
     ssid_entry  *_ssids[];			/* SSIDs (ssid_entry) */
@@ -510,6 +555,7 @@ public:
     void set_encap(EtherAddress encap)      { memcpy(_encap, encap.data(), 6); }
     void set_net_bssid(EtherAddress bssid)  { memcpy(_net_bssid, bssid.data(), 6); }
     void set_lvap_bssid(EtherAddress bssid) { memcpy(_lvap_bssid, bssid.data(), 6); }
+    void set_supported_band(uint8_t supported_band)	{ _supported_band = supported_band; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* set port packet format */
@@ -791,14 +837,16 @@ public:
 struct empower_cqm_link {
   private:
     uint8_t  _ta[6]; 					/* EtherAddress */
-    uint32_t _p_pdr;  					/* p_pdr [0-18000] */
+    uint32_t _p_channel_busy_fraction;	/* p_channel_busy_fraction [0-18000] */
+    uint32_t _p_throughput;				/* p_throughput [0-18000] */
     uint32_t _p_available_bw;			/* p_available_bw [0-18000] */
-    uint32_t _p_throughput;				/* p_available_bw [0-18000] */
-    uint32_t _p_channel_busy_fraction;	/* p_available_bw [0-18000] */
+    uint32_t _p_pdr;  					/* p_pdr [0-18000] */
+    uint32_t _p_attainable_throughput;	/* p_available_bw [0-18000] */
   public:
     void set_p_pdr(uint32_t p_pdr) 										{ _p_pdr = htonl(p_pdr); }
     void set_p_available_bw(uint32_t p_available_bw) 					{ _p_available_bw = htonl(p_available_bw); }
     void set_p_throughput(uint32_t p_throughput) 						{ _p_throughput = htonl(p_throughput); }
+    void set_p_attainable_throughput(uint32_t p_attainable_throughput) 	{ _p_attainable_throughput = htonl(p_attainable_throughput); }
     void set_p_channel_busy_fraction(uint32_t p_channel_busy_fraction) 	{ _p_channel_busy_fraction = htonl(p_channel_busy_fraction); }
     void set_ta(EtherAddress ta)   					   			 		{ memcpy(_ta, ta.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;

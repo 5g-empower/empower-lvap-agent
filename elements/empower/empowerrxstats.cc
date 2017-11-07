@@ -149,13 +149,6 @@ void EmpowerRXStats::run_timer(Timer *) {
 		// Update busyness
 		BusynessInfo *nfo = &iter.value();
 		nfo->update();
-		// print busyness table
-		if (_debug) {
-			click_chatter("%{element} :: %s :: %s",
-						  this,
-						  __func__,
-						  nfo->unparse().c_str());
-		}
 		// Delete stale entries
 		if (nfo->_silent_window_count > _max_silent_window_count) {
 			iter = busyness.erase(iter);

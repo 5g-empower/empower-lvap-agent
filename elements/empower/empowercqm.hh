@@ -71,6 +71,7 @@ private:
 	Timer _timer;
 
 	unsigned _period; // in ms
+	unsigned _samples; // in #
 	unsigned _max_silent_window_count; // in number of windows
     double _rssi_threshold; // threshold for rssi cdf
 
@@ -80,7 +81,7 @@ private:
 	static String read_handler(Element *, void *);
 
 	void update_link_table(EtherAddress, uint8_t, uint16_t, uint32_t, uint8_t);
-	void update_channel_busy_time(uint8_t, uint32_t, uint8_t);
+	void update_channel_busy_time(uint8_t, EtherAddress, uint32_t, uint8_t);
 
 };
 
