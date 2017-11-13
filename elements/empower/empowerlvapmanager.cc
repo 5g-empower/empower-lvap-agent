@@ -1353,7 +1353,9 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state->_del_lvap_module_id = 0;
 
 		_sta2lvaps.find_insert(sta, state);
-		_bssid2lvaps.find_insert(lvap_bssid, state);
+		if(state->_lvap_bssid == state->_net_bssid)	// update the hashtable only if not shared configuration
+			_bssid2lvaps.find_insert(lvap_bssid, state);
+
 
 		/* Regenerate the BSSID mask */
 		compute_bssid_mask();
@@ -1659,7 +1661,9 @@ int EmpowerLVAPManager::remove_lvap(EmpowerStationState *ess) {
 
 	// Erase lvap
 	_sta2lvaps.erase(_sta2lvaps.find(ess->_sta));
-	_bssid2lvaps.erase(_bssid2lvaps.find(ess->_lvap_bssid));
+	if(ess->_lvap_bssid == ess->_net_bssid)
+		_bssid2lvaps.erase(_bssid2lvaps.find(ess->_lvap_bssid));
+
 
 	// Remove this VAP's BSSID from the mask
 	compute_bssid_mask();
