@@ -27,6 +27,9 @@
 #define GTP_SNP 0x02           /* Sequence Number Present */
 #define GTP_NPDUNP 0x01        /* N-PDU Number Present */
 
+#define GPDU_TYPE 255
+#define GTP_HEADER_LEN 8
+
 struct click_gtp {
   uint8_t flags; /* As seen above */
   uint8_t message_type; /* GTP message type */

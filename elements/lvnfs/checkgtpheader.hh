@@ -19,7 +19,6 @@
 #define CLICK_CHECKGTPHEADER_HH
 #include <click/element.hh>
 #include <click/atomic.hh>
-#include GPDU_TYPE 255
 CLICK_DECLS
 
 class CheckGTPHeader : public Element { public:
