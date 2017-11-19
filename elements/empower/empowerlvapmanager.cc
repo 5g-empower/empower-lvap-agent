@@ -1222,6 +1222,13 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		/* Regenerate the BSSID mask */
 		compute_bssid_mask();
 
+		/* trigger vap join message */
+		if (ssid != "") {
+			for (int i = 0; i < _eqms.size(); i++) {
+				_eqms[i]->create_traffic_rule(ssid, 0);
+			}
+		}
+
 		return 0;
 
 	}

@@ -49,21 +49,8 @@ class AggregationQueue {
 
 public:
 
-	ReadWriteLock _queue_lock;
-	Packet** _q;
-
-	uint32_t _capacity;
-	EtherAddress _ra;
-	EtherAddress _ta;
-	EtherAddress _sa;
-	uint32_t _size;
-	uint32_t _bsize;
-	uint32_t _drops;
-	uint32_t _head;
-	uint32_t _tail;
-
 	AggregationQueue(uint32_t capacity, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
-		_q = new Packet*[_capacity];
+		_q = new Packet*[capacity];
 		_capacity = capacity;
 		_ra = ra;
 		_ta = ta;
@@ -87,7 +74,6 @@ public:
 		_queue_lock.acquire_write();
 		for (uint32_t i = 0; i < _capacity; i++) {
 			if (_q[i]) {
-				click_chatter("nothing to seeeee....");
 				_q[i]->kill();
 			}
 		}
@@ -106,21 +92,20 @@ public:
 			_size--;
 		}
 		_queue_lock.release_write();
-		return (p);
+		if (p) {
+			return wifi_encap(p, _ra, _sa, _ta);
+		}
+		return 0;
 	}
 
 	bool push(Packet* p) {
-		if (p->shared()) {
-			click_chatter("is shared");
-		}
-		return false;
 		bool result = false;
 		_queue_lock.acquire_write();
 		if (_size == _capacity) {
 			_drops++;
 			result = false;
 		} else {
-			_q[_tail] = 0;
+			_q[_tail] = p;
 			_tail++;
 			_tail %= _capacity;
 			_size++;
@@ -130,17 +115,32 @@ public:
 		return result;
 	}
 
-	const Packet* top() {
-		Packet* p = 0;
-		_queue_lock.acquire_write();
-		if (_head != _tail) {
-			p = _q[(_head + 1) % _capacity];
-		}
-		_queue_lock.release_write();
-		return p;
-	}
+    const Packet* top() {
+      Packet* p = 0;
+      _queue_lock.acquire_write();
+      if(_head != _tail) {
+        p = _q[(_head+1) % _capacity];
+      }
+      _queue_lock.release_write();
+      return p;
+    }
 
-    /*Packet * wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
+private:
+
+	ReadWriteLock _queue_lock;
+	Packet** _q;
+
+	uint32_t _capacity;
+	EtherAddress _ra;
+	EtherAddress _ta;
+	EtherAddress _sa;
+	uint32_t _size;
+	uint32_t _bsize;
+	uint32_t _drops;
+	uint32_t _head;
+	uint32_t _tail;
+
+    Packet * wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
 
         WritablePacket *q = p->uniqueify();
 
@@ -185,73 +185,13 @@ public:
 
 		return q;
 
-    }*/
+    }
 };
 
 typedef HashTable<EtherAddress, AggregationQueue*> AggregationQueues;
 typedef AggregationQueues::iterator AQIter;
 
 class EmpowerQOSManager;
-
-class TrafficRuleQueue {
-
-  public:
-
-    TrafficRuleQueue(String ssid, int dscp, uint32_t capacity) : _ssid(ssid), _dscp(dscp), _capacity(capacity) {}
-    ~TrafficRuleQueue() {}
-
-    bool enqueue(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
-
-    		bool result = false;
-
-		_queue_lock.acquire_write();
-
-		if (_queues.find(ra) == _queues.end()) {
-
-			click_chatter("TrafficRuleQueue :: enqueue :: creating new aggregation queue for ra %s sa %s ta %s",
-						  ra.unparse().c_str(),
-						  sa.unparse().c_str(),
-						  ta.unparse().c_str());
-
-			AggregationQueue *queue = new AggregationQueue(_capacity, ra, sa, ta);
-			_queues.set(ra, queue);
-
-		}
-
-		AggregationQueue *queue = _queues.get(ra);
-		result = queue->push(p);
-
-		_queue_lock.release_write();
-
-		return result;
-
-    }
-
-	String unparse() {
-		StringAccum result;
-		_queue_lock.acquire_read();
-		result << _ssid << "/" << _dscp << " -> capacity: " << _capacity
-				<< "\n";
-		AQIter itr = _queues.begin();
-		while (itr != _queues.end()) {
-			AggregationQueue *aq = itr.value();
-			result << "  " << aq->unparse();
-			itr++;
-		} // end while
-		_queue_lock.release_read();
-		return result.take_string();
-	}
-
-  private:
-
-    ReadWriteLock _queue_lock;
-	AggregationQueues _queues;
-
-	String _ssid;
-	int _dscp;
-    uint32_t _capacity;
-
-};
 
 class TrafficRule {
   public:
@@ -273,10 +213,119 @@ class TrafficRule {
     		return (other._ssid == _ssid && other._dscp == _dscp);
     }
 
+    inline bool operator!=(TrafficRule other) const {
+    		return (other._ssid != _ssid || other._dscp != _dscp);
+    }
+
+	String unparse() {
+		StringAccum result;
+		result << _ssid << ":" << _dscp;
+		return result.take_string();
+	}
+
+};
+
+class TrafficRuleQueue {
+
+  public:
+
+    AggregationQueues _queues;
+	Vector<EtherAddress> _active_list;
+
+	TrafficRule _tr;
+    uint32_t _capacity;
+    uint32_t _deficit;
+    uint32_t _quantum;
+
+    uint32_t _drops; // packets dropped because of full queue
+    uint32_t _bdrops; // bytes dropped
+
+    TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum) : _tr(tr), _capacity(capacity), _deficit(0), _quantum(quantum), _drops(0), _bdrops(0) {}
+    ~TrafficRuleQueue() {}
+
+    bool enqueue(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
+
+		if (_queues.find(ra) == _queues.end()) {
+
+			click_chatter("%s :: creating new aggregation queue for ra %s sa %s ta %s",
+					      _tr.unparse().c_str(),
+						  ra.unparse().c_str(),
+						  sa.unparse().c_str(),
+						  ta.unparse().c_str());
+
+			AggregationQueue *queue = new AggregationQueue(_capacity, ra, sa, ta);
+			_queues.set(ra, queue);
+			_active_list.push_back(ra);
+
+		}
+
+		if (_queues.get(ra)->push(p)) {
+			// check if ra is in active list
+			if (find(_active_list.begin(), _active_list.end(), ra) == _active_list.end()) {
+				_active_list.push_back(ra);
+			}
+			return true;
+		}
+
+		_drops++;
+		_bdrops+=p->length();
+
+		return false;
+
+    }
+
+    Packet *dequeue() {
+
+		if (_active_list.empty()) {
+			return 0;
+		}
+
+		EtherAddress ra = _active_list[0];
+		_active_list.pop_front();
+
+		AQIter active = _queues.find(ra);
+		AggregationQueue* queue = active.value();
+
+		Packet *p = queue->pull();
+
+		if (!p) {
+			return dequeue();
+		}
+
+		_active_list.push_back(ra);
+
+		return p;
+
+    }
+
+	String unparse() {
+
+		StringAccum result;
+
+		result << _tr.unparse() << " -> capacity: " << _capacity << "\n";
+
+		AQIter itr = _queues.begin();
+
+		while (itr != _queues.end()) {
+
+			AggregationQueue *aq = itr.value();
+			result << "  " << aq->unparse();
+
+			itr++;
+
+		}
+
+		return result.take_string();
+
+	}
+
 };
 
 typedef HashTable<TrafficRule, TrafficRuleQueue*> TrafficRules;
 typedef TrafficRules::iterator TRIter;
+
+typedef HashTable<TrafficRule, Packet*> HeadTable;
+typedef HeadTable::iterator HItr;
 
 class EmpowerQOSManager: public SimpleQueue {
 public:
@@ -306,15 +355,19 @@ private:
 	class Minstrel * _rc;
 
 	TrafficRules _rules;
+    HeadTable _head_table;
+	Vector<TrafficRule> _active_list;
 
     int _sleepiness;
     uint32_t _capacity;
+    uint32_t _quantum;
 
     bool _debug;
 
 	void enqueue(String, int, Packet *, EtherAddress, EtherAddress, EtherAddress);
 
 	String list_queues();
+	uint32_t compute_deficit(Packet *);
 
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);

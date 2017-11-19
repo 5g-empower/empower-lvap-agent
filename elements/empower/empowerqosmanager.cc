@@ -33,7 +33,7 @@
 CLICK_DECLS
 
 EmpowerQOSManager::EmpowerQOSManager() :
-		_el(0), _rc(0), _sleepiness(0), _capacity(500), _debug(false) {
+		_el(0), _rc(0), _sleepiness(0), _capacity(500), _quantum(1470), _debug(false) {
 }
 
 EmpowerQOSManager::~EmpowerQOSManager() {
@@ -92,16 +92,16 @@ EmpowerQOSManager::push(int, Packet *p) {
 	// this element, then we lookup the traffic rule queue and enqueue the Ethernet packet with all the info
 	// necessary later to build the wifi frame.
 	if (!dst.is_broadcast() && !dst.is_group()) {
-        EmpowerStationState *ess = _el->get_ess(dst);
-        if (!ess) {
+		EmpowerStationState *ess = _el->get_ess(dst);
+		if (!ess) {
 			p->kill();
 			return;
 		}
-        if (ess->_iface_id != iface_id) {
-				p->kill();
-				return;
-        }
-        if (!ess->_set_mask) {
+		if (ess->_iface_id != iface_id) {
+			p->kill();
+			return;
+		}
+		if (!ess->_set_mask) {
 			p->kill();
 			return;
 		}
@@ -148,7 +148,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 			if (!it.value()._association_status) {
 				continue;
 			}
-	        Packet *q = p->clone();
+			Packet *q = p->clone();
 			enqueue(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
 		}
 
@@ -175,7 +175,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 			if (it.value()._lvap_bssid != it.value()._net_bssid) {
 				continue;
 			}
-	        Packet *q = p->clone();
+			Packet *q = p->clone();
 			enqueue(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
 		}
 
@@ -184,7 +184,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 			if (it.value()._iface_id != iface_id) {
 				continue;
 			}
-	        Packet *q = p->clone();
+			Packet *q = p->clone();
 			enqueue(it.value()._ssid, dscp, q, dst, src, it.value()._net_bssid);
 		}
 
@@ -207,16 +207,66 @@ void EmpowerQOSManager::enqueue(String ssid, int dscp, Packet *q, EtherAddress r
 	TrafficRuleQueue *trq = _rules.get(tr);
 
 	if (trq->enqueue(q, ra, sa, ta)) {
+		// check if tr is in active list
+		if (find(_active_list.begin(), _active_list.end(), tr) == _active_list.end()) {
+			_active_list.push_back(tr);
+		}
+		// wake up queue
 		_empty_note.wake();
+		// reset sleepiness
+		_sleepiness = 0;
 	} else {
 		q->kill();
 	}
 
 }
 
+uint32_t EmpowerQOSManager::compute_deficit(Packet *p) {
+	return p->length();
+}
+
 Packet * EmpowerQOSManager::pull(int) {
-	_empty_note.sleep();
+
+	if (_active_list.empty()) {
+		if (++_sleepiness == SLEEPINESS_TRIGGER) {
+			_empty_note.sleep();
+		}
+		return 0;
+	}
+
+	TrafficRule tr = _active_list[0];
+	_active_list.pop_front();
+
+	TRIter active = _rules.find(tr);
+	HItr head = _head_table.find(tr);
+	TrafficRuleQueue* queue = active.value();
+	queue->_deficit += _quantum;
+
+	Packet *p = 0;
+	if (head.value()) {
+		p = head.value();
+		_head_table.set(tr, 0);
+	} else {
+		p = queue->dequeue();
+	}
+
+	if (!p) {
+		queue->_deficit = 0;
+	} else if (compute_deficit(p) <= queue->_deficit) {
+		queue->_deficit -= compute_deficit(p);
+		_active_list.push_front(tr);
+		return p;
+	} else {
+		_head_table.set(tr, p);
+		_active_list.push_back(tr);
+	}
+
+	if (++_sleepiness == SLEEPINESS_TRIGGER) {
+		_empty_note.sleep();
+	}
+
 	return 0;
+
 }
 
 void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp) {
@@ -227,15 +277,17 @@ void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp) {
 					  __func__,
 					  ssid.c_str(),
 					  dscp);
-		TrafficRuleQueue *queue = new TrafficRuleQueue(ssid, dscp, _capacity);
+		TrafficRuleQueue *queue = new TrafficRuleQueue(tr, _capacity, _quantum);
 		_rules.set(tr, queue);
+		_head_table.set(tr, 0);
+		_active_list.push_back(tr);
 	}
 }
 
 String EmpowerQOSManager::list_queues() {
 	StringAccum result;
 	TRIter itr = _rules.begin();
-	while(itr != _rules.end()) {
+	while (itr != _rules.end()) {
 		TrafficRuleQueue *trq = itr.value();
 		result << trq->unparse();
 		itr++;
@@ -251,7 +303,7 @@ String EmpowerQOSManager::read_handler(Element *e, void *thunk) {
 	EmpowerQOSManager *td = (EmpowerQOSManager *) e;
 	switch ((uintptr_t) thunk) {
 	case H_QUEUES:
-		return(td->list_queues());
+		return (td->list_queues());
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
 	default:
@@ -259,12 +311,9 @@ String EmpowerQOSManager::read_handler(Element *e, void *thunk) {
 	}
 }
 
-int EmpowerQOSManager::write_handler(const String &in_s, Element *e,
-		void *vparam, ErrorHandler *errh) {
-
+int EmpowerQOSManager::write_handler(const String &in_s, Element *e, void *vparam, ErrorHandler *errh) {
 	EmpowerQOSManager *f = (EmpowerQOSManager *) e;
 	String s = cp_uncomment(in_s);
-
 	switch ((intptr_t) vparam) {
 	case H_DEBUG: {    //debug
 		bool debug;
