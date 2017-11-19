@@ -3,9 +3,10 @@
 #include <clicknet/wifi.h>
 
 // MCS data rates (kbps)
-static const uint32_t mcs_rate_lookup[8] =
+static const uint32_t mcs_rate_lookup[16] =
 {
-6500, 13000, 19500, 26000, 39000, 52000, 58500, 65000
+6500, 13000, 19500, 26000, 39000, 52000, 58500, 65000,
+13000, 26000, 39000, 52000, 78000, 104000, 117000, 130000
 };
 
 unsigned
@@ -79,7 +80,7 @@ calc_backoff_ht(int, int t)
 unsigned
 calc_usecs_wifi_packet_tries_ht(int length, int rate, int try0, int tryN)
 {
-	if (!rate || !length || try0 > tryN) {
+	if (rate < 0 || !length || try0 > tryN) {
 		return 99999;
 	}
 	int tt = 0;
