@@ -84,6 +84,7 @@ typedef HashTable<uint16_t, uint32_t> CBytes;
 typedef CBytes::iterator CBytesIter;
 
 class Minstrel;
+class EmpowerQOSManager;
 
 class NetworkPort {
 public:
@@ -363,6 +364,7 @@ private:
 	VAP _vaps;
 	Vector<EtherAddress> _masks;
 	Vector<Minstrel *> _rcs;
+	Vector<EmpowerQOSManager *> _eqms;
 	Vector<String> _debugfs_strings;
 	Timer _timer;
 	uint32_t _seq;

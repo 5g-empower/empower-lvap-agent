@@ -33,7 +33,7 @@
 CLICK_DECLS
 
 EmpowerQOSManager::EmpowerQOSManager() :
-		_el(0), _debug(false) {
+		_el(0), _rc(0), _sleepiness(0), _capacity(500), _debug(false) {
 }
 
 EmpowerQOSManager::~EmpowerQOSManager() {
@@ -44,9 +44,19 @@ int EmpowerQOSManager::configure(Vector<String> &conf,
 
 	return Args(conf, this, errh)
 			.read_m("EL", ElementCastArg("EmpowerLVAPManager"), _el)
+			.read_m("RC", ElementCastArg("Minstrel"), _rc)
 			.read("DEBUG", _debug)
 			.complete();
 
+}
+
+void * EmpowerQOSManager::cast(const char *n) {
+	if (strcmp(n, "EmpowerQOSManager") == 0)
+		return (EmpowerQOSManager *) this;
+	else if (strcmp(n, Notifier::EMPTY_NOTIFIER) == 0)
+		return static_cast<Notifier *>(&_empty_note);
+	else
+		return SimpleQueue::cast(n);
 }
 
 void
@@ -62,19 +72,35 @@ EmpowerQOSManager::push(int, Packet *p) {
 		return;
 	}
 
+	Timestamp now = Timestamp::now();
+	p->set_timestamp_anno(now);
+
+	int dscp = 0;
+	uint8_t iface_id = PAINT_ANNO(p);
+
 	click_ether *eh = (click_ether *) p->data();
+
+	if (eh->ether_type == 0x0800) {
+		const click_ip *ip = p->ip_header();
+		dscp = ip->ip_tos >> 2;
+	}
 
 	EtherAddress src = EtherAddress(eh->ether_shost);
 	EtherAddress dst = EtherAddress(eh->ether_dhost);
 
-	// unicast traffic
+	// If traffic is unicast we need to check if the lvap is active and if it is on the same interface of
+	// this element, then we lookup the traffic rule queue and enqueue the Ethernet packet with all the info
+	// necessary later to build the wifi frame.
 	if (!dst.is_broadcast() && !dst.is_group()) {
         EmpowerStationState *ess = _el->get_ess(dst);
-        TxPolicyInfo *txp = _el->get_txp(dst);
         if (!ess) {
 			p->kill();
 			return;
 		}
+        if (ess->_iface_id != iface_id) {
+				p->kill();
+				return;
+        }
         if (!ess->_set_mask) {
 			p->kill();
 			return;
@@ -95,96 +121,71 @@ EmpowerQOSManager::push(int, Packet *p) {
 			p->kill();
 			return;
 		}
-		txp->update_tx(p->length());
-		Packet * p_out = wifi_encap(p, dst, src, ess->_lvap_bssid);
-		SET_PAINT_ANNO(p_out, ess->_iface_id);
-		output(0).push(p_out);
+        enqueue(ess->_ssid, dscp, p, dst, src, ess->_lvap_bssid);
 		return;
 	}
 
 	// broadcast and multicast traffic, we need to transmit one frame for each unique
 	// bssid. this is due to the fact that we can have the same bssid for multiple LVAPs.
-	for (int i = 0; i < _el->num_ifaces(); i++) {
+	if (_rc->tx_policies()->lookup(dst)->_tx_mcast == TX_MCAST_DMS) {
 
-		TxPolicyInfo * tx_policy = _el->get_tx_policies(i)->lookup(dst);
+		// DMS mcast policy, duplicate the frame for each station in
+		// each bssid and use unicast destination addresses. note that
+		// a given station cannot be in more than one bssid, so just
+		// track if the frame has already been delivered to a given
+		// station.
 
-		if (tx_policy->_tx_mcast == TX_MCAST_DMS) {
-
-			// dms mcast policy, duplicate the frame for each station in
-			// each bssid and use unicast destination addresses. note that
-			// a given station cannot be in more than one bssid, so just
-			// track if the frame has already been delivered to a given
-			// station.
-
-			Vector<EtherAddress> sent;
-
-			for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-				EtherAddress sta = it.value()._sta;
-				if (it.value()._iface_id != i) {
-					continue;
-				}
-				if (!it.value()._set_mask) {
-					continue;
-				}
-				if (!it.value()._authentication_status) {
-					continue;
-				}
-				if (!it.value()._association_status) {
-					continue;
-				}
-				if (find(sent.begin(), sent.end(), sta) != sent.end()) {
-					continue;
-				}
-				sent.push_back(sta);
-				Packet *q = p->clone();
-				if (!q) {
-					continue;
-				}
-				Packet * p_out = wifi_encap(q, sta, src, it.value()._lvap_bssid);
-				tx_policy->update_tx(p->length());
-				SET_PAINT_ANNO(p_out, i);
-				output(0).push(p_out);
+		for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
+			if (!it.value()._iface_id != iface_id) {
+				continue;
 			}
-
-		} else if (tx_policy->_tx_mcast == TX_MCAST_UR) {
-
-			// TODO: implement
-
-		} else {
-
-			// legacy mcast policy, just send the frame as it is, minstrel will
-			// pick the rate from the transmission policies table
-
-			Vector<EtherAddress> sent;
-
-			for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-				EtherAddress bssid = it.value()._lvap_bssid;
-				if (it.value()._iface_id != i) {
-					continue;
-				}
-				if (!it.value()._set_mask) {
-					continue;
-				}
-				if (!it.value()._authentication_status) {
-					continue;
-				}
-				if (!it.value()._association_status) {
-					continue;
-				}
-				if (find(sent.begin(), sent.end(), bssid) != sent.end()) {
-					continue;
-				}
-				sent.push_back(bssid);
-				Packet *q = p->clone();
-				if (!q) {
-					continue;
-				}
-				Packet * p_out = wifi_encap(q, dst, src, bssid);
-				tx_policy->update_tx(p->length());
-				SET_PAINT_ANNO(p_out, i);
-				output(0).push(p_out);
+			if (!it.value()._set_mask) {
+				continue;
 			}
+			if (!it.value()._authentication_status) {
+				continue;
+			}
+			if (!it.value()._association_status) {
+				continue;
+			}
+	        Packet *q = p->clone();
+			enqueue(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
+		}
 
+	} else {
+
+		// Legacy mcast policy, we have two cases. Frames must still be duplicated for unique tenants
+		// since the lvap model does not support broadcasting. then the frame must be send also to the
+		// shared tenants
+
+		// handle unique LVAPs
+		for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
+			if (it.value()._iface_id != iface_id) {
+				continue;
+			}
+			if (!it.value()._set_mask) {
+				continue;
+			}
+			if (!it.value()._authentication_status) {
+				continue;
+			}
+			if (!it.value()._association_status) {
+				continue;
+			}
+			if (it.value()._lvap_bssid != it.value()._net_bssid) {
+				continue;
+			}
+	        Packet *q = p->clone();
+			enqueue(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
+		}
+
+		// handle VAPs
+		for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
+			if (it.value()._iface_id != iface_id) {
+				continue;
+			}
+	        Packet *q = p->clone();
+			enqueue(it.value()._ssid, dscp, q, dst, src, it.value()._net_bssid);
 		}
 
 	}
@@ -194,80 +195,63 @@ EmpowerQOSManager::push(int, Packet *p) {
 
 }
 
-Packet *
-EmpowerQOSManager::wifi_encap(Packet *q, EtherAddress dst, EtherAddress src, EtherAddress bssid) {
+void EmpowerQOSManager::enqueue(String ssid, int dscp, Packet *q, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
 
-    WritablePacket *p_out = q->uniqueify();
+	TrafficRule tr = TrafficRule(ssid, dscp);
 
-	if (!p_out) {
-		p_out->kill();
-		return 0;
+	if (_rules.find(tr) == _rules.end()) {
+		q->kill();
+		return;
 	}
 
-	uint8_t mode = WIFI_FC1_DIR_FROMDS;
-	uint16_t ethtype;
+	TrafficRuleQueue *trq = _rules.get(tr);
 
-    memcpy(&ethtype, p_out->data() + 12, 2);
-
-	p_out->pull(sizeof(struct click_ether));
-	p_out = p_out->push(sizeof(struct click_llc));
-
-	if (!p_out) {
-		p_out->kill();
-		return 0;
+	if (trq->enqueue(q, ra, sa, ta)) {
+		_empty_note.wake();
+	} else {
+		q->kill();
 	}
-
-	memcpy(p_out->data(), WIFI_LLC_HEADER, WIFI_LLC_HEADER_LEN);
-	memcpy(p_out->data() + 6, &ethtype, 2);
-
-	if (!(p_out = p_out->push(sizeof(struct click_wifi)))) {
-		p_out->kill();
-		return 0;
-	}
-
-	struct click_wifi *w = (struct click_wifi *) p_out->data();
-
-	memset(p_out->data(), 0, sizeof(click_wifi));
-	w->i_fc[0] = (uint8_t) (WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_DATA);
-	w->i_fc[1] = 0;
-	w->i_fc[1] |= (uint8_t) (WIFI_FC1_DIR_MASK & mode);
-
-	switch (mode) {
-	case WIFI_FC1_DIR_NODS:
-		memcpy(w->i_addr1, dst.data(), 6);
-		memcpy(w->i_addr2, src.data(), 6);
-		memcpy(w->i_addr3, bssid.data(), 6);
-		break;
-	case WIFI_FC1_DIR_TODS:
-		memcpy(w->i_addr1, bssid.data(), 6);
-		memcpy(w->i_addr2, src.data(), 6);
-		memcpy(w->i_addr3, dst.data(), 6);
-		break;
-	case WIFI_FC1_DIR_FROMDS:
-		memcpy(w->i_addr1, dst.data(), 6);
-		memcpy(w->i_addr2, bssid.data(), 6);
-		memcpy(w->i_addr3, src.data(), 6);
-		break;
-	default:
-		click_chatter("%{element} :: %s :: invalid mode %d",
-				      this,
-				      __func__,
-				      mode);
-		p_out->kill();
-		return 0;
-	}
-
-	return p_out;
 
 }
 
+Packet * EmpowerQOSManager::pull(int) {
+	_empty_note.sleep();
+	return 0;
+}
+
+void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp) {
+	TrafficRule tr = TrafficRule(ssid, dscp);
+	if (_rules.find(tr) == _rules.end()) {
+		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u",
+					  this,
+					  __func__,
+					  ssid.c_str(),
+					  dscp);
+		TrafficRuleQueue *queue = new TrafficRuleQueue(ssid, dscp, _capacity);
+		_rules.set(tr, queue);
+	}
+}
+
+String EmpowerQOSManager::list_queues() {
+	StringAccum result;
+	TRIter itr = _rules.begin();
+	while(itr != _rules.end()) {
+		TrafficRuleQueue *trq = itr.value();
+		result << trq->unparse();
+		itr++;
+	} // end while
+	return result.take_string();
+}
+
 enum {
-	H_DEBUG
+	H_DEBUG, H_QUEUES
 };
 
 String EmpowerQOSManager::read_handler(Element *e, void *thunk) {
 	EmpowerQOSManager *td = (EmpowerQOSManager *) e;
 	switch ((uintptr_t) thunk) {
+	case H_QUEUES:
+		return(td->list_queues());
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
 	default:
@@ -295,6 +279,7 @@ int EmpowerQOSManager::write_handler(const String &in_s, Element *e,
 
 void EmpowerQOSManager::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
+	add_read_handler("queues", read_handler, (void *) H_QUEUES);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
 }
 

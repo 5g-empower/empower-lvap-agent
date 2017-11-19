@@ -51,3 +51,4 @@ EmpowerTee::push(int, Packet *p)
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(EmpowerTee)
+ELEMENT_REQUIRES(userlevel)

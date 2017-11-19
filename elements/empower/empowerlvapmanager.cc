@@ -33,6 +33,7 @@
 #include "empowerdisassocresponder.hh"
 #include "empowerrxstats.hh"
 #include "empowercqm.hh"
+#include "empowerqosmanager.hh"
 CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
@@ -77,6 +78,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 	String debugfs_strings;
 	String rcs_strings;
 	String res_strings;
+	String eqms_strings;
 
 	res = Args(conf, this, errh).read_m("WTP", _wtp)
 						        .read_m("E11K", ElementCastArg("Empower11k"), _e11k)
@@ -85,6 +87,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
 								.read_m("EDEAUTHR", ElementCastArg("EmpowerDeAuthResponder"), _edeauthr)
 			                    .read_m("DEBUGFS", debugfs_strings)
+			                    .read_m("EQMS", eqms_strings)
 			                    .read_m("RCS", rcs_strings)
 			                    .read_m("RES", res_strings)
 			                    .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
@@ -146,6 +149,21 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 		ResourceElement *elm = new ResourceElement(hwaddr, channel, band);
 		_ifaces_to_elements.set(x, elm);
 
+	}
+
+	tokens.clear();
+	cp_spacevec(eqms_strings, tokens);
+
+	for (int i = 0; i < tokens.size(); i++) {
+		EmpowerQOSManager * eqm;
+		if (!ElementCastArg("EmpowerQOSManager").parse(tokens[i], eqm, Args(conf, this, errh))) {
+			return errh->error("error param %s: must be an EmpowerQOSManager element", tokens[i].c_str());
+		}
+		_eqms.push_back(eqm);
+	}
+
+	if (_eqms.size() != _masks.size()) {
+		return errh->error("eqms has %u values, while masks has %u values", _eqms.size(), _masks.size());
 	}
 
 	return res;
@@ -1298,13 +1316,13 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	}
 
 	if (_debug) {
-	    StringAccum sa;
-    	sa << ssids[0];
-    	if (ssids.size() > 1) {
+		StringAccum sa;
+		sa << ssids[0];
+		if (ssids.size() > 1) {
 			for (int i = 1; i < ssids.size(); i++) {
 				sa << ", " << ssids[i];
 			}
-    	}
+		}
 		click_chatter("%{element} :: %s :: sta %s net_bssid %s lvap_bssid %s ssid %s [ %s ] assoc_id %d %s %s %s",
 					  this,
 					  __func__,
@@ -1359,6 +1377,13 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 		/* send add lvap response message */
 		send_add_del_lvap_response(EMPOWER_PT_ADD_LVAP_RESPONSE, state._sta, module_id, 0);
+
+		/* trigger lvap join message */
+		if (ssid != "") {
+			for (int i = 0; i < _eqms.size(); i++) {
+				_eqms[i]->create_traffic_rule(ssid, 0);
+			}
+		}
 
 		return 0;
 
@@ -1419,6 +1444,13 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 	/* send add lvap response message */
 	send_add_del_lvap_response(EMPOWER_PT_ADD_LVAP_RESPONSE, ess->_sta, module_id, 0);
+
+	/* trigger lvap join message */
+	if (ssid != "") {
+		for (int i = 0; i < _eqms.size(); i++) {
+			_eqms[i]->create_traffic_rule(ssid, 0);
+		}
+	}
 
 	return 0;
 
