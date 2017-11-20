@@ -121,7 +121,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 			p->kill();
 			return;
 		}
-        enqueue(ess->_ssid, dscp, p, dst, src, ess->_lvap_bssid);
+        store(ess->_ssid, dscp, p, dst, src, ess->_lvap_bssid);
 		return;
 	}
 
@@ -149,7 +149,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 				continue;
 			}
 			Packet *q = p->clone();
-			enqueue(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
+			store(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
 		}
 
 	} else {
@@ -176,7 +176,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 				continue;
 			}
 			Packet *q = p->clone();
-			enqueue(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
+			store(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
 		}
 
 		// handle VAPs
@@ -185,7 +185,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 				continue;
 			}
 			Packet *q = p->clone();
-			enqueue(it.value()._ssid, dscp, q, dst, src, it.value()._net_bssid);
+			store(it.value()._ssid, dscp, q, dst, src, it.value()._net_bssid);
 		}
 
 	}
@@ -195,7 +195,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 
 }
 
-void EmpowerQOSManager::enqueue(String ssid, int dscp, Packet *q, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
+void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
 
 	TrafficRule tr = TrafficRule(ssid, dscp);
 
@@ -261,15 +261,11 @@ Packet * EmpowerQOSManager::pull(int) {
 		_active_list.push_back(tr);
 	}
 
-	if (++_sleepiness == SLEEPINESS_TRIGGER) {
-		_empty_note.sleep();
-	}
-
 	return 0;
 
 }
 
-void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp) {
+void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp, int iface) {
 	TrafficRule tr = TrafficRule(ssid, dscp);
 	if (_rules.find(tr) == _rules.end()) {
 		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u",
@@ -281,6 +277,7 @@ void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp) {
 		_rules.set(tr, queue);
 		_head_table.set(tr, 0);
 		_active_list.push_back(tr);
+		_el->send_status_traffic_rule(ssid, dscp, iface);
 	}
 }
 

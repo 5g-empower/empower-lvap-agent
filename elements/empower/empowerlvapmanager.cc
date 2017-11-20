@@ -363,6 +363,52 @@ void EmpowerLVAPManager::send_hello() {
 
 }
 
+int EmpowerLVAPManager::handle_traffic_rule_status_request(Packet *p, uint32_t offset) {
+	// send Traffic Rule status update messages
+	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
+		int iface_id = it_re.key();
+		for (TRIter it = _eqms[iface_id]->rules()->begin(); it.live(); it++) {
+			send_status_traffic_rule(it.key()._ssid, it.key()._dscp, iface_id);
+		}
+	}
+	return 0;
+}
+
+void EmpowerLVAPManager:: send_status_traffic_rule(String ssid, int dscp, int iface) {
+
+	TrafficRule tr = TrafficRule(ssid, dscp);
+	TrafficRuleQueue * queue = _eqms[iface]->rules()->find(tr).value();
+	ResourceElement* re = iface_to_element(iface);
+
+	int len = sizeof(empower_status_traffic_rule) + ssid.length();
+
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	memset(p->data(), 0, p->length());
+
+	empower_status_traffic_rule *status = (struct empower_status_traffic_rule *) (p->data());
+	status->set_version(_empower_version);
+	status->set_length(len);
+	status->set_type(EMPOWER_PT_STATUS_TRAFFIC_RULE);
+	status->set_seq(get_next_seq());
+	status->set_wtp(_wtp);
+	status->set_dscp(queue->_tr._dscp);
+	status->set_ssid(queue->_tr._ssid);
+	status->set_quantum(queue->_quantum);
+	if (queue->_amsdu_aggregation) {
+		status->set_flags(EMPOWER_AMSDU_AGGREGATION);
+	}
+
+	send_message(p);
+}
+
 void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 
 	Vector<String> ssids;
@@ -1225,7 +1271,7 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		/* trigger vap join message */
 		if (ssid != "") {
 			for (int i = 0; i < _eqms.size(); i++) {
-				_eqms[i]->create_traffic_rule(ssid, 0);
+				_eqms[i]->create_traffic_rule(ssid, 0, state._iface_id);
 			}
 		}
 
@@ -1388,7 +1434,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		/* trigger lvap join message */
 		if (ssid != "") {
 			for (int i = 0; i < _eqms.size(); i++) {
-				_eqms[i]->create_traffic_rule(ssid, 0);
+				_eqms[i]->create_traffic_rule(ssid, 0, state._iface_id);
 			}
 		}
 
@@ -1455,7 +1501,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	/* trigger lvap join message */
 	if (ssid != "") {
 		for (int i = 0; i < _eqms.size(); i++) {
-			_eqms[i]->create_traffic_rule(ssid, 0);
+			_eqms[i]->create_traffic_rule(ssid, 0, ess->_iface_id);
 		}
 	}
 
@@ -1993,6 +2039,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_PORT_STATUS_REQ:
 			handle_port_status_request(p, offset);
+			break;
+		case EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ:
+			handle_traffic_rule_status_request(p, offset);
 			break;
 		default:
 			click_chatter("%{element} :: %s :: Unknown packet type: %d",

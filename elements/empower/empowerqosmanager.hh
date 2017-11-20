@@ -191,8 +191,6 @@ private:
 typedef HashTable<EtherAddress, AggregationQueue*> AggregationQueues;
 typedef AggregationQueues::iterator AQIter;
 
-class EmpowerQOSManager;
-
 class TrafficRule {
   public:
 
@@ -227,21 +225,26 @@ class TrafficRule {
 
 class TrafficRuleQueue {
 
-  public:
+public:
 
     AggregationQueues _queues;
 	Vector<EtherAddress> _active_list;
 
 	TrafficRule _tr;
     uint32_t _capacity;
+    uint32_t _size;
+    uint32_t _drops;
     uint32_t _deficit;
     uint32_t _quantum;
+    bool _amsdu_aggregation;
 
-    uint32_t _drops; // packets dropped because of full queue
-    uint32_t _bdrops; // bytes dropped
+	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum) :
+			_tr(tr), _capacity(capacity), _size(0), _deficit(0),
+			_quantum(quantum), _amsdu_aggregation(false), _drops(0) {
+	}
 
-    TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum) : _tr(tr), _capacity(capacity), _deficit(0), _quantum(quantum), _drops(0), _bdrops(0) {}
-    ~TrafficRuleQueue() {}
+	~TrafficRuleQueue() {
+	}
 
     bool enqueue(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
 
@@ -260,6 +263,8 @@ class TrafficRuleQueue {
 		}
 
 		if (_queues.get(ra)->push(p)) {
+			// update size
+			_size++;
 			// check if ra is in active list
 			if (find(_active_list.begin(), _active_list.end(), ra) == _active_list.end()) {
 				_active_list.push_back(ra);
@@ -268,8 +273,6 @@ class TrafficRuleQueue {
 		}
 
 		_drops++;
-		_bdrops+=p->length();
-
 		return false;
 
     }
@@ -293,30 +296,21 @@ class TrafficRuleQueue {
 		}
 
 		_active_list.push_back(ra);
-
+		_size--;
 		return p;
 
     }
 
 	String unparse() {
-
 		StringAccum result;
-
 		result << _tr.unparse() << " -> capacity: " << _capacity << "\n";
-
 		AQIter itr = _queues.begin();
-
 		while (itr != _queues.end()) {
-
 			AggregationQueue *aq = itr.value();
 			result << "  " << aq->unparse();
-
 			itr++;
-
 		}
-
 		return result.take_string();
-
 	}
 
 };
@@ -328,6 +322,7 @@ typedef HashTable<TrafficRule, Packet*> HeadTable;
 typedef HeadTable::iterator HItr;
 
 class EmpowerQOSManager: public SimpleQueue {
+
 public:
 
 	EmpowerQOSManager();
@@ -344,7 +339,9 @@ public:
 	Packet *pull(int);
 
 	void add_handlers();
-	void create_traffic_rule(String, int);
+	void create_traffic_rule(String, int, int);
+
+	TrafficRules * rules() { return &_rules; }
 
 private:
 
@@ -364,8 +361,7 @@ private:
 
     bool _debug;
 
-	void enqueue(String, int, Packet *, EtherAddress, EtherAddress, EtherAddress);
-
+	void store(String, int, Packet *, EtherAddress, EtherAddress, EtherAddress);
 	String list_queues();
 	uint32_t compute_deficit(Packet *);
 

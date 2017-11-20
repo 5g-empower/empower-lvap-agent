@@ -99,6 +99,11 @@ enum empower_packet_types {
 	EMPOWER_PT_LVAP_STATUS_REQ = 0x53,			// ac -> wtp
 	EMPOWER_PT_VAP_STATUS_REQ = 0x54,			// ac -> wtp
 	EMPOWER_PT_PORT_STATUS_REQ = 0x55,			// ac -> wtp
+	EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ = 0x56,	// ac -> wtp
+
+	// Traffic Rule
+	EMPOWER_PT_ADD_TRAFFIC_RULE = 0x57,          // ac -> wtp
+	EMPOWER_PT_STATUS_TRAFFIC_RULE = 0x58		// wtp -> ac
 
 };
 
@@ -904,7 +909,7 @@ struct empower_del_mcast_addr : public empower_header {
 struct empower_del_mcast_receiver : public empower_header {
   private:
 	uint8_t  _sta[6]; 			/* EtherAddress */
-	uint8_t  _hwaddr[6];		/* EtherAddress */
+	uint8_t  _hwaddr[6];			/* EtherAddress */
 	uint8_t  _channel;			/* WiFi channel (int) */
 	uint8_t  _band;				/* WiFi band (empower_band_types) */
   public:
@@ -912,6 +917,37 @@ struct empower_del_mcast_receiver : public empower_header {
 	uint8_t      band()			{ return _band; }
 	uint8_t      channel()		{ return _channel; }
 	EtherAddress hwaddr()		{ return EtherAddress(_hwaddr); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+struct empower_add_traffic_rule : public empower_header {
+  private:
+	uint16_t		_flags;				/* Aggregation flags */
+	uint16_t 	_priority;			/* Priority of the slice (int) */
+	uint16_t 	_parent_priority;	/* Priority of the tenant (without considering types of traffic) (int) */
+    uint8_t 		_dscp;				/* Traffic DSCP (int) */
+    char    		_ssid[];				/* SSID (String) */
+  public:
+    uint16_t     priority()					{ return ntohs(_priority); }
+    uint16_t     parent_priority()			{ return ntohs(_parent_priority); }
+    bool         flags(int f)				{ return ntohs(_flags) & f; }
+    uint8_t      dscp()						{ return _dscp; }
+    String       ssid()						{ int len = length() - 17; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* traffic rule status packet format */
+struct empower_status_traffic_rule : public empower_header {
+  private:
+    uint8_t 		_wtp[6];				/* EtherAddress */
+	uint16_t		_flags;				/* Aggregation flags */
+	uint16_t 	_quantum;			/* Priority of the slice (int) */
+    uint8_t 		_dscp;				/* Traffic DSCP (int) */
+    char    		_ssid[];				/* SSID (String) */
+  public:
+	void set_wtp(EtherAddress wtp)         				{ memcpy(_wtp, wtp.data(), 6); }
+    void set_dscp(uint8_t dscp)      					{ _dscp = dscp; }
+    void set_quantum(uint16_t quantum)      				{ _quantum = htons(quantum); }
+    void set_flags(uint16_t f)							{ _flags = htons(ntohs(_flags) | f); }
+    void set_ssid(String ssid)             				{ memcpy(&_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 CLICK_ENDDECLS
