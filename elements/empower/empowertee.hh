@@ -14,17 +14,21 @@ CLICK_DECLS
 
 class EmpowerTee : public Element {
 
- public:
+public:
 
 	EmpowerTee() CLICK_COLD;
 
-  const char *class_name() const		{ return "EmpowerTee"; }
-  const char *port_count() const		{ return "1/1-"; }
-  const char *processing() const		{ return PUSH; }
+	const char *class_name() const		{ return "EmpowerTee"; }
+	const char *port_count() const		{ return "1/1-"; }
+	const char *processing() const		{ return PUSH; }
 
-  int configure(Vector<String> &, ErrorHandler *) CLICK_COLD;
+	int configure(Vector<String> &, ErrorHandler *) CLICK_COLD;
 
-  void push(int, Packet *);
+	void push(int, Packet *);
+
+private:
+
+	class EmpowerLVAPManager *_el;
 
 };
 
