@@ -56,7 +56,6 @@ public:
 		_ta = ta;
 		_sa = sa;
 		_size = 0;
-		_bsize = 0;
 		_drops = 0;
 		_head = 0;
 		_tail = 0;
@@ -93,7 +92,9 @@ public:
 		}
 		_queue_lock.release_write();
 		if (p) {
-			return wifi_encap(p, _ra, _sa, _ta);
+			click_ether *eh = (click_ether *) p->data();
+			EtherAddress src = EtherAddress(eh->ether_shost);
+			return wifi_encap(p, _ra, src, _ta);
 		}
 		return 0;
 	}
@@ -125,6 +126,8 @@ public:
       return p;
     }
 
+    uint32_t size() { return _size; }
+
 private:
 
 	ReadWriteLock _queue_lock;
@@ -135,7 +138,6 @@ private:
 	EtherAddress _ta;
 	EtherAddress _sa;
 	uint32_t _size;
-	uint32_t _bsize;
 	uint32_t _drops;
 	uint32_t _head;
 	uint32_t _tail;
