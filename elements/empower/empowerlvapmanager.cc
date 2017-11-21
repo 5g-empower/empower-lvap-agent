@@ -363,22 +363,20 @@ void EmpowerLVAPManager::send_hello() {
 
 }
 
-int EmpowerLVAPManager::handle_traffic_rule_status_request(Packet *p, uint32_t offset) {
-	// send Traffic Rule status update messages
-	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
-		int iface_id = it_re.key();
-		for (TRIter it = _eqms[iface_id]->rules()->begin(); it.live(); it++) {
-			send_status_traffic_rule(it.key()._ssid, it.key()._dscp, iface_id);
-		}
+int EmpowerLVAPManager::handle_traffic_rule_status_request(Packet *, uint32_t) {
+
+	for (TRIter it = _eqms[0]->rules()->begin(); it.live(); it++) {
+		send_status_traffic_rule(it.key()._ssid, it.key()._dscp);
 	}
+
 	return 0;
+
 }
 
-void EmpowerLVAPManager:: send_status_traffic_rule(String ssid, int dscp, int iface) {
+void EmpowerLVAPManager:: send_status_traffic_rule(String ssid, int dscp) {
 
 	TrafficRule tr = TrafficRule(ssid, dscp);
-	TrafficRuleQueue * queue = _eqms[iface]->rules()->find(tr).value();
-	ResourceElement* re = iface_to_element(iface);
+	TrafficRuleQueue * queue = _eqms[0]->rules()->find(tr).value();
 
 	int len = sizeof(empower_status_traffic_rule) + ssid.length();
 
@@ -1271,7 +1269,7 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		/* trigger vap join message */
 		if (ssid != "") {
 			for (int i = 0; i < _eqms.size(); i++) {
-				_eqms[i]->create_traffic_rule(ssid, 0, state._iface_id);
+				_eqms[i]->create_traffic_rule(ssid, 0);
 			}
 		}
 
@@ -1434,7 +1432,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		/* trigger lvap join message */
 		if (ssid != "") {
 			for (int i = 0; i < _eqms.size(); i++) {
-				_eqms[i]->create_traffic_rule(ssid, 0, state._iface_id);
+				_eqms[i]->create_traffic_rule(ssid, 0);
 			}
 		}
 
@@ -1501,7 +1499,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	/* trigger lvap join message */
 	if (ssid != "") {
 		for (int i = 0; i < _eqms.size(); i++) {
-			_eqms[i]->create_traffic_rule(ssid, 0, ess->_iface_id);
+			_eqms[i]->create_traffic_rule(ssid, 0);
 		}
 	}
 

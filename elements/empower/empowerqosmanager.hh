@@ -71,7 +71,7 @@ class EtherPair {
 
 	String unparse() {
 		StringAccum result;
-		result << "(" << _ra << ", " << _ta << ")";
+		result << "(" << _ra.unparse() << ", " << _ta.unparse() << ")";
 		return result.take_string();
 	}
 
@@ -94,7 +94,7 @@ public:
 	String unparse() {
 		StringAccum result;
 		_queue_lock.acquire_read();
-		result << _pair << " -> status: " << _size << "/" << _capacity << "\n";
+		result << _pair.unparse() << " -> status: " << _size << "/" << _capacity << "\n";
 		_queue_lock.release_read();
 		return result.take_string();
 	}
@@ -269,8 +269,8 @@ public:
     bool _amsdu_aggregation;
 
 	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum) :
-			_tr(tr), _capacity(capacity), _size(0), _deficit(0),
-			_quantum(quantum), _amsdu_aggregation(false), _drops(0) {
+			_tr(tr), _capacity(capacity), _size(0), _drops(0), _deficit(0),
+			_quantum(quantum), _amsdu_aggregation(false) {
 	}
 
 	~TrafficRuleQueue() {
@@ -369,7 +369,7 @@ public:
 	Packet *pull(int);
 
 	void add_handlers();
-	void create_traffic_rule(String, int, int);
+	void create_traffic_rule(String, int);
 
 	TrafficRules * rules() { return &_rules; }
 

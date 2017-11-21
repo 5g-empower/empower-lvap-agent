@@ -135,7 +135,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 		// station.
 
 		for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-			if (!it.value()._iface_id != iface_id) {
+			if (it.value()._iface_id != iface_id) {
 				continue;
 			}
 			if (!it.value()._set_mask) {
@@ -264,7 +264,7 @@ Packet * EmpowerQOSManager::pull(int) {
 
 }
 
-void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp, int iface) {
+void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp) {
 	TrafficRule tr = TrafficRule(ssid, dscp);
 	if (_rules.find(tr) == _rules.end()) {
 		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u",
@@ -276,7 +276,7 @@ void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp, int iface) {
 		_rules.set(tr, queue);
 		_head_table.set(tr, 0);
 		_active_list.push_back(tr);
-		_el->send_status_traffic_rule(ssid, dscp, iface);
+		_el->send_status_traffic_rule(ssid, dscp);
 	}
 }
 
