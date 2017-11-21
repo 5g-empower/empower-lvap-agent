@@ -45,15 +45,46 @@ Turn debug on/off
 =a EmpowerWifiDecap
 */
 
+class EtherPair {
+  public:
+
+    EtherAddress _ra;
+    EtherAddress _ta;
+
+    EtherPair() {
+    }
+
+    EtherPair(EtherAddress ra, EtherAddress ta) : _ra(ra), _ta(ta) {
+    }
+
+    inline hashcode_t hashcode() const {
+    		return CLICK_NAME(hashcode)(_ra) + CLICK_NAME(hashcode)(_ta);
+    }
+
+    inline bool operator==(EtherPair other) const {
+    		return (other._ra == _ra && other._ta == _ta);
+    }
+
+    inline bool operator!=(EtherPair other) const {
+    		return (other._ra != _ra || other._ta != _ta);
+    }
+
+	String unparse() {
+		StringAccum result;
+		result << "(" << _ra << ", " << _ta << ")";
+		return result.take_string();
+	}
+
+};
+
 class AggregationQueue {
 
 public:
 
-	AggregationQueue(uint32_t capacity, EtherAddress ra, EtherAddress ta) {
+	AggregationQueue(uint32_t capacity, EtherPair pair) {
 		_q = new Packet*[capacity];
 		_capacity = capacity;
-		_ra = ra;
-		_ta = ta;
+		_pair = pair;
 		_size = 0;
 		_drops = 0;
 		_head = 0;
@@ -63,7 +94,7 @@ public:
 	String unparse() {
 		StringAccum result;
 		_queue_lock.acquire_read();
-		result << "RA: " << _ra << ", TA: " << _ta << " status: " << _size << "/" << _capacity << "\n";
+		result << _pair << " -> status: " << _size << "/" << _capacity << "\n";
 		_queue_lock.release_read();
 		return result.take_string();
 	}
@@ -93,7 +124,7 @@ public:
 		if (p) {
 			click_ether *eh = (click_ether *) p->data();
 			EtherAddress src = EtherAddress(eh->ether_shost);
-			return wifi_encap(p, _ra, src, _ta);
+			return wifi_encap(p, _pair._ra, src, _pair._ta);
 		}
 		return 0;
 	}
@@ -133,8 +164,7 @@ private:
 	Packet** _q;
 
 	uint32_t _capacity;
-	EtherAddress _ra;
-	EtherAddress _ta;
+	EtherPair _pair;
 	uint32_t _size;
 	uint32_t _drops;
 	uint32_t _head;
@@ -188,7 +218,7 @@ private:
     }
 };
 
-typedef HashTable<EtherAddress, AggregationQueue*> AggregationQueues;
+typedef HashTable<EtherPair, AggregationQueue*> AggregationQueues;
 typedef AggregationQueues::iterator AQIter;
 
 class TrafficRule {
@@ -228,7 +258,7 @@ class TrafficRuleQueue {
 public:
 
     AggregationQueues _queues;
-	Vector<EtherAddress> _active_list;
+	Vector<EtherPair> _active_list;
 
 	TrafficRule _tr;
     uint32_t _capacity;
@@ -248,25 +278,26 @@ public:
 
     bool enqueue(Packet *p, EtherAddress ra, EtherAddress ta) {
 
-		if (_queues.find(ra) == _queues.end()) {
+    		EtherPair pair = EtherPair(ra, ta);
 
-			click_chatter("%s :: creating new aggregation queue for ra %s ta %s",
+		if (_queues.find(pair) == _queues.end()) {
+
+			click_chatter("%s :: creating new aggregation queue for %s",
 					      _tr.unparse().c_str(),
-						  ra.unparse().c_str(),
-						  ta.unparse().c_str());
+						  pair.unparse().c_str());
 
-			AggregationQueue *queue = new AggregationQueue(_capacity, ra, ta);
-			_queues.set(ra, queue);
-			_active_list.push_back(ra);
+			AggregationQueue *queue = new AggregationQueue(_capacity, pair);
+			_queues.set(pair, queue);
+			_active_list.push_back(pair);
 
 		}
 
-		if (_queues.get(ra)->push(p)) {
+		if (_queues.get(pair)->push(p)) {
 			// update size
 			_size++;
 			// check if ra is in active list
-			if (find(_active_list.begin(), _active_list.end(), ra) == _active_list.end()) {
-				_active_list.push_back(ra);
+			if (find(_active_list.begin(), _active_list.end(), pair) == _active_list.end()) {
+				_active_list.push_back(pair);
 			}
 			return true;
 		}
@@ -282,10 +313,10 @@ public:
 			return 0;
 		}
 
-		EtherAddress ra = _active_list[0];
+		EtherPair pair = _active_list[0];
 		_active_list.pop_front();
 
-		AQIter active = _queues.find(ra);
+		AQIter active = _queues.find(pair);
 		AggregationQueue* queue = active.value();
 
 		Packet *p = queue->pull();
@@ -294,7 +325,7 @@ public:
 			return dequeue();
 		}
 
-		_active_list.push_back(ra);
+		_active_list.push_back(pair);
 		_size--;
 		return p;
 
