@@ -89,6 +89,9 @@ public:
 		_drops = 0;
 		_head = 0;
 		_tail = 0;
+		for (unsigned i = 0; i < _capacity; i++) {
+			_q[i] = 0;
+		}
 	}
 
 	String unparse() {
@@ -121,12 +124,7 @@ public:
 			_size--;
 		}
 		_queue_lock.release_write();
-		if (p) {
-			click_ether *eh = (click_ether *) p->data();
-			EtherAddress src = EtherAddress(eh->ether_shost);
-			return wifi_encap(p, _pair._ra, src, _pair._ta);
-		}
-		return 0;
+		return p;
 	}
 
 	bool push(Packet* p) {
@@ -157,6 +155,7 @@ public:
     }
 
     uint32_t size() { return _size; }
+    EtherPair pair() { return _pair; }
 
 private:
 
@@ -170,52 +169,6 @@ private:
 	uint32_t _head;
 	uint32_t _tail;
 
-    Packet * wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
-
-        WritablePacket *q = p->uniqueify();
-
-		if (!q) {
-			return 0;
-		}
-
-		uint8_t mode = WIFI_FC1_DIR_FROMDS;
-		uint16_t ethtype;
-
-		memcpy(&ethtype, q->data() + 12, 2);
-
-		q->pull(sizeof(struct click_ether));
-		q = q->push(sizeof(struct click_llc));
-
-		if (!q) {
-			q->kill();
-			return 0;
-		}
-
-		memcpy(q->data(), WIFI_LLC_HEADER, WIFI_LLC_HEADER_LEN);
-		memcpy(q->data() + 6, &ethtype, 2);
-
-		q = q->push(sizeof(struct click_wifi));
-
-		if (!q) {
-			q->kill();
-			return 0;
-		}
-
-		struct click_wifi *w = (struct click_wifi *) q->data();
-
-		memset(q->data(), 0, sizeof(click_wifi));
-
-		w->i_fc[0] = (uint8_t) (WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_DATA);
-		w->i_fc[1] = 0;
-		w->i_fc[1] |= (uint8_t) (WIFI_FC1_DIR_MASK & mode);
-
-		memcpy(w->i_addr1, ra.data(), 6);
-		memcpy(w->i_addr2, ta.data(), 6);
-		memcpy(w->i_addr3, sa.data(), 6);
-
-		return q;
-
-    }
 };
 
 typedef HashTable<EtherPair, AggregationQueue*> AggregationQueues;
@@ -276,6 +229,55 @@ public:
 	~TrafficRuleQueue() {
 	}
 
+	uint32_t size() { return _size; }
+
+    Packet * wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
+
+        WritablePacket *q = p->uniqueify();
+
+		if (!q) {
+			return 0;
+		}
+
+		uint8_t mode = WIFI_FC1_DIR_FROMDS;
+		uint16_t ethtype;
+
+		memcpy(&ethtype, q->data() + 12, 2);
+
+		q->pull(sizeof(struct click_ether));
+		q = q->push(sizeof(struct click_llc));
+
+		if (!q) {
+			q->kill();
+			return 0;
+		}
+
+		memcpy(q->data(), WIFI_LLC_HEADER, WIFI_LLC_HEADER_LEN);
+		memcpy(q->data() + 6, &ethtype, 2);
+
+		q = q->push(sizeof(struct click_wifi));
+
+		if (!q) {
+			q->kill();
+			return 0;
+		}
+
+		struct click_wifi *w = (struct click_wifi *) q->data();
+
+		memset(q->data(), 0, sizeof(click_wifi));
+
+		w->i_fc[0] = (uint8_t) (WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_DATA);
+		w->i_fc[1] = 0;
+		w->i_fc[1] |= (uint8_t) (WIFI_FC1_DIR_MASK & mode);
+
+		memcpy(w->i_addr1, ra.data(), 6);
+		memcpy(w->i_addr2, ta.data(), 6);
+		memcpy(w->i_addr3, sa.data(), 6);
+
+		return q;
+
+    }
+
     bool enqueue(Packet *p, EtherAddress ra, EtherAddress ta) {
 
     		EtherPair pair = EtherPair(ra, ta);
@@ -325,8 +327,14 @@ public:
 			return dequeue();
 		}
 
-		_active_list.push_back(pair);
 		_size--;
+
+		click_ether *eh = (click_ether *) p->data();
+		EtherAddress src = EtherAddress(eh->ether_shost);
+		p = wifi_encap(p, queue->pair()._ra, src, queue->pair()._ta);
+
+		_active_list.push_back(pair);
+
 		return p;
 
     }

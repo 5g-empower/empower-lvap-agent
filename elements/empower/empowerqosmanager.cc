@@ -207,7 +207,7 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 
 	if (trq->enqueue(q, ra, ta)) {
 		// check if tr is in active list
-		if (find(_active_list.begin(), _active_list.end(), tr) == _active_list.end()) {
+		if (trq->size() == 0) {
 			_active_list.push_back(tr);
 		}
 		// wake up queue
@@ -251,6 +251,9 @@ Packet * EmpowerQOSManager::pull(int) {
 
 	if (!p) {
 		queue->_deficit = 0;
+		if (queue->size() > 0) {
+			_active_list.push_back(tr);
+		}
 	} else if (compute_deficit(p) <= queue->_deficit) {
 		queue->_deficit -= compute_deficit(p);
 		_active_list.push_front(tr);
