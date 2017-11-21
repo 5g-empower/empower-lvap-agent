@@ -49,12 +49,11 @@ class AggregationQueue {
 
 public:
 
-	AggregationQueue(uint32_t capacity, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
+	AggregationQueue(uint32_t capacity, EtherAddress ra, EtherAddress ta) {
 		_q = new Packet*[capacity];
 		_capacity = capacity;
 		_ra = ra;
 		_ta = ta;
-		_sa = sa;
 		_size = 0;
 		_drops = 0;
 		_head = 0;
@@ -64,7 +63,7 @@ public:
 	String unparse() {
 		StringAccum result;
 		_queue_lock.acquire_read();
-		result << "RA: " << _ra << ", TA: " << _ta << " SA: " << _sa << " status: " << _size << "/" << _capacity << "\n";
+		result << "RA: " << _ra << ", TA: " << _ta << " status: " << _size << "/" << _capacity << "\n";
 		_queue_lock.release_read();
 		return result.take_string();
 	}
@@ -136,7 +135,6 @@ private:
 	uint32_t _capacity;
 	EtherAddress _ra;
 	EtherAddress _ta;
-	EtherAddress _sa;
 	uint32_t _size;
 	uint32_t _drops;
 	uint32_t _head;
@@ -248,17 +246,16 @@ public:
 	~TrafficRuleQueue() {
 	}
 
-    bool enqueue(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
+    bool enqueue(Packet *p, EtherAddress ra, EtherAddress ta) {
 
 		if (_queues.find(ra) == _queues.end()) {
 
-			click_chatter("%s :: creating new aggregation queue for ra %s sa %s ta %s",
+			click_chatter("%s :: creating new aggregation queue for ra %s ta %s",
 					      _tr.unparse().c_str(),
 						  ra.unparse().c_str(),
-						  sa.unparse().c_str(),
 						  ta.unparse().c_str());
 
-			AggregationQueue *queue = new AggregationQueue(_capacity, ra, sa, ta);
+			AggregationQueue *queue = new AggregationQueue(_capacity, ra, ta);
 			_queues.set(ra, queue);
 			_active_list.push_back(ra);
 
@@ -363,7 +360,7 @@ private:
 
     bool _debug;
 
-	void store(String, int, Packet *, EtherAddress, EtherAddress, EtherAddress);
+	void store(String, int, Packet *, EtherAddress, EtherAddress);
 	String list_queues();
 	uint32_t compute_deficit(Packet *);
 

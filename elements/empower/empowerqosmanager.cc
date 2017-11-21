@@ -85,7 +85,6 @@ EmpowerQOSManager::push(int, Packet *p) {
 		dscp = ip->ip_tos >> 2;
 	}
 
-	EtherAddress src = EtherAddress(eh->ether_shost);
 	EtherAddress dst = EtherAddress(eh->ether_dhost);
 
 	// If traffic is unicast we need to check if the lvap is active and if it is on the same interface of
@@ -121,7 +120,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 			p->kill();
 			return;
 		}
-        store(ess->_ssid, dscp, p, dst, src, ess->_lvap_bssid);
+        store(ess->_ssid, dscp, p, dst, ess->_lvap_bssid);
 		return;
 	}
 
@@ -149,7 +148,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 				continue;
 			}
 			Packet *q = p->clone();
-			store(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
+			store(it.value()._ssid, dscp, q, it.value()._sta, it.value()._lvap_bssid);
 		}
 
 	} else {
@@ -176,7 +175,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 				continue;
 			}
 			Packet *q = p->clone();
-			store(it.value()._ssid, dscp, q, it.value()._sta, src, it.value()._lvap_bssid);
+			store(it.value()._ssid, dscp, q, it.value()._sta, it.value()._lvap_bssid);
 		}
 
 		// handle VAPs
@@ -185,7 +184,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 				continue;
 			}
 			Packet *q = p->clone();
-			store(it.value()._ssid, dscp, q, dst, src, it.value()._net_bssid);
+			store(it.value()._ssid, dscp, q, dst, it.value()._net_bssid);
 		}
 
 	}
@@ -195,7 +194,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 
 }
 
-void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
+void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra, EtherAddress ta) {
 
 	TrafficRule tr = TrafficRule(ssid, dscp);
 
@@ -206,7 +205,7 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 
 	TrafficRuleQueue *trq = _rules.get(tr);
 
-	if (trq->enqueue(q, ra, sa, ta)) {
+	if (trq->enqueue(q, ra, ta)) {
 		// check if tr is in active list
 		if (find(_active_list.begin(), _active_list.end(), tr) == _active_list.end()) {
 			_active_list.push_back(tr);
