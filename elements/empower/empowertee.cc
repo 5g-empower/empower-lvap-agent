@@ -61,7 +61,7 @@ void EmpowerTee::push(int, Packet *p) {
 	click_ether *eh = (click_ether *) p->data();
 	EtherAddress dst = EtherAddress(eh->ether_dhost);
 
-	// frame is unicast, then send only to the correct interface
+	// frame is unicast then send only to the correct interface
 	if (!dst.is_broadcast() && !dst.is_group()) {
 		EmpowerStationState *ess = _el->get_ess(dst);
 		if (!ess) {
@@ -69,9 +69,10 @@ void EmpowerTee::push(int, Packet *p) {
 			return;
 		}
 		output(ess->_iface_id).push(p);
-
+		return;
 	}
 
+	// if multicast or broadcast then send to all ports
 	int n = noutputs();
 	for (int i = 0; i < n - 1; i++) {
 		if (Packet *q = p->clone()) {
