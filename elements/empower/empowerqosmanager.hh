@@ -85,7 +85,7 @@ public:
 		_q = new Packet*[capacity];
 		_capacity = capacity;
 		_pair = pair;
-		_size = 0;
+		_nb_pkts = 0;
 		_drops = 0;
 		_head = 0;
 		_tail = 0;
@@ -97,7 +97,7 @@ public:
 	String unparse() {
 		StringAccum result;
 		_queue_lock.acquire_read();
-		result << _pair.unparse() << " -> status: " << _size << "/" << _capacity << "\n";
+		result << _pair.unparse() << " -> status: " << _nb_pkts << "/" << _capacity << "\n";
 		_queue_lock.release_read();
 		return result.take_string();
 	}
@@ -116,12 +116,12 @@ public:
 	Packet* pull() {
 		Packet* p = 0;
 		_queue_lock.acquire_write();
-		if (_size > 0) {
+		if (_nb_pkts > 0) {
 			p = _q[_head];
 			_q[_head] = 0;
 			_head++;
 			_head %= _capacity;
-			_size--;
+			_nb_pkts--;
 		}
 		_queue_lock.release_write();
 		return p;
@@ -130,14 +130,14 @@ public:
 	bool push(Packet* p) {
 		bool result = false;
 		_queue_lock.acquire_write();
-		if (_size == _capacity) {
+		if (_nb_pkts == _capacity) {
 			_drops++;
 			result = false;
 		} else {
 			_q[_tail] = p;
 			_tail++;
 			_tail %= _capacity;
-			_size++;
+			_nb_pkts++;
 			result = true;
 		}
 		_queue_lock.release_write();
@@ -154,7 +154,7 @@ public:
       return p;
     }
 
-    uint32_t size() { return _size; }
+    uint32_t nb_pkts() { return _nb_pkts; }
     EtherPair pair() { return _pair; }
 
 private:
@@ -164,7 +164,7 @@ private:
 
 	uint32_t _capacity;
 	EtherPair _pair;
-	uint32_t _size;
+	uint32_t _nb_pkts;
 	uint32_t _drops;
 	uint32_t _head;
 	uint32_t _tail;
@@ -220,16 +220,22 @@ public:
     uint32_t _deficit;
     uint32_t _quantum;
     bool _amsdu_aggregation;
+    uint32_t _max_aggr_length;
 
 	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum) :
 			_tr(tr), _capacity(capacity), _size(0), _drops(0), _deficit(0),
-			_quantum(quantum), _amsdu_aggregation(false) {
+			_quantum(quantum), _amsdu_aggregation(false), _max_aggr_length(0) {
 	}
 
 	~TrafficRuleQueue() {
 	}
 
 	uint32_t size() { return _size; }
+
+	void update_size() {
+		// update size
+		_size++;
+	}
 
     Packet * wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
 
@@ -295,8 +301,6 @@ public:
 		}
 
 		if (_queues.get(pair)->push(p)) {
-			// update size
-			_size++;
 			// check if ra is in active list
 			if (find(_active_list.begin(), _active_list.end(), pair) == _active_list.end()) {
 				_active_list.push_back(pair);
@@ -320,7 +324,6 @@ public:
 
 		AQIter active = _queues.find(pair);
 		AggregationQueue* queue = active.value();
-
 		Packet *p = queue->pull();
 
 		if (!p) {

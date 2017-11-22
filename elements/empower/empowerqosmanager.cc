@@ -210,6 +210,7 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 		if (trq->size() == 0) {
 			_active_list.push_back(tr);
 		}
+		trq->update_size();
 		// wake up queue
 		_empty_note.wake();
 		// reset sleepiness
