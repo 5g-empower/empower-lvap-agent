@@ -11,12 +11,6 @@ static const uint8_t _empower_version = 0x00;
 /* protocol type */
 enum empower_packet_types {
 
-    // Internal messages
-    EMPOWER_PT_WTP_BYE = 0x00,          // ac -> ac
-    EMPOWER_PT_WTP_REGISTER = 0x01,     // ac -> ac
-    EMPOWER_PT_LVAP_JOIN = 0x02,        // ac -> ac
-    EMPOWER_PT_LVAP_LEAVE = 0x03,       // ac -> ac
-
     // LVAP messages
     EMPOWER_PT_HELLO = 0x04,            // wtp -> ac
     EMPOWER_PT_PROBE_REQUEST = 0x05,    // wtp -> ac
@@ -46,10 +40,6 @@ enum empower_packet_types {
     EMPOWER_PT_SUMMARY_TRIGGER = 0x24,     		// ac -> wtp
     EMPOWER_PT_DEL_SUMMARY_TRIGGER = 0x25, 		// ac -> wtp
 
-    EMPOWER_PT_ADD_BUSYNESS_TRIGGER = 0x39, 	// ac -> wtp
-    EMPOWER_PT_BUSYNESS_TRIGGER = 0x40,     	// ac -> wtp
-    EMPOWER_PT_DEL_BUSYNESS_TRIGGER = 0x41, 	// ac -> wtp
-
     // Channel Quality Maps
     EMPOWER_PT_UCQM_REQUEST = 0x26,     		// ac -> wtp
     EMPOWER_PT_UCQM_RESPONSE = 0x27,    		// wtp -> ac
@@ -68,19 +58,15 @@ enum empower_packet_types {
 
     // MCAST Packet/Bytes counters
     EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x35,		// ac -> wtp
-    EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x36,	// wtp -> ac
+    EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x36,		// wtp -> ac
 
-    // Busyness
-    EMPOWER_PT_BUSYNESS_REQUEST = 0x37,			// ac -> wtp
-    EMPOWER_PT_BUSYNESS_RESPONSE = 0x38,		// wtp -> ac
+    // wifi stats
+    EMPOWER_PT_WIFI_STATS_REQUEST = 0x37,			// ac -> wtp
+    EMPOWER_PT_WIFI_STATS_RESPONSE = 0x38,			// wtp -> ac
 
     // WTP Packet/Bytes counters
     EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x42,     // ac -> wtp
     EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x43,    // wtp -> ac
-
-	// P_CQM
-	EMPOWER_PT_CQM_LINKS_REQUEST = 0x44,        // ac -> wtp
-	EMPOWER_PT_CQM_LINKS_RESPONSE = 0x45,       // ac -> wtp
 
 	// Multicast address transmission policies
 	EMPOWER_PT_INCOM_MCAST_REQUEST = 0x46,		// wtp -> ac
@@ -291,30 +277,29 @@ struct lvap_stats_entry {
     void set_cur_prob(uint32_t cur_prob) 	{ _cur_prob = htonl(cur_prob); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* busyness request packet format */
-struct empower_busyness_request : public empower_header {
+/* wifi stats request packet format */
+struct empower_wifi_stats_request : public empower_header {
 private:
-  uint32_t _busyness_id; /* Module id (int) */
+  uint32_t _wifi_stats_id; /* Module id (int) */
   uint8_t  _hwaddr[6];	 /* EtherAddress */
   uint8_t  _channel;	 /* WiFi Channel (int) */
   uint8_t  _band;		 /* WiFi band (empower_band_types) */
 public:
-    uint32_t busyness_id()	{ return ntohl(_busyness_id); }
+    uint32_t wifi_stats_id()	{ return ntohl(_wifi_stats_id); }
     uint8_t channel()     	{ return _channel; }
     uint8_t band()        	{ return _band; }
     EtherAddress hwaddr() 	{ return EtherAddress(_hwaddr); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* link stats response packet format */
-struct empower_busyness_response : public empower_header {
+struct empower_wifi_stats_response : public empower_header {
 private:
-  uint32_t _busyness_id;	/* Module id (int) */
+  uint32_t _wifi_stats_id;	/* Module id (int) */
   uint8_t  _wtp[6];			/* EtherAddress */
-  uint32_t _prob; 			/* Probability [0-18000] */
+  /* TODO: need to add additional params */
 public:
-  void set_busyness_id(uint32_t busyness_id) 	{ _busyness_id = htonl(busyness_id); }
-  void set_wtp(EtherAddress wtp)				{ memcpy(_wtp, wtp.data(), 6); }
-  void set_prob(uint32_t prob) 					{ _prob = htonl(prob); }
+  void set_wifi_stats_id(uint32_t wifi_stats_id) 	{ _wifi_stats_id = htonl(wifi_stats_id); }
+  void set_wtp(EtherAddress wtp)					{ memcpy(_wtp, wtp.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* channel quality map request packet format */
@@ -621,52 +606,6 @@ public:
     void set_ur_mcast_count(uint8_t ur_mcast_count) 	{ _ur_mcast_count = ur_mcast_count; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* add busyness packet format */
-struct empower_add_busyness_trigger: public empower_header {
-private:
-    uint32_t _trigger_id;	/* Module id (int) */
-    uint8_t  _hwaddr[6];	/* EtherAddress */
-    uint8_t  _channel;		/* WiFi channel (int) */
-    uint8_t  _band;			/* WiFi band (empower_band_types) */
-    uint8_t  _relation;   	/* Relation (relation_t) */
-    uint32_t _value;		/* Busyness value between 0 and 18000 */
-    uint16_t _period;		/* Reporting period in ms (int) */
-public:
-    EtherAddress hwaddr() { return EtherAddress(_hwaddr); }
-    uint8_t channel()     { return _channel; }
-    uint8_t band()        { return _band; }
-    uint32_t trigger_id() { return ntohl(_trigger_id); }
-    uint8_t relation()    { return _relation; }
-    uint32_t value()      { return ntohl(_value); }
-    uint16_t period()     { return ntohs(_period); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* del busyness trigger packet format */
-struct empower_del_busyness_trigger: public empower_header {
-private:
-    uint32_t _trigger_id; /* Module id (int) */
-public:
-    uint32_t trigger_id() { return ntohl(_trigger_id); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* busyness trigger packet format */
-struct empower_busyness_trigger: public empower_header {
-private:
-    uint32_t _trigger_id; 	/* Module id (int) */
-    uint8_t  _wtp[6];		/* EtherAddress */
-    uint8_t  _hwaddr[6];	/* EtherAddress */
-    uint8_t  _channel;		/* WiFi channel (int) */
-    uint8_t  _band;			/* WiFi band (empower_band_types) */
-    uint32_t  _current;     /* Busyness value between 0 and 18000 */
-public:
-    void set_wtp(EtherAddress wtp)          { memcpy(_wtp, wtp.data(), 6); }
-    void set_band(uint8_t band)             { _band = band; }
-    void set_channel(uint8_t channel)       { _channel = channel; }
-    void set_hwaddr(EtherAddress hwaddr)    { memcpy(_hwaddr, hwaddr.data(), 6); }
-    void set_current(uint32_t current)      { _current = htonl(current); }
-    void set_trigger_id(int32_t trigger_id) { _trigger_id = htonl(trigger_id); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
 /* add rssi trigger packet format */
 struct empower_add_rssi_trigger: public empower_header {
 private:
@@ -816,44 +755,6 @@ public:
     void set_wtp(EtherAddress wtp)         { memcpy(_wtp, wtp.data(), 6); }
     void set_net_bssid(EtherAddress bssid) { memcpy(_net_bssid, bssid.data(), 6); }
     void set_ssid(String ssid)             { memcpy(&_ssid, ssid.data(), ssid.length()); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* cqm links request packet format */
-struct empower_cqm_links_request : public empower_header {
-private:
-  uint32_t  _cqm_links_id;	/* Module id (int) */
-public:
-    uint32_t cqm_links_id() { return ntohl(_cqm_links_id); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* counters response packet format */
-struct empower_cqm_links_response : public empower_header {
-private:
-  uint32_t _cqm_links_id;	/* Module id (int) */
-  uint8_t  _wtp[6];			/* EtherAddress */
-  uint16_t _nb_links;		/* Int */
-public:
-    void set_wtp(EtherAddress wtp)               { memcpy(_wtp, wtp.data(), 6); }
-    void set_nb_links(uint16_t nb_links)         { _nb_links = htons(nb_links); }
-    void set_cqm_links_id(uint32_t cqm_links_id) { _cqm_links_id = htonl(cqm_links_id); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* cqm link entry */
-struct empower_cqm_link {
-  private:
-    uint8_t  _ta[6]; 					/* EtherAddress */
-    uint32_t _p_channel_busy_fraction;	/* p_channel_busy_fraction [0-18000] */
-    uint32_t _p_throughput;				/* p_throughput [0-18000] */
-    uint32_t _p_available_bw;			/* p_available_bw [0-18000] */
-    uint32_t _p_pdr;  					/* p_pdr [0-18000] */
-    uint32_t _p_attainable_throughput;	/* p_available_bw [0-18000] */
-  public:
-    void set_p_pdr(uint32_t p_pdr) 										{ _p_pdr = htonl(p_pdr); }
-    void set_p_available_bw(uint32_t p_available_bw) 					{ _p_available_bw = htonl(p_available_bw); }
-    void set_p_throughput(uint32_t p_throughput) 						{ _p_throughput = htonl(p_throughput); }
-    void set_p_attainable_throughput(uint32_t p_attainable_throughput) 	{ _p_attainable_throughput = htonl(p_attainable_throughput); }
-    void set_p_channel_busy_fraction(uint32_t p_channel_busy_fraction) 	{ _p_channel_busy_fraction = htonl(p_channel_busy_fraction); }
-    void set_ta(EtherAddress ta)   					   			 		{ memcpy(_ta, ta.data(), 6); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* incomming multicast address request format */
