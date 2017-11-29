@@ -258,7 +258,10 @@ Packet * EmpowerQOSManager::pull(int) {
 			_active_list.push_back(tr);
 		}
 	} else if (compute_deficit(p) <= queue->_deficit) {
-		queue->_deficit -= compute_deficit(p);
+		uint32_t deficit = compute_deficit(p);
+		queue->_deficit -= deficit;
+		queue->_deficit_used += deficit;
+		queue->_transm_bytes += p->length();
 		_active_list.push_front(tr);
 		return p;
 	} else {

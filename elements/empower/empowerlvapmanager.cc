@@ -376,6 +376,10 @@ void EmpowerLVAPManager:: send_status_traffic_rule(String ssid, int dscp, int if
 	status->set_dscp(queue->_tr._dscp);
 	status->set_ssid(queue->_tr._ssid);
 	status->set_quantum(queue->_quantum);
+	status->set_max_queue_length(queue->_max_queue_length);
+	status->set_deficit_used(queue->_deficit_used);
+	status->set_transm_pkts(queue->_transm_pkts);
+	status->set_transm_bytes(queue->_transm_bytes);
 
 	if (queue->_amsdu_aggregation) {
 		status->set_flags(EMPOWER_AMSDU_AGGREGATION);
