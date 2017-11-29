@@ -854,12 +854,12 @@ struct empower_status_traffic_rule : public empower_header {
 	void set_hwaddr(EtherAddress hwaddr)					{ memcpy(_hwaddr, hwaddr.data(), 6); }
 	void set_channel(uint8_t channel)						{ _channel = channel; }
     void set_dscp(uint8_t dscp)      						{ _dscp = dscp; }
-    void set_quantum(uint32_t quantum)      				{ _quantum = htons(quantum); }
+    void set_quantum(uint32_t quantum)      				{ _quantum = htonl(quantum); }
     void set_flags(uint16_t f)								{ _flags = htons(ntohs(_flags) | f); }
-    void set_deficit_used(uint32_t deficit_used)			{ _deficit_used = htons(deficit_used); }
-    void set_transm_pkts(uint32_t transm_pkts)				{ _transm_pkts = htons(transm_pkts); }
-    void set_transm_bytes(uint32_t transm_bytes)			{ _transm_bytes = htons(transm_bytes); }
-    void set_max_queue_length(uint32_t max_queue_length)    { _max_queue_length = htons(max_queue_length); }
+    void set_deficit_used(uint32_t deficit_used)			{ _deficit_used = htonl(deficit_used); }
+    void set_transm_pkts(uint32_t transm_pkts)				{ _transm_pkts = htonl(transm_pkts); }
+    void set_transm_bytes(uint32_t transm_bytes)			{ _transm_bytes = htonl(transm_bytes); }
+    void set_max_queue_length(uint32_t max_queue_length)    { _max_queue_length = htonl(max_queue_length); }
     void set_ssid(String ssid)             					{ memcpy(&_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 

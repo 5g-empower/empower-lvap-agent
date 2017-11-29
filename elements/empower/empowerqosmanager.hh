@@ -233,7 +233,8 @@ public:
 
 	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation) :
 			_tr(tr), _capacity(capacity), _size(0), _drops(0), _deficit(0),
-			_quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _max_aggr_length(7935) {
+			_quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _max_aggr_length(7935),
+			_deficit_used(0), _transm_pkts(0), _transm_bytes(0), _max_queue_length(0){
 	}
 
 	~TrafficRuleQueue() {
@@ -393,7 +394,7 @@ public:
 	Packet *pull(int);
 
 	void add_handlers();
-	void create_traffic_rule(String, int, int, bool);
+	void create_traffic_rule(String, int, uint32_t, bool);
 
 	TrafficRules * rules() { return &_rules; }
 
