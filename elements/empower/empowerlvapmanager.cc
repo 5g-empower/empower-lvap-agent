@@ -333,18 +333,23 @@ void EmpowerLVAPManager::send_hello() {
 
 int EmpowerLVAPManager::handle_traffic_rule_status_request(Packet *, uint32_t) {
 
-	for (TRIter it = _eqms[0]->rules()->begin(); it.live(); it++) {
-		send_status_traffic_rule(it.key()._ssid, it.key()._dscp);
+	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
+		int iface_id = it_re.key();
+		for (TRIter it = _eqms[iface_id]->rules()->begin(); it.live(); it++) {
+			send_status_traffic_rule(it.key()._ssid, it.key()._dscp, iface_id);
+		}
 	}
 
 	return 0;
 
 }
 
-void EmpowerLVAPManager:: send_status_traffic_rule(String ssid, int dscp) {
+void EmpowerLVAPManager:: send_status_traffic_rule(String ssid, int dscp, int iface_id) {
 
 	TrafficRule tr = TrafficRule(ssid, dscp);
-	TrafficRuleQueue * queue = _eqms[0]->rules()->find(tr).value();
+	TrafficRuleQueue * queue = _eqms[iface_id]->rules()->find(tr).value();
+
+	ResourceElement* re = iface_to_element(iface_id);
 
 	int len = sizeof(empower_status_traffic_rule) + ssid.length();
 
@@ -365,9 +370,13 @@ void EmpowerLVAPManager:: send_status_traffic_rule(String ssid, int dscp) {
 	status->set_type(EMPOWER_PT_STATUS_TRAFFIC_RULE);
 	status->set_seq(get_next_seq());
 	status->set_wtp(_wtp);
+	status->set_hwaddr(re->_hwaddr);
+	status->set_channel(re->_channel);
+	status->set_band(re->_band);
 	status->set_dscp(queue->_tr._dscp);
 	status->set_ssid(queue->_tr._ssid);
 	status->set_quantum(queue->_quantum);
+
 	if (queue->_amsdu_aggregation) {
 		status->set_flags(EMPOWER_AMSDU_AGGREGATION);
 	}
@@ -1172,12 +1181,8 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		/* Regenerate the BSSID mask */
 		compute_bssid_mask();
 
-		/* trigger vap join message */
-		if (ssid != "") {
-			for (int i = 0; i < _eqms.size(); i++) {
-				_eqms[i]->create_traffic_rule(ssid, 0);
-			}
-		}
+		/* create default traffic rule */
+		_eqms[iface]->create_traffic_rule(ssid, 0, 1500, false);
 
 		return 0;
 
@@ -1335,11 +1340,9 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		/* send add lvap response message */
 		send_add_del_lvap_response(EMPOWER_PT_ADD_LVAP_RESPONSE, state._sta, module_id, 0);
 
-		/* trigger lvap join message */
+		/* create default traffic rule */
 		if (ssid != "") {
-			for (int i = 0; i < _eqms.size(); i++) {
-				_eqms[i]->create_traffic_rule(ssid, 0);
-			}
+			_eqms[iface]->create_traffic_rule(ssid, 0, 1500, false);
 		}
 
 		return 0;
@@ -1402,11 +1405,9 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	/* send add lvap response message */
 	send_add_del_lvap_response(EMPOWER_PT_ADD_LVAP_RESPONSE, ess->_sta, module_id, 0);
 
-	/* trigger lvap join message */
+	/* create default traffic rule */
 	if (ssid != "") {
-		for (int i = 0; i < _eqms.size(); i++) {
-			_eqms[i]->create_traffic_rule(ssid, 0);
-		}
+		_eqms[iface]->create_traffic_rule(ssid, 0, 1500, false);
 	}
 
 	return 0;
@@ -1785,6 +1786,24 @@ int EmpowerLVAPManager::handle_incom_mcast_addr_response(Packet *p, uint32_t off
 	return 0;
 }
 
+int EmpowerLVAPManager::handle_add_traffic_rule(Packet *p, uint32_t offset) {
+
+	struct empower_add_traffic_rule *add_traffic_rule = (struct empower_add_traffic_rule *) (p->data() + offset);
+
+	int dscp = add_traffic_rule->dscp();
+	String ssid = add_traffic_rule->ssid();
+	uint32_t quantum = add_traffic_rule->quantum();
+	bool amsdu_aggregation = add_traffic_rule->flags(EMPOWER_AMSDU_AGGREGATION);
+
+	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
+		int iface_id = it_re.key();
+		_eqms[iface_id]->create_traffic_rule(ssid, dscp, quantum, amsdu_aggregation);
+	}
+
+	return 0;
+
+}
+
 int EmpowerLVAPManager::handle_del_mcast_addr(Packet *p, uint32_t offset) {
 
 	struct empower_del_mcast_addr *q = (struct empower_del_mcast_addr *) (p->data() + offset);
@@ -1915,6 +1934,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ:
 			handle_traffic_rule_status_request(p, offset);
+			break;
+		case EMPOWER_PT_ADD_TRAFFIC_RULE:
+			handle_add_traffic_rule(p, offset);
 			break;
 		default:
 			click_chatter("%{element} :: %s :: Unknown packet type: %d",

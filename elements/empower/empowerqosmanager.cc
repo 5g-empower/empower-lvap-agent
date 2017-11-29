@@ -33,7 +33,7 @@
 CLICK_DECLS
 
 EmpowerQOSManager::EmpowerQOSManager() :
-		_el(0), _rc(0), _sleepiness(0), _capacity(500), _quantum(1470), _debug(false) {
+		_el(0), _rc(0), _sleepiness(0), _capacity(500), _quantum(1470), _iface_id(0), _debug(false) {
 }
 
 EmpowerQOSManager::~EmpowerQOSManager() {
@@ -45,6 +45,8 @@ int EmpowerQOSManager::configure(Vector<String> &conf,
 	return Args(conf, this, errh)
 			.read_m("EL", ElementCastArg("EmpowerLVAPManager"), _el)
 			.read_m("RC", ElementCastArg("Minstrel"), _rc)
+			.read_m("IFACE_ID", _iface_id)
+			.read("QUANTUM", _quantum)
 			.read("DEBUG", _debug)
 			.complete();
 
@@ -80,7 +82,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 
 	click_ether *eh = (click_ether *) p->data();
 
-	if (eh->ether_type == 0x0800) {
+	if (ntohs(eh->ether_type) == 0x0800) {
 		const click_ip *ip = p->ip_header();
 		dscp = ip->ip_tos >> 2;
 	}
@@ -240,7 +242,7 @@ Packet * EmpowerQOSManager::pull(int) {
 	TRIter active = _rules.find(tr);
 	HItr head = _head_table.find(tr);
 	TrafficRuleQueue* queue = active.value();
-	queue->_deficit += _quantum;
+	queue->_deficit += queue->_quantum;
 
 	Packet *p = 0;
 	if (head.value()) {
@@ -268,19 +270,22 @@ Packet * EmpowerQOSManager::pull(int) {
 
 }
 
-void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp) {
+void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp, int quantum, bool amsdu_aggregation) {
 	TrafficRule tr = TrafficRule(ssid, dscp);
 	if (_rules.find(tr) == _rules.end()) {
-		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u",
+		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u quantum %u A-MSDU: %s",
 					  this,
 					  __func__,
 					  ssid.c_str(),
-					  dscp);
-		TrafficRuleQueue *queue = new TrafficRuleQueue(tr, _capacity, _quantum);
+					  dscp,
+					  quantum,
+					  amsdu_aggregation ? "yes." : "no");
+		int tr_quantum = (quantum == 0) ? _quantum : quantum;
+		TrafficRuleQueue *queue = new TrafficRuleQueue(tr, _capacity, tr_quantum, amsdu_aggregation);
 		_rules.set(tr, queue);
 		_head_table.set(tr, 0);
 		_active_list.push_back(tr);
-		_el->send_status_traffic_rule(ssid, dscp);
+		_el->send_status_traffic_rule(ssid, dscp, _iface_id);
 	}
 }
 

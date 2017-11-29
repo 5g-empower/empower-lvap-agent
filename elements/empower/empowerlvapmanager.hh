@@ -277,6 +277,7 @@ public:
 	int handle_vap_status_request(Packet *, uint32_t);
 	int handle_port_status_request(Packet *, uint32_t);
 	int handle_traffic_rule_status_request(Packet *, uint32_t);
+	int handle_add_traffic_rule(Packet *, uint32_t);
 
 	void send_hello();
 	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
@@ -285,7 +286,7 @@ public:
 	void send_status_lvap(EtherAddress);
 	void send_status_vap(EtherAddress);
 	void send_status_port(EtherAddress, int);
-	void send_status_traffic_rule(String, int);
+	void send_status_traffic_rule(String, int, int);
 	void send_counters_response(EtherAddress, uint32_t);
 	void send_txp_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, EtherAddress);
 	void send_img_response(int, uint32_t, EtherAddress, uint8_t, empower_bands_types);

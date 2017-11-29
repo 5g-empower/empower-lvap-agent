@@ -154,6 +154,10 @@ public:
       return p;
     }
 
+	uint32_t top_length() {
+		return top()->length();
+	}
+
     uint32_t nb_pkts() { return _nb_pkts; }
     EtherPair pair() { return _pair; }
 
@@ -222,9 +226,9 @@ public:
     bool _amsdu_aggregation;
     uint32_t _max_aggr_length;
 
-	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum) :
+	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation) :
 			_tr(tr), _capacity(capacity), _size(0), _drops(0), _deficit(0),
-			_quantum(quantum), _amsdu_aggregation(false), _max_aggr_length(0) {
+			_quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _max_aggr_length(7935) {
 	}
 
 	~TrafficRuleQueue() {
@@ -380,7 +384,7 @@ public:
 	Packet *pull(int);
 
 	void add_handlers();
-	void create_traffic_rule(String, int);
+	void create_traffic_rule(String, int, int, bool);
 
 	TrafficRules * rules() { return &_rules; }
 
@@ -399,6 +403,8 @@ private:
     int _sleepiness;
     uint32_t _capacity;
     uint32_t _quantum;
+
+    int _iface_id;
 
     bool _debug;
 

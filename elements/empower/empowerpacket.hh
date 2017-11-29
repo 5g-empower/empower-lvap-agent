@@ -823,28 +823,32 @@ struct empower_del_mcast_receiver : public empower_header {
 struct empower_add_traffic_rule : public empower_header {
   private:
 	uint16_t		_flags;				/* Aggregation flags */
-	uint16_t 	_priority;			/* Priority of the slice (int) */
-	uint16_t 	_parent_priority;	/* Priority of the tenant (without considering types of traffic) (int) */
+	uint16_t 	_quantum;			/* Priority of the slice (int) */
     uint8_t 		_dscp;				/* Traffic DSCP (int) */
     char    		_ssid[];				/* SSID (String) */
   public:
-    uint16_t     priority()					{ return ntohs(_priority); }
-    uint16_t     parent_priority()			{ return ntohs(_parent_priority); }
+    uint16_t     quantum()					{ return ntohs(_quantum); }
     bool         flags(int f)				{ return ntohs(_flags) & f; }
     uint8_t      dscp()						{ return _dscp; }
-    String       ssid()						{ int len = length() - 17; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    String       ssid()						{ int len = length() - 15; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* traffic rule status packet format */
 struct empower_status_traffic_rule : public empower_header {
   private:
     uint8_t 		_wtp[6];				/* EtherAddress */
+    uint8_t 		_hwaddr[6];			/* EtherAddress */
+    uint8_t 		_channel;			/* WiFi channel (int) */
+    uint8_t 		_band;				/* WiFi band (empower_band_types) */
 	uint16_t		_flags;				/* Aggregation flags */
 	uint16_t 	_quantum;			/* Priority of the slice (int) */
     uint8_t 		_dscp;				/* Traffic DSCP (int) */
     char    		_ssid[];				/* SSID (String) */
   public:
 	void set_wtp(EtherAddress wtp)         				{ memcpy(_wtp, wtp.data(), 6); }
+	void set_band(uint8_t band)							{ _band = band; }
+	void set_hwaddr(EtherAddress hwaddr)					{ memcpy(_hwaddr, hwaddr.data(), 6); }
+	void set_channel(uint8_t channel)					{ _channel = channel; }
     void set_dscp(uint8_t dscp)      					{ _dscp = dscp; }
     void set_quantum(uint16_t quantum)      				{ _quantum = htons(quantum); }
     void set_flags(uint16_t f)							{ _flags = htons(ntohs(_flags) | f); }
