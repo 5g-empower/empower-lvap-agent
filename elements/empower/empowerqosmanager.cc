@@ -258,7 +258,10 @@ Packet * EmpowerQOSManager::pull(int) {
 			_active_list.push_back(tr);
 		}
 	} else if (compute_deficit(p) <= queue->_deficit) {
-		queue->_deficit -= compute_deficit(p);
+		uint32_t deficit = compute_deficit(p);
+		queue->_deficit -= deficit;
+		queue->_deficit_used += deficit;
+		queue->_transm_bytes += p->length();
 		_active_list.push_front(tr);
 		return p;
 	} else {
@@ -270,7 +273,7 @@ Packet * EmpowerQOSManager::pull(int) {
 
 }
 
-void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp, int quantum, bool amsdu_aggregation) {
+void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation) {
 	TrafficRule tr = TrafficRule(ssid, dscp);
 	if (_rules.find(tr) == _rules.end()) {
 		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u quantum %u A-MSDU: %s",
@@ -280,7 +283,7 @@ void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp, int quantum, 
 					  dscp,
 					  quantum,
 					  amsdu_aggregation ? "yes." : "no");
-		int tr_quantum = (quantum == 0) ? _quantum : quantum;
+		uint32_t tr_quantum = (quantum == 0) ? _quantum : quantum;
 		TrafficRuleQueue *queue = new TrafficRuleQueue(tr, _capacity, tr_quantum, amsdu_aggregation);
 		_rules.set(tr, queue);
 		_head_table.set(tr, 0);

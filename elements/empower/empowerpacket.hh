@@ -822,37 +822,45 @@ struct empower_del_mcast_receiver : public empower_header {
 
 struct empower_add_traffic_rule : public empower_header {
   private:
-	uint16_t		_flags;				/* Aggregation flags */
-	uint16_t 	_quantum;			/* Priority of the slice (int) */
-    uint8_t 		_dscp;				/* Traffic DSCP (int) */
+	uint16_t		_flags;					/* Aggregation flags */
+	uint32_t 		_quantum;				/* Priority of the slice (int) */
+    uint8_t 		_dscp;					/* Traffic DSCP (int) */
     char    		_ssid[];				/* SSID (String) */
   public:
-    uint16_t     quantum()					{ return ntohs(_quantum); }
+    uint32_t     quantum()					{ return ntohs(_quantum); }
     bool         flags(int f)				{ return ntohs(_flags) & f; }
     uint8_t      dscp()						{ return _dscp; }
-    String       ssid()						{ int len = length() - 15; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    String       ssid()						{ int len = length() - 17; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* traffic rule status packet format */
 struct empower_status_traffic_rule : public empower_header {
   private:
     uint8_t 		_wtp[6];				/* EtherAddress */
-    uint8_t 		_hwaddr[6];			/* EtherAddress */
-    uint8_t 		_channel;			/* WiFi channel (int) */
-    uint8_t 		_band;				/* WiFi band (empower_band_types) */
-	uint16_t		_flags;				/* Aggregation flags */
-	uint16_t 	_quantum;			/* Priority of the slice (int) */
-    uint8_t 		_dscp;				/* Traffic DSCP (int) */
+    uint8_t 		_hwaddr[6];				/* EtherAddress */
+    uint8_t 		_channel;				/* WiFi channel (int) */
+    uint8_t 		_band;					/* WiFi band (empower_band_types) */
+	uint16_t		_flags;					/* Aggregation flags */
+	uint32_t 		_quantum;				/* Priority of the slice (int) */
+    uint8_t 		_dscp;					/* Traffic DSCP (int) */
+    uint32_t        _deficit_used;          /* Total deficit used by this queue */
+    uint32_t        _transm_pkts;           /* Total transmitted packets */
+    uint32_t        _transm_bytes;          /* Total transmitted bytes */
+    uint32_t        _max_queue_length;      /* Maximum queue length reached */
     char    		_ssid[];				/* SSID (String) */
   public:
-	void set_wtp(EtherAddress wtp)         				{ memcpy(_wtp, wtp.data(), 6); }
-	void set_band(uint8_t band)							{ _band = band; }
+	void set_wtp(EtherAddress wtp)         					{ memcpy(_wtp, wtp.data(), 6); }
+	void set_band(uint8_t band)								{ _band = band; }
 	void set_hwaddr(EtherAddress hwaddr)					{ memcpy(_hwaddr, hwaddr.data(), 6); }
-	void set_channel(uint8_t channel)					{ _channel = channel; }
-    void set_dscp(uint8_t dscp)      					{ _dscp = dscp; }
-    void set_quantum(uint16_t quantum)      				{ _quantum = htons(quantum); }
-    void set_flags(uint16_t f)							{ _flags = htons(ntohs(_flags) | f); }
-    void set_ssid(String ssid)             				{ memcpy(&_ssid, ssid.data(), ssid.length()); }
+	void set_channel(uint8_t channel)						{ _channel = channel; }
+    void set_dscp(uint8_t dscp)      						{ _dscp = dscp; }
+    void set_quantum(uint32_t quantum)      				{ _quantum = htonl(quantum); }
+    void set_flags(uint16_t f)								{ _flags = htons(ntohs(_flags) | f); }
+    void set_deficit_used(uint32_t deficit_used)			{ _deficit_used = htonl(deficit_used); }
+    void set_transm_pkts(uint32_t transm_pkts)				{ _transm_pkts = htonl(transm_pkts); }
+    void set_transm_bytes(uint32_t transm_bytes)			{ _transm_bytes = htonl(transm_bytes); }
+    void set_max_queue_length(uint32_t max_queue_length)    { _max_queue_length = htonl(max_queue_length); }
+    void set_ssid(String ssid)             					{ memcpy(&_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 CLICK_ENDDECLS

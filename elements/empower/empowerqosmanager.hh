@@ -225,10 +225,16 @@ public:
     uint32_t _quantum;
     bool _amsdu_aggregation;
     uint32_t _max_aggr_length;
+    uint32_t _deficit_used;
+    uint32_t _transm_pkts;
+    uint32_t _transm_bytes;
+    uint32_t _max_queue_length;
+
 
 	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation) :
 			_tr(tr), _capacity(capacity), _size(0), _drops(0), _deficit(0),
-			_quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _max_aggr_length(7935) {
+			_quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _max_aggr_length(7935),
+			_deficit_used(0), _transm_pkts(0), _transm_bytes(0), _max_queue_length(0){
 	}
 
 	~TrafficRuleQueue() {
@@ -303,12 +309,16 @@ public:
 			_active_list.push_back(pair);
 
 		}
-
-		if (_queues.get(pair)->push(p)) {
+		AggregationQueue *queue = _queues.get(pair);
+		if (queue->push(p)) {
 			// check if ra is in active list
 			if (find(_active_list.begin(), _active_list.end(), pair) == _active_list.end()) {
 				_active_list.push_back(pair);
 			}
+			if (queue->nb_pkts() > _max_queue_length) {
+				_max_queue_length = _queues.get(pair)->nb_pkts();
+			}
+
 			return true;
 		}
 
@@ -384,7 +394,7 @@ public:
 	Packet *pull(int);
 
 	void add_handlers();
-	void create_traffic_rule(String, int, int, bool);
+	void create_traffic_rule(String, int, uint32_t, bool);
 
 	TrafficRules * rules() { return &_rules; }
 
