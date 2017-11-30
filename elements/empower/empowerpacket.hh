@@ -821,16 +821,16 @@ struct empower_del_mcast_receiver : public empower_header {
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 struct empower_add_traffic_rule : public empower_header {
-  private:
-	uint16_t		_flags;					/* Aggregation flags */
-	uint32_t 		_quantum;				/* Priority of the slice (int) */
-    uint8_t 		_dscp;					/* Traffic DSCP (int) */
-    char    		_ssid[];				/* SSID (String) */
+
+	uint16_t		_flags;				/* Aggregation flags */
+	uint32_t 		_quantum;			/* Priority of the slice (int) */
+    uint8_t 		_dscp;				/* Traffic DSCP (int) */
+    char    		_ssid[];			/* SSID (String) */
   public:
-    uint32_t     quantum()					{ return ntohs(_quantum); }
-    bool         flags(int f)				{ return ntohs(_flags) & f; }
-    uint8_t      dscp()						{ return _dscp; }
-    String       ssid()						{ int len = length() - 17; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    uint32_t     quantum()				{ return ntohl(_quantum); }
+    bool         flags(int f)			{ return ntohs(_flags) & f; }
+    uint8_t      dscp()					{ return _dscp; }
+    String       ssid()					{ int len = length() - 17; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* traffic rule status packet format */
@@ -859,7 +859,7 @@ struct empower_status_traffic_rule : public empower_header {
     void set_deficit_used(uint32_t deficit_used)			{ _deficit_used = htonl(deficit_used); }
     void set_transm_pkts(uint32_t transm_pkts)				{ _transm_pkts = htonl(transm_pkts); }
     void set_transm_bytes(uint32_t transm_bytes)			{ _transm_bytes = htonl(transm_bytes); }
-    void set_max_queue_length(uint32_t max_queue_length)    { _max_queue_length = htonl(max_queue_length); }
+    void set_max_queue_length(uint32_t max_queue_length) 	{ _max_queue_length = htonl(max_queue_length); }
     void set_ssid(String ssid)             					{ memcpy(&_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
