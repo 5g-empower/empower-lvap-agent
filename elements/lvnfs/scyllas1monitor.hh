@@ -5,6 +5,8 @@
 #include <click/hashmap.hh>
 CLICK_DECLS
 
+extern Vector <struct S1APMonitorElement> S1APMonElelist;
+
 struct click_sctp {
 private:
     uint16_t _src_port;
