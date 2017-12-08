@@ -358,7 +358,6 @@ private:
 	class EmpowerAssociationResponder *_eassor;
 	class EmpowerDeAuthResponder *_edeauthr;
 	class EmpowerRXStats *_ers;
-	class EmpowerCQM *_cqm;
 	class EmpowerMulticastTable * _mtbl;
 
 	LVAP _lvaps;
