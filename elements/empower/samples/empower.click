@@ -15,8 +15,6 @@ ControlSocket("TCP", 7777);
 
 ers :: EmpowerRXStats(EL el);
 
-cqm :: EmpowerCQM(EL el);
-
 wifi_cl :: Classifier(0/08%0c,  // data
                       0/00%0c); // mgt
 
@@ -36,7 +34,6 @@ FromDevice(moni0, PROMISC false, OUTBOUND true, SNIFFER false)
   -> rc_0
   -> WifiDupeFilter()
   -> Paint(0)
-  -> cqm
   -> ers;
 
 sched_0 :: PrioSched()
@@ -70,7 +67,6 @@ ctrl :: Socket(TCP, 192.168.1.3, 4433, CLIENT true, VERBOSE true, RECONNECT_CALL
                                 PERIOD 5000,
                                 DEBUGFS " /sys/kernel/debug/ieee80211/phy0/netdev:moni0/../ath9k/bssid_extra",
                                 ERS ers,
-                                CQM cqm,
                                 DEBUG false)
     -> ctrl;
 
