@@ -375,13 +375,70 @@ void EmpowerLVAPManager:: send_status_traffic_rule(String ssid, int dscp, int if
 	status->set_dscp(queue->_tr._dscp);
 	status->set_ssid(queue->_tr._ssid);
 	status->set_quantum(queue->_quantum);
-	status->set_max_queue_length(queue->_max_queue_length);
-	status->set_deficit_used(queue->_deficit_used);
-	status->set_transm_pkts(queue->_transm_pkts);
-	status->set_transm_bytes(queue->_transm_bytes);
 
 	if (queue->_amsdu_aggregation) {
 		status->set_flags(EMPOWER_AMSDU_AGGREGATION);
+	}
+
+	send_message(p);
+}
+
+int EmpowerLVAPManager::handle_tr_stats_request(Packet *p, uint32_t offset) {
+
+	struct empower_tr_stats_request *q = (struct empower_tr_stats_request *) (p->data() + offset);
+	EtherAddress hwaddr = q->hwaddr();
+	empower_bands_types band = (empower_bands_types) q->band();
+	uint8_t channel = q->channel();
+	String ssid = q->ssid();
+
+	int iface_id = element_to_iface(hwaddr, channel, band);
+
+	for (TRIter it = _eqms[iface_id]->rules()->begin(); it.live(); it++) {
+		if (ssid == it.key()._ssid) {
+			send_tr_stats_response(it.key()._ssid, it.key()._dscp, iface_id);
+		}
+	}
+
+	return 0;
+
+}
+
+void EmpowerLVAPManager:: send_tr_stats_response(String ssid, int dscp, int iface_id) {
+
+	TrafficRule tr = TrafficRule(ssid, dscp);
+	TrafficRuleQueue * queue = _eqms[iface_id]->rules()->find(tr).value();
+
+	ResourceElement* re = iface_to_element(iface_id);
+
+	int len = sizeof(empower_status_traffic_rule) + ssid.length();
+
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	memset(p->data(), 0, p->length());
+
+	empower_tr_stats_response *stats = (struct empower_tr_stats_response *) (p->data());
+	stats->set_version(_empower_version);
+	stats->set_length(len);
+	stats->set_type(EMPOWER_PT_STATUS_TRAFFIC_RULE);
+	stats->set_seq(get_next_seq());
+	stats->set_wtp(_wtp);
+	stats->set_dscp(queue->_tr._dscp);
+	stats->set_ssid(queue->_tr._ssid);
+	stats->set_quantum(queue->_quantum);
+	stats->set_max_queue_length(queue->_max_queue_length);
+	stats->set_deficit_used(queue->_deficit_used);
+	stats->set_transm_pkts(queue->_transm_pkts);
+	stats->set_transm_bytes(queue->_transm_bytes);
+
+	if (queue->_amsdu_aggregation) {
+		stats->set_flags(EMPOWER_AMSDU_AGGREGATION);
 	}
 
 	send_message(p);
@@ -1940,6 +1997,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_ADD_TRAFFIC_RULE:
 			handle_add_traffic_rule(p, offset);
+			break;
+		case EMPOWER_PT_TR_STATS_REQUEST:
+			handle_tr_stats_request(p, offset);
 			break;
 		default:
 			click_chatter("%{element} :: %s :: Unknown packet type: %d",
