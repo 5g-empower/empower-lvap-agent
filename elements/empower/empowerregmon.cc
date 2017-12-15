@@ -14,6 +14,8 @@
  * legally binding.
  */
 
+#include <stdio.h>
+#include <inttypes.h>
 #include <click/config.h>
 #include "empowerregmon.hh"
 #include <click/args.hh>
@@ -34,12 +36,14 @@ EmpowerRegmon::~EmpowerRegmon() {
 
 int EmpowerRegmon::initialize(ErrorHandler *) {
 
-	String registers_name[3] = {"tx_busy", "rx_busy", "ed"};
+	RegmonRegister reg_tx = RegmonRegister(EMPOWER_REGMON_TX, _iface_id, 100);
+	_registers.push_back(reg_tx);
 
-	for (int i = 0; i < 3; i++) {
-		RegmonRegister reg = RegmonRegister(registers_name[i], i, 100);
-		_registers.push_back(reg);
-	}
+	RegmonRegister reg_rx = RegmonRegister(EMPOWER_REGMON_RX, _iface_id, 100);
+	_registers.push_back(reg_rx);
+
+	RegmonRegister reg_ed = RegmonRegister(EMPOWER_REGMON_ED, _iface_id, 100);
+	_registers.push_back(reg_ed);
 
 	_last_mac_ticks = 0;
 
@@ -98,78 +102,68 @@ int EmpowerRegmon::configure(Vector<String> &conf, ErrorHandler *errh) {
 
 void EmpowerRegmon::run_timer(Timer *) {
 
-	_read_start.assign_now();
+	Timestamp start = Timestamp::now();
 
-	char buffer[1024];
-	int nread;
+	FILE * fp;
+	char * line = NULL;
+	size_t len = 0;
+	ssize_t read;
 
-	// due to bugs in the driver patch, it is necessary to open the file each time
-	fclose(_register_log_file);
 	String register_log_file_path = _debugfs + "/register_log";
-	_register_log_file = fopen(register_log_file_path.c_str(), "r");
+	fp = fopen(register_log_file_path.c_str(), "r");
 
-	char *block_state = NULL;
-
-	nread = fread(&buffer, 1, sizeof buffer, _register_log_file);
-
-	while (nread > 0) {
-
-		char * line = strtok_r(strdup(buffer), "\n", &block_state);
-
-		while (line != NULL && strlen(line) > 20) {
-
-			char *line_state = NULL;
-
-			int i = 0;
-			int mac_ticks_delta = 0;
-			bool skip_line = false;
-
-			char * reg_col = strtok_r(strdup(line), ",", &line_state);
-			while (reg_col != NULL && i < 7 && !skip_line) {
-				uint32_t value = strtoul(reg_col, NULL, 0);
-				switch(i) {
-					case 0:
-					case 1:
-					case 2:
-						break;
-					case 3:
-						mac_ticks_delta = value - _last_mac_ticks;
-						_last_mac_ticks = value;
-						if (mac_ticks_delta < 0)
-							skip_line = true;
-						break;
-					default:
-						_registers[i - 4].add_sample(value, mac_ticks_delta);
-				}
-				reg_col = strtok_r(NULL, ",", &line_state);
-				i++;
-			}
-
-			line = strtok_r(NULL, "\n", &block_state);
-			nread = fread(&buffer, 1, sizeof buffer, _register_log_file);
-
-		}
-
+	if (fp == NULL) {
+		click_chatter("%{element} :: %s :: unable to open file %s",
+					  this,
+					  __func__,
+					  register_log_file_path.c_str());
+		_timer.schedule_after_msec(_elem_period);
+		return;
 	}
 
-	// re-schedule the timer considering the time spent for computation
-	_read_end.assign_now();
+	while ((read = getline(&line, &len, fp)) != -1) {
+		Vector<String> values;
+		char* token = strtok(line, ",");
+		while (token != NULL) {
+			values.push_back(String(token));
+			token = strtok(NULL, ",");
+		}
+		uint32_t sec = strtoul(values[0].c_str(), NULL, 10);
+		uint32_t nsec = strtoul(values[1].c_str(), NULL, 10);
+		uint64_t mac_ticks = strtoull(values[2].c_str(), NULL, 16);
+		uint64_t tx = strtoull(values[3].c_str(), NULL, 16);
+		uint64_t rx = strtoull(values[4].c_str(), NULL, 16);
+		uint64_t ed = strtoull(values[5].c_str(), NULL, 16);
+		int mac_ticks_delta = mac_ticks - _last_mac_ticks;
+		_last_mac_ticks = mac_ticks;
+		if (mac_ticks_delta < 0) {
+			continue;
+		}
+		Timestamp timestamp = Timestamp(sec, nsec);
+		_registers[EMPOWER_REGMON_TX].add_sample(timestamp.usecval(), tx, mac_ticks_delta);
+		_registers[EMPOWER_REGMON_RX].add_sample(timestamp.usecval(), rx, mac_ticks_delta);
+		_registers[EMPOWER_REGMON_ED].add_sample(timestamp.usecval(), ed, mac_ticks_delta);
+	}
 
-	// fixme, computation might take seconds
-	unsigned delta = (_read_end - _read_start).msec();
+	fclose(fp);
 
-	if (delta > _elem_period)
-		click_chatter("%{element} :: %s :: processing samples took too much time (%d msec)",
+	Timestamp delta = Timestamp::now() -start;
+
+	if (delta.msec() > _elem_period) {
+		click_chatter("%{element} :: %s :: processing samples took too much time %s",
 				      this,
 					  __func__,
-					  delta);
+					  delta.unparse().c_str());
+	}
 
-	_timer.schedule_after_msec(_elem_period - delta);
+	_timer.schedule_after_msec(_elem_period - delta.msec());
+	return;
 
 }
 
 enum {
 	H_STATUS,
+	H_FULL,
 };
 
 String EmpowerRegmon::read_handler(Element *e, void *thunk) {
@@ -177,9 +171,17 @@ String EmpowerRegmon::read_handler(Element *e, void *thunk) {
 	EmpowerRegmon *eg = (EmpowerRegmon *) e;
 	switch ((uintptr_t) thunk) {
 	case H_STATUS: {
-		sa << "Registers:" << "\n";
 		for (RegistersIter iter = eg->_registers.begin(); iter != eg->_registers.end(); iter++) {
 			sa << iter->unparse() << "\n";
+		}
+		return sa.take_string();
+	}
+	case H_FULL: {
+		for (RegistersIter iter = eg->_registers.begin(); iter != eg->_registers.end(); iter++) {
+			sa << iter->unparse() << "\n";
+			for (int i = 0; i < 100; i++) {
+				sa << iter->_timestamps[i] << " " << iter->_samples[i] << '\n';
+			}
 		}
 		return sa.take_string();
 	}
@@ -190,6 +192,7 @@ String EmpowerRegmon::read_handler(Element *e, void *thunk) {
 
 void EmpowerRegmon::add_handlers() {
 	add_read_handler("status", read_handler, (void *) H_STATUS);
+	add_read_handler("full", read_handler, (void *) H_FULL);
 }
 
 CLICK_ENDDECLS

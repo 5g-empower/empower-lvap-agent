@@ -706,7 +706,7 @@ void EmpowerLVAPManager::send_wifi_stats_response(uint32_t wifi_stats_id, EtherA
 		return;
 	}
 
-	int len = sizeof(empower_wifi_stats_response);
+	int len = sizeof(empower_wifi_stats_response) + sizeof(wifi_stats_entry) * _regmons[iface_id]->registers(EMPOWER_REGMON_TX)->_size * 3;
 	WritablePacket *p = Packet::make(len);
 
 	if (!p) {
@@ -715,6 +715,8 @@ void EmpowerLVAPManager::send_wifi_stats_response(uint32_t wifi_stats_id, EtherA
 					  __func__);
 		return;
 	}
+
+
 
 	memset(p->data(), 0, p->length());
 
@@ -725,7 +727,39 @@ void EmpowerLVAPManager::send_wifi_stats_response(uint32_t wifi_stats_id, EtherA
 	stats->set_seq(get_next_seq());
 	stats->set_wifi_stats_id(wifi_stats_id);
 	stats->set_wtp(_wtp);
-	/* TODO: Add more parameters */
+	stats->set_nb_entries(_regmons[iface_id]->registers(EMPOWER_REGMON_TX)->_size * 3);
+
+	uint8_t *ptr = (uint8_t *) stats;
+	ptr += sizeof(struct empower_wifi_stats_response);
+
+	uint8_t *end = ptr + (len - sizeof(struct empower_wifi_stats_response));
+
+	for (int i = 0; i < _regmons[iface_id]->registers(EMPOWER_REGMON_TX)->_size; i++) {
+		assert (ptr <= end);
+		wifi_stats_entry *entry = (wifi_stats_entry *) ptr;
+		entry->set_type(_regmons[iface_id]->registers(EMPOWER_REGMON_TX)->_type);
+		entry->set_timestamp(_regmons[iface_id]->registers(EMPOWER_REGMON_TX)->_timestamps[i]);
+		entry->set_sample(_regmons[iface_id]->registers(EMPOWER_REGMON_TX)->_samples[i]);
+		ptr += sizeof(struct wifi_stats_entry);
+	}
+
+	for (int i = 0; i < _regmons[iface_id]->registers(EMPOWER_REGMON_RX)->_size; i++) {
+		assert (ptr <= end);
+		wifi_stats_entry *entry = (wifi_stats_entry *) ptr;
+		entry->set_type(_regmons[iface_id]->registers(EMPOWER_REGMON_RX)->_type);
+		entry->set_timestamp(_regmons[iface_id]->registers(EMPOWER_REGMON_RX)->_timestamps[i]);
+		entry->set_sample(_regmons[iface_id]->registers(EMPOWER_REGMON_RX)->_samples[i]);
+		ptr += sizeof(struct wifi_stats_entry);
+	}
+
+	for (int i = 0; i < _regmons[iface_id]->registers(EMPOWER_REGMON_ED)->_size; i++) {
+		assert (ptr <= end);
+		wifi_stats_entry *entry = (wifi_stats_entry *) ptr;
+		entry->set_type(_regmons[iface_id]->registers(EMPOWER_REGMON_ED)->_type);
+		entry->set_timestamp(_regmons[iface_id]->registers(EMPOWER_REGMON_ED)->_timestamps[i]);
+		entry->set_sample(_regmons[iface_id]->registers(EMPOWER_REGMON_ED)->_samples[i]);
+		ptr += sizeof(struct wifi_stats_entry);
+	}
 
 	send_message(p);
 

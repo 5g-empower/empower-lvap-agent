@@ -84,6 +84,12 @@ enum empower_aggregation_flags {
 	EMPOWER_AMSDU_AGGREGATION = (1<<0)
 };
 
+enum empower_regmon_types {
+    EMPOWER_REGMON_TX = 0x0,
+	EMPOWER_REGMON_RX = 0x1,
+	EMPOWER_REGMON_ED = 0x2,
+};
+
 typedef HashTable<uint16_t, uint32_t> CBytes;
 typedef CBytes::iterator CBytesIter;
 

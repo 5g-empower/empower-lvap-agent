@@ -13,11 +13,12 @@ CLICK_DECLS
 class RegmonRegister {
 public:
 
-	RegmonRegister(String name, int iface_id, uint32_t size) {
-		_name = name;
+	RegmonRegister(empower_regmon_types type, int iface_id, uint32_t size) {
+		_type = type;
 		_iface_id = iface_id;
 		_size = size;
-		_samples = new uint8_t[size]();
+		_samples = new uint32_t[size]();
+		_timestamps = new uint32_t[size]();
 		_index = 0;
 		_last_value = 0;
 		_skipped = 0;
@@ -27,18 +28,18 @@ public:
 		memset(_samples, 0, _size);
 	}
 
-	void add_sample(uint32_t value, uint32_t mac_ticks_delta) {
+	void add_sample(uint32_t timestamp, uint32_t value, uint32_t mac_ticks_delta) {
 
 		if (_first_run) {
 			_first_run = false;
 			_samples[_index] = 0;
-		}
-		else {
-			uint32_t perc = ((value - _last_value) * 100) / mac_ticks_delta;
-			 _samples[_index] = (uint8_t)perc;
+			_timestamps[_index] = timestamp;
+		} else {
+			_samples[_index] = ((value - _last_value) * 18000) / mac_ticks_delta;
+			_timestamps[_index] = timestamp;
 		}
 
-		 _last_value = value;
+		_last_value = value;
 
 		if (value > _max_value)
 			_max_value = value;
@@ -55,24 +56,30 @@ public:
 
 		StringAccum sa;
 
-		sa << "Register=" << _name << "\t\t";
-		sa << "Id=" << _iface_id << "\t\t";
-		sa << "Size=" << _size << "\t\t";
-		sa << "Index=" << _index << "\t\t";
-		sa << "Skipped=" << _skipped << "\t\t";
+		if (_type == EMPOWER_REGMON_TX) {
+			sa << "Register=tx\t";
+		} else if (_type == EMPOWER_REGMON_RX) {
+			sa << "Register=rx\t";
+		} else {
+			sa << "Register=ed\t";
+		}
+
+		sa << "Id=" << _iface_id << "\t";
+		sa << "Size=" << _size << "\t";
+		sa << "Index=" << _index << "\t";
+		sa << "Skipped=" << _skipped << "\t";
 		sa << "MinValue=" << _min_value << "\t\t";
-		sa << "MaxValue=" << _max_value << "\t\t";
+		sa << "MaxValue=" << _max_value;
 
 		return sa.take_string();
 
 	}
 
-private:
-
-	String _name;
+	empower_regmon_types _type;
 	int _iface_id;
 	int _size;
-	uint8_t *_samples;
+	uint32_t *_samples;
+	uint32_t *_timestamps;
 	int _index;
 	uint32_t _last_value;
 	int _skipped;
@@ -97,6 +104,7 @@ public:
 	void add_handlers();
 	int initialize(ErrorHandler *);
 	void run_timer(Timer *);
+	RegmonRegister * registers(int i) { return &_registers.at(i); }
 
 private:
 
@@ -112,7 +120,6 @@ private:
 	String _debugfs;
 
 	FILE *_register_log_file;
-	Timestamp _read_start, _read_end;
 	uint32_t _last_mac_ticks;
 
 	Registers _registers;

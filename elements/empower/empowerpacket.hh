@@ -295,15 +295,29 @@ public:
     EtherAddress hwaddr() 	{ return EtherAddress(_hwaddr); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* link stats response packet format */
+/* wifi stats entry format */
+struct wifi_stats_entry {
+  private:
+      uint8_t  _type;		/* EtherAddress */
+      uint32_t _timestamp;	/* Timestamp in microseconds (int) */
+      uint32_t _sample;		/* Std RSSI during last window in dBm (int) */
+  public:
+    void set_type(uint8_t type)             			{ _type = type; }
+    void set_sample(uint32_t sample)             		{ _sample = htonl(sample); }
+    void set_timestamp(uint32_t timestamp)      		{ _timestamp = htonl(timestamp); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* wifi stats response packet format */
 struct empower_wifi_stats_response : public empower_header {
 private:
   uint32_t _wifi_stats_id;	/* Module id (int) */
   uint8_t  _wtp[6];			/* EtherAddress */
+  uint16_t _nb_entries;	    /* Int */
   /* TODO: need to add additional params */
 public:
   void set_wifi_stats_id(uint32_t wifi_stats_id) 	{ _wifi_stats_id = htonl(wifi_stats_id); }
   void set_wtp(EtherAddress wtp)					{ memcpy(_wtp, wtp.data(), 6); }
+  void set_nb_entries(uint16_t nb_entries)  	  { _nb_entries = htons(nb_entries); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* channel quality map request packet format */
