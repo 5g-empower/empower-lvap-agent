@@ -1288,7 +1288,7 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		compute_bssid_mask();
 
 		/* create default traffic rule */
-		_eqms[iface]->create_traffic_rule(ssid, 0, 1500, false);
+		_eqms[iface]->set_traffic_rule(ssid, 0, 1500, false);
 
 		return 0;
 
@@ -1448,7 +1448,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 		/* create default traffic rule */
 		if (ssid != "") {
-			_eqms[iface]->create_traffic_rule(ssid, 0, 1500, false);
+			_eqms[iface]->set_traffic_rule(ssid, 0, 1500, false);
 		}
 
 		return 0;
@@ -1513,7 +1513,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 	/* create default traffic rule */
 	if (ssid != "") {
-		_eqms[iface]->create_traffic_rule(ssid, 0, 1500, false);
+		_eqms[iface]->set_traffic_rule(ssid, 0, 1500, false);
 	}
 
 	return 0;
@@ -1615,6 +1615,35 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 	return 0;
 
 }
+
+int EmpowerLVAPManager::handle_del_port(Packet *p, uint32_t offset) {
+
+	struct empower_del_port *q = (struct empower_del_port *) (p->data() + offset);
+
+	EtherAddress addr = q->addr();
+	EtherAddress hwaddr = q->hwaddr();
+	int channel = q->channel();
+	empower_bands_types band = (empower_bands_types) q->band();
+
+	int iface = element_to_iface(hwaddr, channel, band);
+
+	if (iface == -1) {
+		   click_chatter("%{element} :: %s :: invalid resource element (%s, %u, %u)!",
+									 this,
+									 __func__,
+									 hwaddr.unparse().c_str(),
+									 channel,
+									 band);
+		   return 0;
+	}
+
+	_rcs[iface]->tx_policies()->remove(addr);
+	_rcs[iface]->forget_station(addr);
+
+	return 0;
+
+}
+
 
 int EmpowerLVAPManager::handle_add_rssi_trigger(Packet *p, uint32_t offset) {
 	struct empower_add_rssi_trigger *q = (struct empower_add_rssi_trigger *) (p->data() + offset);
@@ -1724,8 +1753,10 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 
 	// remove lvap
 	remove_lvap(ess);
+
 	// send del lvap response message
 	send_add_del_lvap_response(EMPOWER_PT_DEL_LVAP_RESPONSE, ess->_sta, module_id, 0);
+
 	return 0;
 
 }
@@ -1892,7 +1923,7 @@ int EmpowerLVAPManager::handle_incom_mcast_addr_response(Packet *p, uint32_t off
 	return 0;
 }
 
-int EmpowerLVAPManager::handle_add_traffic_rule(Packet *p, uint32_t offset) {
+int EmpowerLVAPManager::handle_set_traffic_rule(Packet *p, uint32_t offset) {
 
 	struct empower_set_traffic_rule *add_traffic_rule = (struct empower_set_traffic_rule *) (p->data() + offset);
 
@@ -1907,7 +1938,38 @@ int EmpowerLVAPManager::handle_add_traffic_rule(Packet *p, uint32_t offset) {
 	uint32_t quantum = add_traffic_rule->quantum();
 	bool amsdu_aggregation = add_traffic_rule->flags(EMPOWER_AMSDU_AGGREGATION);
 
-	_eqms[iface_id]->create_traffic_rule(ssid, dscp, quantum, amsdu_aggregation);
+	click_chatter("%{element} :: %s :: Receiving add traffic rule for ssid %s dscp %u",
+				  this,
+				  __func__,
+				  ssid.c_str(),
+				  dscp);
+
+	_eqms[iface_id]->set_traffic_rule(ssid, dscp, quantum, amsdu_aggregation);
+
+	return 0;
+
+}
+
+int EmpowerLVAPManager::handle_del_traffic_rule(Packet *p, uint32_t offset) {
+
+	struct empower_del_traffic_rule *del_traffic_rule = (struct empower_del_traffic_rule *) (p->data() + offset);
+
+	EtherAddress hwaddr = del_traffic_rule->hwaddr();
+	int channel = del_traffic_rule->channel();
+	empower_bands_types band = (empower_bands_types) del_traffic_rule->band();
+
+	int iface_id = element_to_iface(hwaddr, channel, band);
+
+	int dscp = del_traffic_rule->dscp();
+	String ssid = del_traffic_rule->ssid();
+
+	click_chatter("%{element} :: %s :: Receiving del traffic rule for ssid %s dscp %u",
+				  this,
+				  __func__,
+				  ssid.c_str(),
+				  dscp);
+
+	_eqms[iface_id]->del_traffic_rule(ssid, dscp);
 
 	return 0;
 
@@ -2020,6 +2082,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 		case EMPOWER_PT_SET_PORT:
 			handle_set_port(p, offset);
 			break;
+		case EMPOWER_PT_DEL_PORT:
+			handle_del_port(p, offset);
+			break;
 		case EMPOWER_PT_LVAP_STATS_REQUEST:
 			handle_lvap_stats_request(p, offset);
 			break;
@@ -2038,14 +2103,10 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 		case EMPOWER_PT_VAP_STATUS_REQ:
 			handle_vap_status_request(p, offset);
 			break;
-		case EMPOWER_PT_PORT_STATUS_REQ:
-			handle_port_status_request(p, offset);
-			break;
-		case EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ:
-			handle_traffic_rule_status_request(p, offset);
-			break;
-		case EMPOWER_PT_ADD_TRAFFIC_RULE:
-			handle_add_traffic_rule(p, offset);
+		case EMPOWER_PT_SET_TRAFFIC_RULE:
+			handle_set_traffic_rule(p, offset);
+		case EMPOWER_PT_DEL_TRAFFIC_RULE:
+			handle_del_traffic_rule(p, offset);
 			break;
 		case EMPOWER_PT_TRAFFIC_RULE_STATS_REQUEST:
 			handle_traffic_rule_stats_request(p, offset);
@@ -2356,6 +2417,10 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 	case H_RECONNECT: {
 		// clear triggers
 		f->_ers->clear_triggers();
+		// clear txps
+		f->clear_txps();
+		// clear trqs
+		f->clear_trqs();
 		// send hello
 		f->send_hello();
 		break;
@@ -2363,6 +2428,19 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 	}
 	return 0;
 }
+
+void EmpowerLVAPManager::clear_txps() {
+	for (REIter iter = _ifaces_to_elements.begin(); iter.live(); iter++) {
+		_rcs[iter.key()]->tx_policies()->clear();
+	}
+}
+
+void EmpowerLVAPManager::clear_trqs() {
+	for (REIter iter = _ifaces_to_elements.begin(); iter.live(); iter++) {
+		_eqms[iter.key()]->clear();
+	}
+}
+
 
 void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);

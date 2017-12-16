@@ -11,7 +11,7 @@ static const uint8_t _empower_version = 0x00;
 /* protocol type */
 enum empower_packet_types {
 
-    // LVAP messages
+    // base messages
     EMPOWER_PT_HELLO = 0x04,            // wtp -> ac
     EMPOWER_PT_PROBE_REQUEST = 0x05,    // wtp -> ac
     EMPOWER_PT_PROBE_RESPONSE = 0x06,   // ac -> wtp
@@ -19,13 +19,49 @@ enum empower_packet_types {
     EMPOWER_PT_AUTH_RESPONSE = 0x08,    // ac -> wtp
     EMPOWER_PT_ASSOC_REQUEST = 0x09,    // wtp -> ac
     EMPOWER_PT_ASSOC_RESPONSE = 0x10,   // ac -> wtp
+	EMPOWER_PT_CAPS_REQUEST = 0x16,     // ac -> wtp
+	EMPOWER_PT_CAPS_RESPONSE = 0x17,    // wtp -> ac
+
+	// lvap messages
     EMPOWER_PT_ADD_LVAP = 0x11,         // ac -> wtp
     EMPOWER_PT_DEL_LVAP = 0x12,         // ac -> wtp
     EMPOWER_PT_STATUS_LVAP = 0x13,      // wtp -> ac
-    EMPOWER_PT_SET_PORT= 0x14,          // ac -> wtp
+
+	// ADD/DEL response messages
+    EMPOWER_PT_ADD_LVAP_RESPONSE = 0x51,        // ac -> wtp
+    EMPOWER_PT_DEL_LVAP_RESPONSE = 0x52,        // ac -> wtp
+
+    // vap
+    EMPOWER_PT_ADD_VAP = 0x32,         			// ac -> wtp
+    EMPOWER_PT_DEL_VAP = 0x33,         			// ac -> wtp
+    EMPOWER_PT_STATUS_VAP = 0x34,      			// wtp -> ac
+
+	// STATUSES requests
+	EMPOWER_PT_LVAP_STATUS_REQ = 0x53,			// ac -> wtp
+	EMPOWER_PT_VAP_STATUS_REQ = 0x54,			// ac -> wtp
+
+	// TX Policies
+	EMPOWER_PT_SET_PORT= 0x14,          // ac -> wtp
+	EMPOWER_PT_DEL_PORT= 0x80,          // ac -> wtp
     EMPOWER_PT_STATUS_PORT = 0x15,      // wtp -> ac
-	EMPOWER_PT_CAPS_REQUEST = 0x16,     // ac -> wtp
-    EMPOWER_PT_CAPS_RESPONSE = 0x17,    // wtp -> ac
+
+	// Traffic Rule
+	EMPOWER_PT_SET_TRAFFIC_RULE = 0x56,          // ac -> wtp
+	EMPOWER_PT_DEL_TRAFFIC_RULE = 0x57,          // ac -> wtp
+	EMPOWER_PT_STATUS_TRAFFIC_RULE = 0x58,		// wtp -> ac
+
+	// Multicast address transmission policies
+	EMPOWER_PT_INCOM_MCAST_REQUEST = 0x46,		// wtp -> ac
+	EMPOWER_PT_INCOM_MCAST_RESPONSE = 0x47,		// ac -> wtp
+
+	// IGMP messages
+	EMPOWER_PT_IGMP_REQUEST = 0x48,				// wtp -> ac
+	EMPOWER_PT_DEL_MCAST_ADDR = 0x49,			// ac -> wtp
+	EMPOWER_PT_DEL_MCAST_RECEIVER = 0x50,		// ac -> wtp
+
+    // Link Stats
+    EMPOWER_PT_LVAP_STATS_REQUEST = 0x30,   	// ac -> wtp
+    EMPOWER_PT_LVAP_STATS_RESPONSE = 0x31,  	// wtp -> ac
 
     // Packet/Bytes counters
     EMPOWER_PT_COUNTERS_REQUEST = 0x18,         // ac -> wtp
@@ -43,57 +79,25 @@ enum empower_packet_types {
     // Channel Quality Maps
     EMPOWER_PT_UCQM_REQUEST = 0x26,     		// ac -> wtp
     EMPOWER_PT_UCQM_RESPONSE = 0x27,    		// wtp -> ac
-
     EMPOWER_PT_NCQM_REQUEST = 0x28,     		// ac -> wtp
     EMPOWER_PT_NCQM_RESPONSE = 0x29,    		// wtp -> ac
-
-    // Link Stats
-    EMPOWER_PT_LVAP_STATS_REQUEST = 0x30,   	// ac -> wtp
-    EMPOWER_PT_LVAP_STATS_RESPONSE = 0x31,  	// wtp -> ac
-
-    // VAPs
-    EMPOWER_PT_ADD_VAP = 0x32,         			// ac -> wtp
-    EMPOWER_PT_DEL_VAP = 0x33,         			// ac -> wtp
-    EMPOWER_PT_STATUS_VAP = 0x34,      			// wtp -> ac
-
-    // MCAST Packet/Bytes counters
-    EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x35,		// ac -> wtp
-    EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x36,		// wtp -> ac
 
     // wifi stats
     EMPOWER_PT_WIFI_STATS_REQUEST = 0x37,			// ac -> wtp
     EMPOWER_PT_WIFI_STATS_RESPONSE = 0x38,			// wtp -> ac
 
+	// Traffic Rule Stats
+	EMPOWER_PT_TRAFFIC_RULE_STATS_REQUEST = 0x59,          // ac -> wtp
+	EMPOWER_PT_TRAFFIC_RULE_STATS_RESPONSE = 0x60,		// wtp -> ac
+
+	// TXP Packet/Bytes counters
+    EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x35,		// ac -> wtp
+    EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x36,		// wtp -> ac
+
     // WTP Packet/Bytes counters
     EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x42,     // ac -> wtp
     EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x43,    // wtp -> ac
 
-	// Multicast address transmission policies
-	EMPOWER_PT_INCOM_MCAST_REQUEST = 0x46,		// wtp -> ac
-	EMPOWER_PT_INCOM_MCAST_RESPONSE = 0x47,		// ac -> wtp
-
-	// IGMP messages
-	EMPOWER_PT_IGMP_REQUEST = 0x48,				// wtp -> ac
-	EMPOWER_PT_DEL_MCAST_ADDR = 0x49,			// ac -> wtp
-	EMPOWER_PT_DEL_MCAST_RECEIVER = 0x50,		// ac -> wtp
-
-	// ADD/DEL response messages
-    EMPOWER_PT_ADD_LVAP_RESPONSE = 0x51,        // ac -> wtp
-    EMPOWER_PT_DEL_LVAP_RESPONSE = 0x52,        // ac -> wtp
-
-	// STATUSES requests
-	EMPOWER_PT_LVAP_STATUS_REQ = 0x53,			// ac -> wtp
-	EMPOWER_PT_VAP_STATUS_REQ = 0x54,			// ac -> wtp
-	EMPOWER_PT_PORT_STATUS_REQ = 0x55,			// ac -> wtp
-	EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ = 0x56,	// ac -> wtp
-
-	// Traffic Rule
-	EMPOWER_PT_ADD_TRAFFIC_RULE = 0x57,          // ac -> wtp
-	EMPOWER_PT_STATUS_TRAFFIC_RULE = 0x58,		// wtp -> ac
-
-	// Traffic Rule Stats
-	EMPOWER_PT_TRAFFIC_RULE_STATS_REQUEST = 0x59,          // ac -> wtp
-	EMPOWER_PT_TRAFFIC_RULE_STATS_RESPONSE = 0x60,		// wtp -> ac
 
 };
 
@@ -594,6 +598,20 @@ public:
     uint8_t nb_ht_mcs()         		{ return _nb_ht_mcs; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
+/* set port packet format */
+struct empower_del_port : public empower_header {
+private:
+    uint8_t  _hwaddr[6];		/* EtherAddress */
+    uint8_t  _channel;			/* WiFi channel (int) */
+    uint8_t  _band;				/* WiFi band (empower_band_types) */
+    uint8_t  _sta[6];			/* EtherAddress */
+public:
+    uint8_t band()           			{ return _band; }
+    uint8_t channel()        			{ return _channel; }
+    EtherAddress hwaddr()    			{ return EtherAddress(_hwaddr); }
+    EtherAddress addr()      			{ return EtherAddress(_sta); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
 /* lvap status packet format */
 struct empower_status_port : public empower_header {
 private:
@@ -854,7 +872,22 @@ struct empower_set_traffic_rule : public empower_header {
     uint32_t     quantum()					{ return ntohl(_quantum); }
     bool         flags(int f)				{ return ntohs(_flags) & f; }
     uint8_t      dscp()						{ return _dscp; }
-    String       ssid()      				{ int len = length() - 20; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    String       ssid()      				{ int len = length() - 25; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+struct empower_del_traffic_rule : public empower_header {
+  private:
+    uint8_t  	_hwaddr[6];			/* EtherAddress */
+    uint8_t 	 	_channel;        	/* WiFi channel (int) */
+    uint8_t  	_band;             	/* WiFi band (empower_band_types) */
+    uint8_t 		_dscp;				/* Traffic DSCP (int) */
+    char    		_ssid[];				/* SSID (String) */
+  public:
+    uint8_t 		 band()                      { return _band; }
+    uint8_t 		 channel()                   { return _channel; }
+    EtherAddress hwaddr()               		{ return EtherAddress(_hwaddr); }
+    uint8_t      dscp()						{ return _dscp; }
+    String       ssid()      				{ int len = length() - 19; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* traffic rule status packet format */
