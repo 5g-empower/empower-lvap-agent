@@ -50,6 +50,7 @@ class TransmissionPolicies : public Element { public:
 
   TxTable * tx_table() { return &_tx_table; }
   TxPolicyInfo * default_tx_policy() { return _default_tx_policy; }
+  void clear();
 
   TxPolicyInfo * lookup(EtherAddress eth);
   TxPolicyInfo * supported(EtherAddress eth);

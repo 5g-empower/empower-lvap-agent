@@ -274,14 +274,14 @@ Packet * EmpowerQOSManager::pull(int) {
 
 }
 
-void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation) {
+void EmpowerQOSManager::set_traffic_rule(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation) {
 	TrafficRule tr = TrafficRule(ssid, dscp);
 	if (_rules.find(tr) == _rules.end()) {
-		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u quantum %u A-MSDU: %s",
+		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u quantum %u A-MSDU %s",
 					  this,
 					  __func__,
-					  ssid.c_str(),
-					  dscp,
+					  tr._ssid.c_str(),
+					  tr._dscp,
 					  quantum,
 					  amsdu_aggregation ? "yes." : "no");
 		uint32_t tr_quantum = (quantum == 0) ? _quantum : quantum;
@@ -293,6 +293,22 @@ void EmpowerQOSManager::create_traffic_rule(String ssid, int dscp, uint32_t quan
 	}
 }
 
+void EmpowerQOSManager::del_traffic_rule(String ssid, int dscp) {
+	TrafficRule tr = TrafficRule(ssid, dscp);
+	TRIter itr = _rules.find(tr);
+	if (itr == _rules.end()) {
+		click_chatter("%{element} :: %s :: unable to find traffic rule queue for ssid %s dscp %u",
+					  this,
+					  __func__,
+					  tr._ssid.c_str(),
+					  tr._dscp);
+		return;
+	}
+	TrafficRuleQueue *trq = itr.value();
+	delete trq;
+	_rules.erase(itr);
+}
+
 String EmpowerQOSManager::list_queues() {
 	StringAccum result;
 	TRIter itr = _rules.begin();
@@ -302,6 +318,20 @@ String EmpowerQOSManager::list_queues() {
 		itr++;
 	} // end while
 	return result.take_string();
+}
+
+void EmpowerQOSManager::clear() {
+	TRIter itr = _rules.begin();
+	while (itr != _rules.end()) {
+		TrafficRuleQueue *trq = itr.value();
+		if (trq->_tr._dscp == 0) {
+			itr++;
+		} else {
+			delete trq;
+			itr = _rules.erase(itr);
+		}
+	} // end while
+	_rules.clear();
 }
 
 enum {

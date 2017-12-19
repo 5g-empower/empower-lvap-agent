@@ -164,7 +164,7 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 
 }
 
-void EmpowerDeAuthResponder:: send_deauth_request(EtherAddress dst, uint16_t reason, int iface_id)
+void EmpowerDeAuthResponder::send_deauth_request(EtherAddress dst, uint16_t reason, int iface_id)
 {
 	EmpowerStationState *ess = _el->get_ess(dst);
 

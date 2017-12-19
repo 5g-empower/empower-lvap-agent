@@ -237,6 +237,13 @@ public:
 	}
 
 	~TrafficRuleQueue() {
+		AQIter itr = _queues.begin();
+		while (itr != _queues.end()) {
+			AggregationQueue *aq = itr.value();
+			delete aq;
+			itr++;
+		}
+		_queues.clear();
 	}
 
 	uint32_t size() { return _size; }
@@ -393,9 +400,11 @@ public:
 	Packet *pull(int);
 
 	void add_handlers();
-	void create_traffic_rule(String, int, uint32_t, bool);
+	void set_traffic_rule(String, int, uint32_t, bool);
+	void del_traffic_rule(String, int);
 
 	TrafficRules * rules() { return &_rules; }
+	void clear();
 
 private:
 

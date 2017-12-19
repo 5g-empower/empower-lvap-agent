@@ -84,11 +84,18 @@ enum empower_aggregation_flags {
 	EMPOWER_AMSDU_AGGREGATION = (1<<0)
 };
 
+enum empower_regmon_types {
+    EMPOWER_REGMON_TX = 0x0,
+	EMPOWER_REGMON_RX = 0x1,
+	EMPOWER_REGMON_ED = 0x2,
+};
+
 typedef HashTable<uint16_t, uint32_t> CBytes;
 typedef CBytes::iterator CBytesIter;
 
 class Minstrel;
 class EmpowerQOSManager;
+class EmpowerRegmon;
 
 class NetworkPort {
 public:
@@ -265,6 +272,7 @@ public:
 	int handle_uimg_request(Packet *, uint32_t);
 	int handle_nimg_request(Packet *, uint32_t);
 	int handle_set_port(Packet *, uint32_t);
+	int handle_del_port(Packet *, uint32_t);
 	int handle_frames_request(Packet *, uint32_t);
 	int handle_lvap_stats_request(Packet *, uint32_t);
 	int handle_wifi_stats_request(Packet *, uint32_t);
@@ -277,7 +285,9 @@ public:
 	int handle_vap_status_request(Packet *, uint32_t);
 	int handle_port_status_request(Packet *, uint32_t);
 	int handle_traffic_rule_status_request(Packet *, uint32_t);
-	int handle_add_traffic_rule(Packet *, uint32_t);
+	int handle_set_traffic_rule(Packet *, uint32_t);
+	int handle_del_traffic_rule(Packet *, uint32_t);
+	int handle_traffic_rule_stats_request(Packet *, uint32_t);
 
 	void send_hello();
 	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
@@ -299,6 +309,7 @@ public:
 	void send_wtp_counters_response(uint32_t);
 	void send_igmp_report(EtherAddress, Vector<IPAddress>*, Vector<enum empower_igmp_record_type>*);
 	void send_add_del_lvap_response(uint8_t, EtherAddress, uint32_t, uint32_t);
+	void send_traffic_rule_stats_response(uint32_t, String, int, int);
 
 	int remove_lvap(EmpowerStationState *);
 	LVAP* lvaps() { return &_lvaps; }
@@ -349,7 +360,8 @@ private:
 	RETable _ifaces_to_elements;
 
 	void compute_bssid_mask();
-
+	void clear_txps();
+	void clear_trqs();
 	void send_message(Packet *);
 
 	class Empower11k *_e11k;
@@ -358,7 +370,6 @@ private:
 	class EmpowerAssociationResponder *_eassor;
 	class EmpowerDeAuthResponder *_edeauthr;
 	class EmpowerRXStats *_ers;
-	class EmpowerCQM *_cqm;
 	class EmpowerMulticastTable * _mtbl;
 
 	LVAP _lvaps;
@@ -366,6 +377,7 @@ private:
 	VAP _vaps;
 	Vector<EtherAddress> _masks;
 	Vector<Minstrel *> _rcs;
+	Vector<EmpowerRegmon *> _regmons;
 	Vector<EmpowerQOSManager *> _eqms;
 	Vector<String> _debugfs_strings;
 	Timer _timer;
