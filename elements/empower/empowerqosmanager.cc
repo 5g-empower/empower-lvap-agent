@@ -29,6 +29,7 @@
 #include <elements/wifi/wirelessinfo.hh>
 #include <elements/wifi/transmissionpolicy.hh>
 #include <elements/wifi/minstrel.hh>
+#include <elements/wifi/bitrate.hh>
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 
@@ -210,6 +211,7 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 	if (trq->enqueue(q, ra, ta)) {
 		// check if tr is in active list
 		if (trq->size() == 0) {
+			trq->_deficit = 0;
 			_active_list.push_back(tr);
 		}
 		trq->update_size();
@@ -224,7 +226,80 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 }
 
 uint32_t EmpowerQOSManager::compute_deficit(Packet *p) {
-	return p->length();
+
+	if (p->length() < sizeof(struct click_wifi)) {
+		click_chatter("%{element} :: %s :: packet too small: %d vs %d",
+					  this,
+					  __func__,
+					  p->length(),
+					  sizeof(struct click_ether));
+		p->kill();
+		return 0;
+	}
+
+	struct click_wifi *w = (struct click_wifi *) p->data();
+	uint8_t dir = w->i_fc[1] & WIFI_FC1_DIR_MASK;
+
+	EtherAddress dst;
+
+	switch (dir) {
+	case WIFI_FC1_DIR_NODS:
+		dst = EtherAddress(w->i_addr1);
+		break;
+	case WIFI_FC1_DIR_TODS:
+		dst = EtherAddress(w->i_addr3);
+		break;
+	case WIFI_FC1_DIR_FROMDS:
+		dst = EtherAddress(w->i_addr1);
+		break;
+	case WIFI_FC1_DIR_DSTODS:
+		dst = EtherAddress(w->i_addr1);
+		break;
+	default:
+		click_chatter("%{element} :: %s :: invalid dir %d",
+					  this,
+					  __func__,
+					  dir);
+		p->kill();
+		return 0;
+	}
+
+	int rate, nb_retransm = 0;
+	uint32_t usecs = p->length()*8/6;
+	MinstrelDstInfo *nfo = _rc->neighbors()->findp(dst);
+	TxPolicyInfo * tx_policy = _el->get_tx_policies(_iface_id)->supported(dst);
+
+	if (!dst.is_group() && !dst.is_broadcast() && nfo && nfo->rates.size() > 0 && nfo->max_tp_rate < nfo->rates.size()) {
+		rate = (nfo->rates[nfo->max_tp_rate]);
+
+		// Probabilities must be divided by 180 to obtain a percentage 97.88
+		int success_prob = nfo->probability[nfo->max_tp_rate];
+		if (success_prob > 0) {
+			success_prob = 18000/success_prob;
+			nb_retransm = (int) ((1 / success_prob) + 0.5); // To truncate properly
+
+			// In case the nb_transm is higher than 1 it is also considering the first transmission
+			if (nb_retransm >= 1)
+				nb_retransm --;
+		}
+	} else {
+		int rate = 1;
+		if(!tx_policy || tx_policy->_ht_mcs.size() == 0) {
+			rate = _el->get_tx_policies(_iface_id)->lookup(dst)->_mcs[0];
+		}
+		else if (tx_policy->_ht_mcs.size()) {
+			rate = _el->get_tx_policies(_iface_id)->lookup(dst)->_ht_mcs[0];
+		}
+	}
+
+	if(tx_policy && tx_policy->_ht_mcs.size()) {
+		usecs = calc_usecs_wifi_packet_ht(p->length(), rate, nb_retransm);
+	}
+	else {
+		usecs = calc_usecs_wifi_packet(p->length(), rate, nb_retransm);
+	}
+
+	return usecs;
 }
 
 Packet * EmpowerQOSManager::pull(int) {
@@ -242,7 +317,11 @@ Packet * EmpowerQOSManager::pull(int) {
 	TRIter active = _rules.find(tr);
 	HItr head = _head_table.find(tr);
 	TrafficRuleQueue* queue = active.value();
-	queue->_deficit += queue->_quantum;
+
+	if (_last_queue != tr || _active_list.empty()) {
+		queue->_deficit += queue->_quantum;
+		_last_queue = tr;
+	}
 
 	Packet *p = 0;
 	if (head.value()) {
@@ -263,7 +342,11 @@ Packet * EmpowerQOSManager::pull(int) {
 		queue->_deficit_used += deficit;
 		queue->_transm_bytes += p->length();
 		queue->_transm_pkts += 1;
-		_active_list.push_front(tr);
+
+		if (queue->size() > 0) {
+			_active_list.push_front(tr);
+		}
+
 		return p;
 	} else {
 		_head_table.set(tr, p);
@@ -271,7 +354,6 @@ Packet * EmpowerQOSManager::pull(int) {
 	}
 
 	return 0;
-
 }
 
 void EmpowerQOSManager::set_traffic_rule(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation) {

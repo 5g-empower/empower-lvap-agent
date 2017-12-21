@@ -1288,7 +1288,17 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		compute_bssid_mask();
 
 		/* create default traffic rule */
-		_eqms[iface]->set_traffic_rule(ssid, 0, 1500, false);
+		int basic_rate = 1;
+		if (band == EMPOWER_BT_L20) {
+			if (_rcs[iface]->tx_policies()->default_tx_policy()->_mcs.size()) {
+				basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_mcs[0];
+			}
+		} else {
+			if (_rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs.size()) {
+				basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs[0];
+			}
+		}
+		uint32_t quantum = (1500 * 8) / basic_rate;
 
 		return 0;
 
@@ -1448,7 +1458,25 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 		/* create default traffic rule */
 		if (ssid != "") {
-			_eqms[iface]->set_traffic_rule(ssid, 0, 1500, false);
+			int basic_rate = 1;
+			if (band == EMPOWER_BT_L20) {
+				if (_rcs[iface]->tx_policies()->default_tx_policy()->_mcs.size()) {
+					basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_mcs[0];
+				}
+			} else {
+				if (_rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs.size()) {
+					basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs[0];
+				}
+			}
+			uint32_t quantum = (1500 * 8) / basic_rate;
+
+			click_chatter("%{element} :: %s :: add lvap set rule (%s, %u)!",
+															 this,
+															 __func__,
+															 ssid.c_str(),
+															 quantum);
+
+			_eqms[iface]->set_traffic_rule(ssid, 0, quantum, false);
 		}
 
 		return 0;
@@ -1513,7 +1541,17 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 	/* create default traffic rule */
 	if (ssid != "") {
-		_eqms[iface]->set_traffic_rule(ssid, 0, 1500, false);
+		int basic_rate = 1;
+		if (band == EMPOWER_BT_L20) {
+			if (_rcs[iface]->tx_policies()->default_tx_policy()->_mcs.size()) {
+				basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_mcs[0];
+			}
+		} else {
+			if (_rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs.size()) {
+				basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs[0];
+			}
+		}
+		uint32_t quantum = (1500 * 8) / basic_rate;
 	}
 
 	return 0;
@@ -2105,6 +2143,7 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_SET_TRAFFIC_RULE:
 			handle_set_traffic_rule(p, offset);
+			break;
 		case EMPOWER_PT_DEL_TRAFFIC_RULE:
 			handle_del_traffic_rule(p, offset);
 			break;
