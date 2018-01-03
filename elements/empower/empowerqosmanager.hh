@@ -417,6 +417,7 @@ private:
 	TrafficRules _rules;
     HeadTable _head_table;
 	Vector<TrafficRule> _active_list;
+	TrafficRule _last_queue;
 
     int _sleepiness;
     uint32_t _capacity;
