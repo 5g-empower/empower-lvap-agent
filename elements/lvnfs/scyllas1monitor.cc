@@ -113,7 +113,7 @@ void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
                                         snprintf(EPC_IP, sizeof(EPC_IP), "%u.%u.%u.%u", bytes[0], bytes[1], bytes[2], bytes[3]);
                                         click_chatter("EPC_IP:%u.%u.%u.%u",bytes[0],bytes[1],bytes[2],bytes[3]);
 				}
-                                sprintf(UE2EPC_teid, "%02x%02x%02x%02x", gTP_TEID->buffer[0], gTP_TEID->buffer[1], gTP_TEID->buffer[2], gTP_TEID->buffer[3]);
+                                snprintf(UE2EPC_teid, sizeof(UE2EPC_teid), "%02x%02x%02x%02x", gTP_TEID->buffer[0], gTP_TEID->buffer[1], gTP_TEID->buffer[2], gTP_TEID->buffer[3]);
 				if (E_RABToBeSetupListCtxtSUReq->buffer[i].nAS_PDU_present) {
 					LIBLTE_S1AP_NAS_PDU_STRUCT *nAS_PDU = &E_RABToBeSetupListCtxtSUReq->buffer[i].nAS_PDU;
 

@@ -15,6 +15,9 @@
  */
 
 #include <click/config.h>
+#include <click/args.hh>
+#include <click/error.hh>
+#include <click/glue.hh>
 #include "stripgtpheader.hh"
 #include "gtp.h"
 CLICK_DECLS
