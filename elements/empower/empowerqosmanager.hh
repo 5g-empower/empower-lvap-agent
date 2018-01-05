@@ -417,7 +417,6 @@ private:
 	TrafficRules _rules;
     HeadTable _head_table;
 	Vector<TrafficRule> _active_list;
-	TrafficRule _last_queue;
 
     int _sleepiness;
     uint32_t _capacity;
@@ -429,7 +428,6 @@ private:
 
 	void store(String, int, Packet *, EtherAddress, EtherAddress);
 	String list_queues();
-	uint32_t compute_deficit(Packet *);
 
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);

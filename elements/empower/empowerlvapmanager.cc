@@ -347,19 +347,6 @@ void EmpowerLVAPManager::send_hello() {
 
 }
 
-int EmpowerLVAPManager::handle_traffic_rule_status_request(Packet *, uint32_t) {
-
-	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
-		int iface_id = it_re.key();
-		for (TRIter it = _eqms[iface_id]->rules()->begin(); it.live(); it++) {
-			send_status_traffic_rule(it.key()._ssid, it.key()._dscp, iface_id);
-		}
-	}
-
-	return 0;
-
-}
-
 void EmpowerLVAPManager::send_status_traffic_rule(String ssid, int dscp, int iface_id) {
 
 	TrafficRule tr = TrafficRule(ssid, dscp);
@@ -1231,18 +1218,6 @@ int EmpowerLVAPManager::handle_vap_status_request(Packet *, uint32_t) {
 	return 0;
 }
 
-int EmpowerLVAPManager::handle_port_status_request(Packet *, uint32_t) {
-	// send tx policies
-	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
-		int iface_id = it_re.key();
-		for (TxTableIter it_txp = get_tx_policies(iface_id)->tx_table()->begin(); it_txp.live(); it_txp++) {
-			EtherAddress sta = it_txp.key();
-			send_status_port(sta, iface_id);
-		}
-	}
-	return 0;
-}
-
 int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 
 	struct empower_add_vap *add_vap = (struct empower_add_vap *) (p->data() + offset);
@@ -1288,17 +1263,10 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		compute_bssid_mask();
 
 		/* create default traffic rule */
-		int basic_rate = 1;
-		if (band == EMPOWER_BT_L20) {
-			if (_rcs[iface]->tx_policies()->default_tx_policy()->_mcs.size()) {
-				basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_mcs[0];
-			}
-		} else {
-			if (_rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs.size()) {
-				basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs[0];
-			}
+		if (ssid != "") {
+			// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
+			_eqms[iface]->set_traffic_rule(ssid, 0, 12000, false);
 		}
-		uint32_t quantum = (1500 * 8) / basic_rate;
 
 		return 0;
 
@@ -1458,25 +1426,8 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 		/* create default traffic rule */
 		if (ssid != "") {
-			int basic_rate = 1;
-			if (band == EMPOWER_BT_L20) {
-				if (_rcs[iface]->tx_policies()->default_tx_policy()->_mcs.size()) {
-					basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_mcs[0];
-				}
-			} else {
-				if (_rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs.size()) {
-					basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs[0];
-				}
-			}
-			uint32_t quantum = (1500 * 8) / basic_rate;
-
-			click_chatter("%{element} :: %s :: add lvap set rule (%s, %u)!",
-															 this,
-															 __func__,
-															 ssid.c_str(),
-															 quantum);
-
-			_eqms[iface]->set_traffic_rule(ssid, 0, quantum, false);
+			// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
+			_eqms[iface]->set_traffic_rule(ssid, 0, 12000, false);
 		}
 
 		return 0;
@@ -1541,17 +1492,8 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 	/* create default traffic rule */
 	if (ssid != "") {
-		int basic_rate = 1;
-		if (band == EMPOWER_BT_L20) {
-			if (_rcs[iface]->tx_policies()->default_tx_policy()->_mcs.size()) {
-				basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_mcs[0];
-			}
-		} else {
-			if (_rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs.size()) {
-				basic_rate = _rcs[iface]->tx_policies()->default_tx_policy()->_ht_mcs[0];
-			}
-		}
-		uint32_t quantum = (1500 * 8) / basic_rate;
+		// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
+		_eqms[iface]->set_traffic_rule(ssid, 0, 12000, false);
 	}
 
 	return 0;
@@ -1649,6 +1591,8 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 		TxPolicyInfo * txp = _rcs[iface]->tx_policies()->tx_table()->find(addr);
 		nfo = _rcs.at(iface)->insert_neighbor(addr, txp);
 	}
+
+	send_status_port(addr, iface);
 
 	return 0;
 
@@ -1983,6 +1927,8 @@ int EmpowerLVAPManager::handle_set_traffic_rule(Packet *p, uint32_t offset) {
 				  dscp);
 
 	_eqms[iface_id]->set_traffic_rule(ssid, dscp, quantum, amsdu_aggregation);
+
+	send_status_traffic_rule(ssid, dscp, iface_id);
 
 	return 0;
 

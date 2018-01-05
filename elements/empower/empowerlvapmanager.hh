@@ -283,8 +283,6 @@ public:
 	int handle_caps_request(Packet *, uint32_t);
 	int handle_lvap_status_request(Packet *, uint32_t);
 	int handle_vap_status_request(Packet *, uint32_t);
-	int handle_port_status_request(Packet *, uint32_t);
-	int handle_traffic_rule_status_request(Packet *, uint32_t);
 	int handle_set_traffic_rule(Packet *, uint32_t);
 	int handle_del_traffic_rule(Packet *, uint32_t);
 	int handle_traffic_rule_stats_request(Packet *, uint32_t);
