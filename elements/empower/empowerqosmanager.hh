@@ -382,7 +382,7 @@ typedef TrafficRules::iterator TRIter;
 typedef HashTable<TrafficRule, Packet*> HeadTable;
 typedef HeadTable::iterator HItr;
 
-class EmpowerQOSManager: public SimpleQueue {
+class EmpowerQOSManager: public Element {
 
 public:
 
