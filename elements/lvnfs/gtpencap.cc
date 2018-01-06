@@ -24,6 +24,7 @@
 #include <click/standard/alignmentinfo.hh>
 #include <click/string.hh>
 #include <click/ipaddress.hh>
+#include <arpa/inet.h>
 #include "scyllas1monitor.hh"
 CLICK_DECLS
 
