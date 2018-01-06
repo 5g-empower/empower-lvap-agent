@@ -30,31 +30,35 @@ int ScyllaS1Monitor::configure(Vector<String> &conf, ErrorHandler *errh) {
 
 Packet *
 ScyllaS1Monitor::simple_action(Packet *p) {
-
 	struct click_ip *ip = (struct click_ip *) (p->data() + _offset);
 
 	if (ip->ip_p != IP_PROTO_SCTP) {
-		return p;
+		return p;        
 	}
 
 	struct click_sctp *sctp = (struct click_sctp *) (p->data() + _offset + ip->ip_hl * 4);
 
 	uint8_t *ptr =  (uint8_t *) sctp;
-	uint8_t *end = ptr + (p->length() - _offset - ip->ip_hl * 4);
+	uint8_t *end = ptr + (p->length() - sizeof(struct click_sctp) - _offset - ip->ip_hl * 4);
 
 	ptr += sizeof(struct click_sctp);
 
 	while (ptr < end) {
 		struct click_sctp_chunk *chunk = (struct click_sctp_chunk *) ptr;
-		if (chunk->type() == 0) {
+		
+                if (chunk->type() == 0) {
+     
 			struct click_sctp_data_chunk *data = (struct click_sctp_data_chunk *) ptr;
+
 			if (data->ppi() == 18) {
 				parse_s1ap(data);
 			}
 		}
 		if (chunk->length() % 4 == 0) {
+
 			ptr += chunk->length();
 		} else {
+
 			ptr += (chunk->length() + 4 - chunk->length() % 4);
 		}
 	}
@@ -66,7 +70,7 @@ ScyllaS1Monitor::simple_action(Packet *p) {
 void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
 
 	uint8_t *payload = (uint8_t *) data;
-	payload += sizeof(struct click_sctp_data_chunk);
+	payload += sizeof(struct click_sctp_data_chunk);        
 
 	LIBLTE_S1AP_S1AP_PDU_STRUCT s1ap_pdu;
 	LIBLTE_BYTE_MSG_STRUCT msg;
@@ -81,7 +85,6 @@ void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
 	/* initiatingMessage */
 	if (s1ap_pdu.choice_type == LIBLTE_S1AP_S1AP_PDU_CHOICE_INITIATINGMESSAGE) {
 		if (s1ap_pdu.choice.initiatingMessage.choice_type == LIBLTE_S1AP_INITIATINGMESSAGE_CHOICE_INITIALCONTEXTSETUPREQUEST) {
-
 			LIBLTE_S1AP_MESSAGE_INITIALCONTEXTSETUPREQUEST_STRUCT *InitialContextSetupRequest = &s1ap_pdu.choice.initiatingMessage.choice.InitialContextSetupRequest;
 
 			uint32_t MME_UE_S1AP_ID = InitialContextSetupRequest->MME_UE_S1AP_ID.MME_UE_S1AP_ID;
@@ -93,26 +96,24 @@ void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
 				/* eRAB Id. */
 				uint8_t e_RAB_ID = E_RABToBeSetupListCtxtSUReq->buffer[i].e_RAB_ID.E_RAB_ID;
 				/* EPC IP address. */
-				char EPC_IP[13];
+				char EPC_IP[16];
 				/* Tunnel End Point Id used for GTP traffic from UE to EPC. */
 				char UE2EPC_teid[9];
 				/* UE IP address. */
-				char UE_IP[13];
+				char UE_IP[16];
 
 				LIBLTE_S1AP_TRANSPORTLAYERADDRESS_STRUCT *transportLayerAddress = &E_RABToBeSetupListCtxtSUReq->buffer[i].transportLayerAddress;
 				LIBLTE_S1AP_GTP_TEID_STRUCT *gTP_TEID = &E_RABToBeSetupListCtxtSUReq->buffer[i].gTP_TEID;
-
+                                
 				/* IPv4 Address */
 				if (transportLayerAddress->n_bits == 32) {
 
 					uint8_t bytes[4];
 					liblte_pack(transportLayerAddress->buffer, transportLayerAddress->n_bits, bytes);
-
-					sprintf(EPC_IP, "%u.%u.%u.%u", bytes[0], bytes[1], bytes[2], bytes[3]);
+                                        snprintf(EPC_IP, sizeof(EPC_IP), "%u.%u.%u.%u", bytes[0], bytes[1], bytes[2], bytes[3]);
+                                        click_chatter("EPC_IP:%u.%u.%u.%u",bytes[0],bytes[1],bytes[2],bytes[3]);
 				}
-
-				sprintf(UE2EPC_teid, "%02x%02x%02x%02x", gTP_TEID->buffer[0], gTP_TEID->buffer[1], gTP_TEID->buffer[2], gTP_TEID->buffer[3]);
-
+                                snprintf(UE2EPC_teid, sizeof(UE2EPC_teid), "%02x%02x%02x%02x", gTP_TEID->buffer[0], gTP_TEID->buffer[1], gTP_TEID->buffer[2], gTP_TEID->buffer[3]);
 				if (E_RABToBeSetupListCtxtSUReq->buffer[i].nAS_PDU_present) {
 					LIBLTE_S1AP_NAS_PDU_STRUCT *nAS_PDU = &E_RABToBeSetupListCtxtSUReq->buffer[i].nAS_PDU;
 
@@ -133,10 +134,8 @@ void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
 						return;
 
 					LIBLTE_MME_PDN_ADDRESS_STRUCT *pdn_addr = &act_def_eps_bearer_context_req.pdn_addr;
-
 					if (pdn_addr->pdn_type == LIBLTE_MME_PDN_TYPE_IPV4) {
-
-						sprintf(UE_IP, "%u.%u.%u.%u", pdn_addr->addr[0], pdn_addr->addr[1], pdn_addr->addr[2], pdn_addr->addr[3]);
+						snprintf(UE_IP, sizeof(UE_IP), "%u.%u.%u.%u", pdn_addr->addr[0], pdn_addr->addr[1], pdn_addr->addr[2], pdn_addr->addr[3]);
 
 						struct S1APMonitorElement ele = {
 							.eNB_UE_S1AP_ID = ENB_UE_S1AP_ID,
@@ -148,7 +147,7 @@ void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
 							.UE2EPC_teid = UE2EPC_teid,
 							.EPC2UE_teid = ""
 						};
-
+                                                
 						S1APMonElelist.push_back(ele);
 					}
 				}
@@ -158,7 +157,6 @@ void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
 	/* successfulOutcome */
 	else if (s1ap_pdu.choice_type == LIBLTE_S1AP_S1AP_PDU_CHOICE_SUCCESSFULOUTCOME) {
 		if (s1ap_pdu.choice.successfulOutcome.choice_type == LIBLTE_S1AP_SUCCESSFULOUTCOME_CHOICE_INITIALCONTEXTSETUPRESPONSE) {
-
 			LIBLTE_S1AP_MESSAGE_INITIALCONTEXTSETUPRESPONSE_STRUCT *InitialContextSetupResponse = &s1ap_pdu.choice.successfulOutcome.choice.InitialContextSetupResponse;
 
 			uint32_t MME_UE_S1AP_ID = InitialContextSetupResponse->MME_UE_S1AP_ID.MME_UE_S1AP_ID;
@@ -171,7 +169,7 @@ void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
 				/* eRAB Id. */
 				uint8_t e_RAB_ID = E_RABSetupListCtxtSURes->buffer[i].e_RAB_ID.E_RAB_ID;
 				/* eNB IP address. */
-				char eNB_IP[13];
+				char eNB_IP[16];
 				/* Tunnel End Point Id used for GTP traffic from EPC to UE. */
 				char EPC2UE_teid[9];
 
@@ -184,7 +182,7 @@ void ScyllaS1Monitor::parse_s1ap(click_sctp_data_chunk *data) {
 					uint8_t bytes[4];
 					liblte_pack(transportLayerAddress->buffer, transportLayerAddress->n_bits, bytes);
 
-					sprintf(eNB_IP, "%u.%u.%u.%u", bytes[0], bytes[1], bytes[2], bytes[3]);
+					snprintf(eNB_IP, sizeof(eNB_IP), "%u.%u.%u.%u", bytes[0], bytes[1], bytes[2], bytes[3]);
 				}
 
 				sprintf(EPC2UE_teid, "%02x%02x%02x%02x", gTP_TEID->buffer[0], gTP_TEID->buffer[1], gTP_TEID->buffer[2], gTP_TEID->buffer[3]);
