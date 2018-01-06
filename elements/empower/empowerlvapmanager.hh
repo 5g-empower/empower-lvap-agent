@@ -286,6 +286,8 @@ public:
 	int handle_set_traffic_rule(Packet *, uint32_t);
 	int handle_del_traffic_rule(Packet *, uint32_t);
 	int handle_traffic_rule_stats_request(Packet *, uint32_t);
+	int handle_traffic_rule_status_request(Packet *, uint32_t);
+	int handle_port_status_request(Packet *, uint32_t);
 
 	void send_hello();
 	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
@@ -358,8 +360,6 @@ private:
 	RETable _ifaces_to_elements;
 
 	void compute_bssid_mask();
-	void clear_txps();
-	void clear_trqs();
 	void send_message(Packet *);
 
 	class Empower11k *_e11k;

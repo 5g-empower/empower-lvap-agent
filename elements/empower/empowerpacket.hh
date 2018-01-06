@@ -44,11 +44,13 @@ enum empower_packet_types {
     EMPOWER_PT_SET_PORT= 0x14,                      // ac -> wtp
     EMPOWER_PT_DEL_PORT= 0x80,                      // ac -> wtp
     EMPOWER_PT_STATUS_PORT = 0x15,                  // wtp -> ac
+    EMPOWER_PT_PORT_STATUS_REQ = 0x62,              // ac -> wtp
 
     // Traffic Rule
     EMPOWER_PT_SET_TRAFFIC_RULE = 0x56,             // ac -> wtp
     EMPOWER_PT_DEL_TRAFFIC_RULE = 0x57,             // ac -> wtp
     EMPOWER_PT_STATUS_TRAFFIC_RULE = 0x58,          // wtp -> ac
+    EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ = 0x61,      // ac -> wtp
 
     // Multicast address transmission policies
     EMPOWER_PT_INCOM_MCAST_REQUEST = 0x46,          // wtp -> ac
@@ -928,7 +930,7 @@ public:
     uint8_t band()          { return _band; }
     EtherAddress hwaddr()   { return EtherAddress(_hwaddr); }
     uint8_t dscp()          { return _dscp; }
-    String ssid()           { int len = length() - 18; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    String ssid()           { int len = length() - 23; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* traffic rule status packet format */
@@ -937,14 +939,12 @@ struct empower_traffic_rule_stats_response : public empower_header {
     uint32_t    _tr_stats_id;       /* Module id (int) */
     uint8_t     _wtp[6];            /* EtherAddress */
     uint16_t    _flags;             /* Aggregation flags */
-    uint32_t    _quantum;           /* Priority of the slice (int) */
     uint32_t    _deficit_used;      /* Total deficit used by this queue */
     uint32_t    _transm_pkts;       /* Total transmitted packets */
     uint32_t    _transm_bytes;      /* Total transmitted bytes */
     uint32_t    _max_queue_length;  /* Maximum queue length reached */
   public:
     void set_wtp(EtherAddress wtp)                          { memcpy(_wtp, wtp.data(), 6); }
-    void set_quantum(uint32_t quantum)                      { _quantum = htonl(quantum); }
     void set_tr_stats_id(uint32_t tr_stats_id)              { _tr_stats_id = htonl(tr_stats_id); }
     void set_flags(uint16_t f)                              { _flags = htons(ntohs(_flags) | f); }
     void set_deficit_used(uint32_t deficit_used)            { _deficit_used = htonl(deficit_used); }

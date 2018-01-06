@@ -389,17 +389,46 @@ void EmpowerLVAPManager::send_status_traffic_rule(String ssid, int dscp, int ifa
 int EmpowerLVAPManager::handle_traffic_rule_stats_request(Packet *p, uint32_t offset) {
 
 	struct empower_traffic_rule_stats_request *q = (struct empower_traffic_rule_stats_request *) (p->data() + offset);
+
 	EtherAddress hwaddr = q->hwaddr();
 	empower_bands_types band = (empower_bands_types) q->band();
 	uint8_t channel = q->channel();
-	String ssid = q->ssid();
-	int dscp = q->dscp();
-	uint32_t tr_stats_id = q->tr_stats_id();
 
-	TrafficRule tr = TrafficRule(ssid, dscp);
 	int iface_id = element_to_iface(hwaddr, channel, band);
 
+	String ssid = q->ssid();
+	int dscp = q->dscp();
+	TrafficRule tr = TrafficRule(ssid, dscp);
+
+	uint32_t tr_stats_id = q->tr_stats_id();
+
 	send_traffic_rule_stats_response(tr_stats_id, ssid, dscp, iface_id);
+
+	return 0;
+
+}
+
+int EmpowerLVAPManager::handle_traffic_rule_status_request(Packet *, uint32_t) {
+
+	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
+		int iface_id = it_re.key();
+		for (TRIter it = _eqms[iface_id]->rules()->begin(); it.live(); it++) {
+			send_status_traffic_rule(it.key()._ssid, it.key()._dscp, iface_id);
+		}
+	}
+
+	return 0;
+
+}
+
+int EmpowerLVAPManager::handle_port_status_request(Packet *, uint32_t) {
+
+	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
+		int iface_id = it_re.key();
+		for (TxTableIter it = _rcs[iface_id]->tx_policies()->tx_table()->begin(); it.live(); it++) {
+			send_status_port(it.key(), iface_id);
+		}
+	}
 
 	return 0;
 
@@ -408,9 +437,13 @@ int EmpowerLVAPManager::handle_traffic_rule_stats_request(Packet *p, uint32_t of
 void EmpowerLVAPManager:: send_traffic_rule_stats_response(uint32_t tr_stats_id, String ssid, int dscp, int iface_id) {
 
 	TrafficRule tr = TrafficRule(ssid, dscp);
-	TrafficRuleQueue * queue = _eqms[iface_id]->rules()->find(tr).value();
+	TrafficRuleQueue * queue = _eqms[iface_id]->rules()->get(tr);
 
-	int len = sizeof(empower_status_traffic_rule) + ssid.length();
+	if (!queue) {
+		return;
+	}
+
+	int len = sizeof(empower_traffic_rule_stats_response) + ssid.length();
 
 	WritablePacket *p = Packet::make(len);
 
@@ -429,7 +462,6 @@ void EmpowerLVAPManager:: send_traffic_rule_stats_response(uint32_t tr_stats_id,
 	stats->set_type(EMPOWER_PT_TRAFFIC_RULE_STATS_RESPONSE);
 	stats->set_seq(get_next_seq());
 	stats->set_wtp(_wtp);
-	stats->set_quantum(queue->_quantum);
 	stats->set_max_queue_length(queue->_max_queue_length);
 	stats->set_deficit_used(queue->_deficit_used);
 	stats->set_transm_pkts(queue->_transm_pkts);
@@ -1928,8 +1960,6 @@ int EmpowerLVAPManager::handle_set_traffic_rule(Packet *p, uint32_t offset) {
 
 	_eqms[iface_id]->set_traffic_rule(ssid, dscp, quantum, amsdu_aggregation);
 
-	send_status_traffic_rule(ssid, dscp, iface_id);
-
 	return 0;
 
 }
@@ -2095,6 +2125,12 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_TRAFFIC_RULE_STATS_REQUEST:
 			handle_traffic_rule_stats_request(p, offset);
+			break;
+		case EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ:
+			handle_traffic_rule_status_request(p, offset);
+			break;
+		case EMPOWER_PT_PORT_STATUS_REQ:
+			handle_port_status_request(p, offset);
 			break;
 		default:
 			click_chatter("%{element} :: %s :: Unknown packet type: %d",
@@ -2402,10 +2438,6 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 	case H_RECONNECT: {
 		// clear triggers
 		f->_ers->clear_triggers();
-		// clear txps
-		f->clear_txps();
-		// clear trqs
-		f->clear_trqs();
 		// send hello
 		f->send_hello();
 		break;
@@ -2413,19 +2445,6 @@ int EmpowerLVAPManager::write_handler(const String &in_s, Element *e,
 	}
 	return 0;
 }
-
-void EmpowerLVAPManager::clear_txps() {
-	for (REIter iter = _ifaces_to_elements.begin(); iter.live(); iter++) {
-		_rcs[iter.key()]->tx_policies()->clear();
-	}
-}
-
-void EmpowerLVAPManager::clear_trqs() {
-	for (REIter iter = _ifaces_to_elements.begin(); iter.live(); iter++) {
-		_eqms[iter.key()]->clear();
-	}
-}
-
 
 void EmpowerLVAPManager::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
