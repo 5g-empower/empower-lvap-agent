@@ -59,7 +59,7 @@ void * EmpowerQOSManager::cast(const char *n) {
 	else if (strcmp(n, Notifier::EMPTY_NOTIFIER) == 0)
 		return static_cast<Notifier *>(&_empty_note);
 	else
-		return SimpleQueue::cast(n);
+		return Element::cast(n);
 }
 
 void
