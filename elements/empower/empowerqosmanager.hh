@@ -302,7 +302,7 @@ public:
 
     bool enqueue(Packet *p, EtherAddress ra, EtherAddress ta) {
 
-    		EtherPair pair = EtherPair(ra, ta);
+    	EtherPair pair = EtherPair(ra, ta);
 
 		if (_queues.find(pair) == _queues.end()) {
 
