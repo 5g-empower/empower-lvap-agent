@@ -200,13 +200,14 @@ EmpowerQOSManager::push(int, Packet *p) {
 void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra, EtherAddress ta) {
 
 	TrafficRule tr = TrafficRule(ssid, dscp);
+	TrafficRuleQueue *trq = 0;
 
 	if (_rules.find(tr) == _rules.end()) {
-		q->kill();
-		return;
+		tr = TrafficRule(ssid, 0);
+		trq = (_rules.get(tr));
+	} else {
+		trq = _rules.get(tr);
 	}
-
-	TrafficRuleQueue *trq = _rules.get(tr);
 
 	if (trq->enqueue(q, ra, ta)) {
 		// check if tr is in active list
