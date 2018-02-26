@@ -142,7 +142,7 @@ void EmpowerDisassocResponder::push(int, Packet *p) {
 
 	ess->_association_status = false;
 	ess->_assoc_id = 0;
-	ess->_ssid = '\0';
+	ess->_ssid = "";
 
 	_el->send_status_lvap(src);
 

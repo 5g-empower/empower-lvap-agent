@@ -80,10 +80,22 @@ enum empower_bands_types {
     EMPOWER_BT_HT20 = 0x1,
 };
 
+enum empower_aggregation_flags {
+	EMPOWER_AMSDU_AGGREGATION = (1<<0)
+};
+
+enum empower_regmon_types {
+    EMPOWER_REGMON_TX = 0x0,
+	EMPOWER_REGMON_RX = 0x1,
+	EMPOWER_REGMON_ED = 0x2,
+};
+
 typedef HashTable<uint16_t, uint32_t> CBytes;
 typedef CBytes::iterator CBytesIter;
 
 class Minstrel;
+class EmpowerQOSManager;
+class EmpowerRegmon;
 
 class NetworkPort {
 public:
@@ -260,19 +272,21 @@ public:
 	int handle_uimg_request(Packet *, uint32_t);
 	int handle_nimg_request(Packet *, uint32_t);
 	int handle_set_port(Packet *, uint32_t);
+	int handle_del_port(Packet *, uint32_t);
 	int handle_frames_request(Packet *, uint32_t);
 	int handle_lvap_stats_request(Packet *, uint32_t);
-	int handle_add_busyness_trigger(Packet *, uint32_t);
-	int handle_del_busyness_trigger(Packet *, uint32_t);
-	int handle_busyness_request(Packet *, uint32_t);
+	int handle_wifi_stats_request(Packet *, uint32_t);
 	int handle_incom_mcast_addr_response(Packet *, uint32_t);
 	int handle_wtp_counters_request(Packet *, uint32_t);
 	int handle_del_mcast_addr(Packet *, uint32_t);
 	int handle_del_mcast_receiver(Packet *, uint32_t);
-	int handle_cqm_links_request(Packet *, uint32_t);
 	int handle_caps_request(Packet *, uint32_t);
 	int handle_lvap_status_request(Packet *, uint32_t);
 	int handle_vap_status_request(Packet *, uint32_t);
+	int handle_set_traffic_rule(Packet *, uint32_t);
+	int handle_del_traffic_rule(Packet *, uint32_t);
+	int handle_traffic_rule_stats_request(Packet *, uint32_t);
+	int handle_traffic_rule_status_request(Packet *, uint32_t);
 	int handle_port_status_request(Packet *, uint32_t);
 
 	void send_hello();
@@ -282,20 +296,20 @@ public:
 	void send_status_lvap(EtherAddress);
 	void send_status_vap(EtherAddress);
 	void send_status_port(EtherAddress, int);
+	void send_status_traffic_rule(String, int, int);
 	void send_counters_response(EtherAddress, uint32_t);
 	void send_txp_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, EtherAddress);
 	void send_img_response(int, uint32_t, EtherAddress, uint8_t, empower_bands_types);
-	void send_busyness_response(uint32_t, EtherAddress, uint8_t, empower_bands_types);
+	void send_wifi_stats_response(uint32_t, EtherAddress, uint8_t, empower_bands_types);
 	void send_caps();
 	void send_rssi_trigger(uint32_t, uint32_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);
-	void send_busyness_trigger(uint32_t, uint32_t, uint32_t);
 	void send_lvap_stats_response(EtherAddress, uint32_t);
 	void send_incomming_mcast_address (EtherAddress, int);
 	void send_wtp_counters_response(uint32_t);
 	void send_igmp_report(EtherAddress, Vector<IPAddress>*, Vector<enum empower_igmp_record_type>*);
-	void send_cqm_links_response(uint32_t);
 	void send_add_del_lvap_response(uint8_t, EtherAddress, uint32_t, uint32_t);
+	void send_traffic_rule_stats_response(uint32_t, String, int, int);
 
 	int remove_lvap(EmpowerStationState *);
 	LVAP* lvaps() { return &_lvaps; }
@@ -346,7 +360,6 @@ private:
 	RETable _ifaces_to_elements;
 
 	void compute_bssid_mask();
-
 	void send_message(Packet *);
 
 	class Empower11k *_e11k;
@@ -355,7 +368,6 @@ private:
 	class EmpowerAssociationResponder *_eassor;
 	class EmpowerDeAuthResponder *_edeauthr;
 	class EmpowerRXStats *_ers;
-	class EmpowerCQM *_cqm;
 	class EmpowerMulticastTable * _mtbl;
 
 	LVAP _lvaps;
@@ -363,6 +375,8 @@ private:
 	VAP _vaps;
 	Vector<EtherAddress> _masks;
 	Vector<Minstrel *> _rcs;
+	Vector<EmpowerRegmon *> _regmons;
+	Vector<EmpowerQOSManager *> _eqms;
 	Vector<String> _debugfs_strings;
 	Timer _timer;
 	uint32_t _seq;

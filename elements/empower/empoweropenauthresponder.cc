@@ -212,7 +212,7 @@ void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, uint16_t seq
 	// transition lvap to disassoc state
 	ess->_association_status = false;
 	ess->_assoc_id = 0;
-	ess->_ssid = '\0';
+	ess->_ssid = "";
 
 	EtherAddress bssid = ess->_lvap_bssid;
 

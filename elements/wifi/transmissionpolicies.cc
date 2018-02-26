@@ -196,6 +196,12 @@ int TransmissionPolicies::remove(EtherAddress eth) {
 
 }
 
+void TransmissionPolicies::clear() {
+	for (TxTableIter it = _tx_table.begin(); it.live(); it++) {
+		remove(it.key());
+	}
+}
+
 enum {
 	H_POLICIES
 };

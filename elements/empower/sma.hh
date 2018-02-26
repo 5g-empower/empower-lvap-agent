@@ -10,7 +10,8 @@ CLICK_DECLS
 class SMA {
 public:
 	SMA(unsigned int period) :
-		period(period), window(new int[period]), head(NULL), tail(NULL), total(0) {
+		period(period), head(NULL), tail(NULL), total(0) {
+		window = new int[period];
 		assert(period >= 1);
 	}
 	~SMA() {

@@ -177,6 +177,12 @@ class Minstrel : public Element { public:
 	void assign_rate(Packet *);
 	void process_feedback(Packet *);
 
+	inline uint32_t estimate_usecs_wifi_packet(Packet *p) {
+		//struct click_wifi *w = (struct click_wifi *) p->data();
+		//EtherAddress dst = EtherAddress(w->i_addr1);
+		return calc_usecs_wifi_packet(p->length(), 1, 0);
+	}
+
 	MinstrelNeighborTable * neighbors() { return &_neighbors; }
 	TransmissionPolicies * tx_policies() { return _tx_policies; }
 	bool forget_station(EtherAddress addr) { return _neighbors.erase(addr); }

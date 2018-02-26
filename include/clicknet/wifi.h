@@ -14,18 +14,18 @@
 
 enum {
   WIFI_EXTRA_TX			        	= (1<<0), /* packet transmission */
-  WIFI_EXTRA_TX_FAIL		    	= (1<<1), /* transmission failed */
+  WIFI_EXTRA_TX_FAIL				= (1<<1), /* transmission failed */
   WIFI_EXTRA_TX_USED_ALT_RATE	= (1<<2), /* used alternate bitrate */
   WIFI_EXTRA_RX_ERR		        	= (1<<3), /* failed crc check */
   WIFI_EXTRA_RX_MORE		   	 	= (1<<4), /* first part of a fragmented skb */
   WIFI_EXTRA_NO_SEQ		        	= (1<<5),
   WIFI_EXTRA_NO_TXF	 	        	= (1<<6),
-  WIFI_EXTRA_DO_RTS_CTS		   = (1<<7),
-  WIFI_EXTRA_DO_CTS		        	= (1<<8),
-  WIFI_EXTRA_MCS		        	= (1<<9),
-  WIFI_EXTRA_MCS_SGI		    	= (1<<10),
-  WIFI_EXTRA_MCS_BW_40		    	= (1<<11),
-  WIFI_EXTRA_TX_NOACK				= (1<<12)
+  WIFI_EXTRA_DO_RTS_CTS			= (1<<7),
+  WIFI_EXTRA_DO_CTS				= (1<<8),
+  WIFI_EXTRA_MCS					= (1<<9),
+  WIFI_EXTRA_MCS_SGI				= (1<<10),
+  WIFI_EXTRA_MCS_BW_40			= (1<<11),
+  WIFI_EXTRA_TX_NOACK			= (1<<12)
 };
 
 struct click_wifi_extra {
@@ -67,12 +67,17 @@ struct click_wifi {
 	uint16_t	i_seq;
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-#define	WIFI_FC0_VERSION_MASK		0x03
+struct click_qos_control {
+	uint16_t	qos_control;
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+#define	WIFI_FC0_VERSION_MASK	0x03
 #define	WIFI_FC0_VERSION_0		0x00
 #define	WIFI_FC0_TYPE_MASK		0x0c
 #define	WIFI_FC0_TYPE_MGT		0x00
 #define	WIFI_FC0_TYPE_CTL		0x04
 #define	WIFI_FC0_TYPE_DATA		0x08
+#define WIFI_QOS_CONTROL			0x0080
 
 #define	WIFI_FC0_SUBTYPE_MASK		0xf0
 /* for TYPE_MGT */
@@ -325,6 +330,15 @@ struct click_wifi_wmm {
 	uint8_t 		qosinfo;
 	uint8_t 		reserved;
 	edca_ac_param 	acparam[AC_COUNT];
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/*
+ * AMSDU subframe header
+ */
+struct click_wifi_amsdu_subframe_header {
+    uint8_t		sa[6];		/* 0-5   Ethernet destination address */
+    uint8_t		da[6];		/* 6-11  Ethernet source address      */
+	uint8_t		len;
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 #define WIFI_RATES_MAXSIZE	15
