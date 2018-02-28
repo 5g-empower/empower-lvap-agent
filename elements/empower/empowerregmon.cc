@@ -130,15 +130,19 @@ void EmpowerRegmon::run_timer(Timer *) {
 		}
 		uint32_t sec = strtoul(values[0].c_str(), NULL, 10);
 		uint32_t nsec = strtoul(values[1].c_str(), NULL, 10);
-		uint64_t mac_ticks = strtoull(values[2].c_str(), NULL, 16);
-		uint64_t tx = strtoull(values[3].c_str(), NULL, 16);
-		uint64_t rx = strtoull(values[4].c_str(), NULL, 16);
-		uint64_t ed = strtoull(values[5].c_str(), NULL, 16);
-		int mac_ticks_delta = mac_ticks - _last_mac_ticks;
-		_last_mac_ticks = mac_ticks;
-		if (mac_ticks_delta < 0) {
+		uint32_t mac_ticks = strtoul(values[3].c_str(), NULL, 16);
+		uint32_t tx = strtoul(values[4].c_str(), NULL, 16);
+		uint32_t rx = strtoul(values[5].c_str(), NULL, 16);
+		uint32_t ed = strtoul(values[6].c_str(), NULL, 16);
+
+		if (mac_ticks < _last_mac_ticks) {
+			_last_mac_ticks = mac_ticks;
 			continue;
 		}
+
+		uint32_t mac_ticks_delta = mac_ticks - _last_mac_ticks;
+		_last_mac_ticks = mac_ticks;
+
 		Timestamp timestamp = Timestamp(sec, nsec);
 		_registers[EMPOWER_REGMON_TX].add_sample(timestamp.usecval(), tx, mac_ticks_delta);
 		_registers[EMPOWER_REGMON_RX].add_sample(timestamp.usecval(), rx, mac_ticks_delta);

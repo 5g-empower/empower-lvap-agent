@@ -35,7 +35,15 @@ public:
 			_samples[_index] = 0;
 			_timestamps[_index] = timestamp;
 		} else {
-			_samples[_index] = ((value - _last_value) * 18000) / mac_ticks_delta;
+
+			if (value > _last_value) {
+
+				uint64_t value_delta = value - _last_value;
+				_samples[_index] = (uint32_t)((value_delta * 18000) / mac_ticks_delta);
+			}
+			else {
+				_samples[_index] = 0;
+			}
 			_timestamps[_index] = timestamp;
 		}
 
