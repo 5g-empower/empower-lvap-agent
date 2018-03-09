@@ -135,18 +135,25 @@ void EmpowerRegmon::run_timer(Timer *) {
 		uint32_t rx = strtoul(values[5].c_str(), NULL, 16);
 		uint32_t ed = strtoul(values[6].c_str(), NULL, 16);
 
+		bool valid;
+		uint32_t mac_ticks_delta = 0;
+
 		if (mac_ticks < _last_mac_ticks) {
+
 			_last_mac_ticks = mac_ticks;
-			continue;
+			valid = false;
+		}
+		else {
+
+			mac_ticks_delta = mac_ticks - _last_mac_ticks;
+			_last_mac_ticks = mac_ticks;
+			valid = true;
 		}
 
-		uint32_t mac_ticks_delta = mac_ticks - _last_mac_ticks;
-		_last_mac_ticks = mac_ticks;
-
 		Timestamp timestamp = Timestamp(sec, nsec);
-		_registers[EMPOWER_REGMON_TX].add_sample(timestamp.usecval(), tx, mac_ticks_delta);
-		_registers[EMPOWER_REGMON_RX].add_sample(timestamp.usecval(), rx, mac_ticks_delta);
-		_registers[EMPOWER_REGMON_ED].add_sample(timestamp.usecval(), ed, mac_ticks_delta);
+		_registers[EMPOWER_REGMON_TX].add_sample(timestamp.usecval(), tx, mac_ticks_delta, valid);
+		_registers[EMPOWER_REGMON_RX].add_sample(timestamp.usecval(), rx, mac_ticks_delta, valid);
+		_registers[EMPOWER_REGMON_ED].add_sample(timestamp.usecval(), ed, mac_ticks_delta, valid);
 	}
 
 	fclose(fp);

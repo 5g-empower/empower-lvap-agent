@@ -28,7 +28,7 @@ public:
 		memset(_samples, 0, _size);
 	}
 
-	void add_sample(uint32_t timestamp, uint32_t value, uint32_t mac_ticks_delta) {
+	void add_sample(uint32_t timestamp, uint32_t value, uint32_t mac_ticks_delta, bool valid) {
 
 		if (_first_run) {
 			_first_run = false;
@@ -36,14 +36,15 @@ public:
 			_timestamps[_index] = timestamp;
 		} else {
 
-			if (value > _last_value) {
+			if (!valid)
+
+				_samples[_index] = 36000;
+			else {
 
 				uint64_t value_delta = value - _last_value;
 				_samples[_index] = (uint32_t)((value_delta * 18000) / mac_ticks_delta);
 			}
-			else {
-				_samples[_index] = 0;
-			}
+
 			_timestamps[_index] = timestamp;
 		}
 
