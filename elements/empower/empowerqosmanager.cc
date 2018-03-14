@@ -123,6 +123,8 @@ EmpowerQOSManager::push(int, Packet *p) {
 			p->kill();
 			return;
 		}
+        TxPolicyInfo * txp = _el->get_txp(ess->_sta);
+	txp->update_tx(p->length());
         store(ess->_ssid, dscp, p, dst, ess->_lvap_bssid);
 		return;
 	}
