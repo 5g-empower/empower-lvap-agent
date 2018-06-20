@@ -80,6 +80,7 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 	String res_strings;
 	String eqms_strings;
 	String regmon_strings;
+	String dpid_string;
 
 	res = Args(conf, this, errh).read_m("WTP", _wtp)
 						        .read_m("E11K", ElementCastArg("Empower11k"), _e11k)
@@ -91,12 +92,18 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 			                    .read_m("EQMS", eqms_strings)
 			                    .read_m("RCS", rcs_strings)
 			                    .read_m("RES", res_strings)
+								.read("BRIDGE_DPID", dpid_string)
 								.read("REGMONS", regmon_strings)
 			                    .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
 								.read("MTBL", ElementCastArg("EmpowerMulticastTable"), _mtbl)
 								.read("PERIOD", _period)
 			                    .read("DEBUG", _debug)
 			                    .complete();
+
+	for (int i = 0; i < dpid_string.length(); i += 2) {
+	    String chunk = dpid_string.substring(i, 2);
+	    _dpid[i / 2] = (uint8_t) strtoul(chunk.c_str(), NULL, 16);
+	}
 
 	cp_spacevec(debugfs_strings, _debugfs_strings);
 
@@ -1197,6 +1204,7 @@ void EmpowerLVAPManager::send_caps() {
 	caps->set_type(EMPOWER_PT_CAPS_RESPONSE);
 	caps->set_seq(get_next_seq());
 	caps->set_wtp(_wtp);
+	caps->set_dpid(_dpid);
 	caps->set_nb_resources_elements(_ifaces_to_elements.size());
 	caps->set_nb_ports_elements(_ports.size());
 
