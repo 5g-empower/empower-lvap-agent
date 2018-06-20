@@ -381,6 +381,7 @@ private:
 	Timer _timer;
 	uint32_t _seq;
 	EtherAddress _wtp;
+	uint8_t _dpid[8];
 	unsigned int _period; // msecs
 	bool _debug;
 
