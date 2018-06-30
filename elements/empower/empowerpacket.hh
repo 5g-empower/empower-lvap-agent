@@ -248,7 +248,6 @@ struct port_elements_entry {
     void set_iface(String iface)         { memset(_iface, 0, 10); memcpy(&_iface, iface.data(), iface.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-
 /* link stats request packet format */
 struct empower_lvap_stats_request : public empower_header {
 private:
@@ -320,11 +319,10 @@ private:
   uint32_t _wifi_stats_id;  /* Module id (int) */
   uint8_t  _wtp[6];         /* EtherAddress */
   uint16_t _nb_entries;     /* Int */
-  /* TODO: need to add additional params */
 public:
   void set_wifi_stats_id(uint32_t wifi_stats_id)    { _wifi_stats_id = htonl(wifi_stats_id); }
   void set_wtp(EtherAddress wtp)                    { memcpy(_wtp, wtp.data(), 6); }
-  void set_nb_entries(uint16_t nb_entries)        { _nb_entries = htons(nb_entries); }
+  void set_nb_entries(uint16_t nb_entries)          { _nb_entries = htons(nb_entries); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* channel quality map request packet format */
@@ -854,7 +852,6 @@ struct empower_del_mcast_receiver : public empower_header {
     uint8_t      channel()      { return _channel; }
     EtherAddress hwaddr()       { return EtherAddress(_hwaddr); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
-
 
 struct empower_set_traffic_rule : public empower_header {
   private:
