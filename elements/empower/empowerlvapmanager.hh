@@ -163,11 +163,10 @@ public:
 	bool _csa_active;
 	int _csa_switch_mode;
 	int _csa_switch_count;
-	EtherAddress _target_hwaddr;
-	int _target_channel;
+	//EtherAddress _target_hwaddr;
+	int _csa_switch_channel;
 	// ADD/DEL LVAP response entries
-	uint32_t _add_lvap_module_id;
-	uint32_t _del_lvap_module_id;
+	uint32_t _module_id;
 };
 
 // Cross structure mapping bssids to list of associated

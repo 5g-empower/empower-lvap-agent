@@ -514,11 +514,9 @@ public:
 /* del lvap packet format */
 struct empower_del_lvap : public empower_header {
   private:
-    uint32_t _module_id;        /* Transaction id */
-    uint8_t _sta[6];            /* EtherAddress */
-    uint8_t _target_hwaddr[6];  /* EtherAddress */
-    uint8_t _target_channel;    /* WiFi channel (int) */
-    uint8_t _target_band;       /* WiFi band (empower_band_types) */
+    uint32_t _module_id;          /* Transaction id */
+    uint8_t _sta[6];              /* EtherAddress */
+    uint8_t _csa_switch_channel;  /* WiFi channel (int) */
     uint8_t _csa_switch_mode;
     uint8_t _csa_switch_count;
   public:
@@ -526,9 +524,7 @@ struct empower_del_lvap : public empower_header {
     EtherAddress sta()              { return EtherAddress(_sta); }
     uint8_t csa_switch_mode()       { return _csa_switch_mode; }
     uint8_t csa_switch_count()      { return _csa_switch_count; }
-    uint8_t target_band()           { return _target_band; }
-    uint8_t target_channel()        { return _target_channel; }
-    EtherAddress target_hwaddr()    { return EtherAddress(_target_hwaddr); }
+    uint8_t csa_switch_channel()    { return _csa_switch_channel; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap add/del response packet format */

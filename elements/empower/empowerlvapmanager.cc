@@ -1448,13 +1448,10 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._csa_active = false;
 		state._csa_switch_count = 0;
 		state._csa_switch_mode = 1;
-		state._target_hwaddr = EtherAddress::make_broadcast();
-		state._target_band = EMPOWER_BT_L20;
-		state._target_channel = 0;
+		state._csa_switch_channel = 0;
 
 		// set the add/del lvap response ids to zero
-		state._add_lvap_module_id = 0;
-		state._del_lvap_module_id = 0;
+		state._module_id = 0;
 
 		_lvaps.set(sta, state);
 
@@ -1475,47 +1472,6 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	}
 
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-
-	// if a csa procedure is active, then the target block MUST be a block
-	// hosted by this WTP. If not then abort. Otherwise ignore add_lvap.
-	if (ess->_csa_active) {
-
-		// lookup interface id
-		int target_iface = element_to_iface(ess->_target_hwaddr, ess->_target_channel, ess->_target_band);
-		int incoming_iface = element_to_iface(hwaddr, channel, band);
-
-		click_chatter("%{element} :: %s :: sta %s csa active, target hwaddr %s target channel %u target band %u iface_id %d",
-					  this,
-					  __func__,
-					  ess->_sta.unparse_colon().c_str(),
-					  ess->_target_hwaddr.unparse().c_str(),
-					  ess->_target_channel,
-					  ess->_target_band,
-					  target_iface);
-
-		click_chatter("%{element} :: %s :: sta %s csa active, incoming hwaddr %s target channel %u target band %u iface_id %d",
-					  this,
-					  __func__,
-					  ess->_sta.unparse_colon().c_str(),
-					  hwaddr.unparse().c_str(),
-					  channel,
-					  band,
-					  incoming_iface);
-
-		// if CSA is active an add lvap can be received, but the target block must be local
-		assert(target_iface >= 0);
-
-		// if CSA is active an add lvap can be received, but the incoming block must be local
-		assert(incoming_iface >= 0);
-
-		// and they must be the same
-		assert(incoming_iface == target_iface);
-
-	    // save module id
-	    ess->_add_lvap_module_id = module_id;
-
-	    return 0;
-	}
 
 	ess->_lvap_bssid = lvap_bssid;
 	ess->_ssids = ssids;
@@ -1745,29 +1701,22 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 		return 0;
 	}
 
-	// if channel is different then start CSA procedure, if target channel is zero it means
-	// that no target block is actually provided, ignore rest of the fields.
-	// Notice that if the target block is hosted in this wtp, the then following add_lvap
-	// message must be ignored and an add_lvap message must be generated locally at the end
-	// of the CSA procedure
-	if ((q->target_channel() != 0) && (q->target_channel() != ess->_channel)) {
+	// if a channel is specified then start the csa procedure
+	if (q->csa_switch_channel() != 0) {
 
-		click_chatter("%{element} :: %s :: sta %s target channel %u is different from current channel %u, starting csa",
+		click_chatter("%{element} :: %s :: sta %s channel %u is different from current channel %u, starting csa",
 				      this,
 				      __func__,
 					  ess->_sta.unparse().c_str(),
-					  q->target_channel(),
+					  q->csa_switch_channel(),
 					  ess->_channel);
 
 		ess->_csa_active = true;
 		ess->_csa_switch_count = q->csa_switch_count();
 		ess->_csa_switch_mode = q->csa_switch_mode();
+		ess->_csa_switch_channel = q->csa_switch_channel();
 
-		ess->_target_band = (empower_bands_types) q->target_band();
-		ess->_target_channel = q->target_channel();
-		ess->_target_hwaddr = q->target_hwaddr();
-
-		ess->_del_lvap_module_id = module_id;
+		ess->_module_id = module_id;
 
 		return 0;
 
