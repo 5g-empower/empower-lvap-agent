@@ -100,7 +100,6 @@ enum empower_packet_types {
     EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x42,         // ac -> wtp
     EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x43,        // wtp -> ac
 
-
 };
 
 /* header format, common to all messages */
