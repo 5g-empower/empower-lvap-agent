@@ -89,8 +89,8 @@ enum empower_packet_types {
     EMPOWER_PT_WIFI_STATS_RESPONSE = 0x38,          // wtp -> ac
 
     // Traffic Rule Stats
-    EMPOWER_PT_TRAFFIC_RULE_STATS_REQUEST = 0x59,   // ac -> wtp
-    EMPOWER_PT_TRAFFIC_RULE_STATS_RESPONSE = 0x60,  // wtp -> ac
+	EMPOWER_PT_TRQ_COUNTERS_REQUEST = 0x59,   // ac -> wtp
+	EMPOWER_PT_TRQ_COUNTERS_RESPONSE = 0x60,  // wtp -> ac
 
     // TXP Packet/Bytes counters
     EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x35,         // ac -> wtp
@@ -910,7 +910,7 @@ struct empower_status_traffic_rule : public empower_header {
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* tr stats request packet format */
-struct empower_traffic_rule_stats_request : public empower_header {
+struct empower_trq_counters_request : public empower_header {
 private:
   uint32_t _tr_stats_id;    /* Module id (int) */
   uint8_t  _hwaddr[6];      /* EtherAddress */
@@ -928,23 +928,19 @@ public:
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* traffic rule status packet format */
-struct empower_traffic_rule_stats_response : public empower_header {
+struct empower_trq_counters_response : public empower_header {
   private:
-    uint32_t    _tr_stats_id;       /* Module id (int) */
+    uint32_t    _counters_id;       /* Module id (int) */
     uint8_t     _wtp[6];            /* EtherAddress */
-    uint16_t    _flags;             /* Aggregation flags */
     uint32_t    _deficit_used;      /* Total deficit used by this queue */
-    uint32_t    _transm_pkts;       /* Total transmitted packets */
-    uint32_t    _transm_bytes;      /* Total transmitted bytes */
     uint32_t    _max_queue_length;  /* Maximum queue length reached */
+    uint16_t	_nb_tx;          	/* Int */
   public:
     void set_wtp(EtherAddress wtp)                          { memcpy(_wtp, wtp.data(), 6); }
-    void set_tr_stats_id(uint32_t tr_stats_id)              { _tr_stats_id = htonl(tr_stats_id); }
-    void set_flags(uint16_t f)                              { _flags = htons(ntohs(_flags) | f); }
+    void set_counters_id(uint32_t counters_id)              { _counters_id = htonl(counters_id); }
     void set_deficit_used(uint32_t deficit_used)            { _deficit_used = htonl(deficit_used); }
-    void set_transm_pkts(uint32_t transm_pkts)              { _transm_pkts = htonl(transm_pkts); }
-    void set_transm_bytes(uint32_t transm_bytes)            { _transm_bytes = htonl(transm_bytes); }
     void set_max_queue_length(uint32_t max_queue_length)    { _max_queue_length = htonl(max_queue_length); }
+    void set_nb_tx(uint16_t nb_tx)             				{ _nb_tx = htons(nb_tx); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 CLICK_ENDDECLS

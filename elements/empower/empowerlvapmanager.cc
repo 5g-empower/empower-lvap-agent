@@ -393,26 +393,16 @@ void EmpowerLVAPManager::send_status_traffic_rule(String ssid, int dscp, int ifa
 	send_message(p);
 }
 
-int EmpowerLVAPManager::handle_traffic_rule_stats_request(Packet *p, uint32_t offset) {
 
-	struct empower_traffic_rule_stats_request *q = (struct empower_traffic_rule_stats_request *) (p->data() + offset);
-
-	EtherAddress hwaddr = q->hwaddr();
-	empower_bands_types band = (empower_bands_types) q->band();
-	uint8_t channel = q->channel();
-
-	int iface_id = element_to_iface(hwaddr, channel, band);
-
+int EmpowerLVAPManager::handle_trq_counters_request(Packet *p, uint32_t offset) {
+    struct empower_trq_counters_request *q = (struct empower_trq_counters_request *) (p->data() + offset);
+    EtherAddress hwaddr = q->hwaddr();
+    empower_bands_types band = (empower_bands_types) q->band();
+    uint8_t channel = q->channel();
 	String ssid = q->ssid();
 	int dscp = q->dscp();
-	TrafficRule tr = TrafficRule(ssid, dscp);
-
-	uint32_t tr_stats_id = q->tr_stats_id();
-
-	send_traffic_rule_stats_response(tr_stats_id, ssid, dscp, iface_id);
-
-	return 0;
-
+    send_trq_counters_response(q->tr_stats_id(), hwaddr, channel, band, ssid, dscp);
+    return 0;
 }
 
 int EmpowerLVAPManager::handle_traffic_rule_status_request(Packet *, uint32_t) {
@@ -441,7 +431,19 @@ int EmpowerLVAPManager::handle_port_status_request(Packet *, uint32_t) {
 
 }
 
-void EmpowerLVAPManager:: send_traffic_rule_stats_response(uint32_t tr_stats_id, String ssid, int dscp, int iface_id) {
+void EmpowerLVAPManager::send_trq_counters_response(uint32_t counters_id, EtherAddress hwaddr, uint8_t channel, empower_bands_types band, String ssid, int dscp) {
+
+    int iface_id = element_to_iface(hwaddr, channel, band);
+
+    if (iface_id == -1) {
+        click_chatter("%{element} :: %s :: invalid resource element (%s, %u, %u)!",
+                      this,
+                      __func__,
+                      hwaddr.unparse().c_str(),
+                      channel,
+                      band);
+        return;
+    }
 
 	TrafficRule tr = TrafficRule(ssid, dscp);
 	TrafficRuleQueue * queue = _eqms[iface_id]->rules()->get(tr);
@@ -450,36 +452,47 @@ void EmpowerLVAPManager:: send_traffic_rule_stats_response(uint32_t tr_stats_id,
 		return;
 	}
 
-	int len = sizeof(empower_traffic_rule_stats_response) + ssid.length();
+    int len = sizeof(empower_trq_counters_response);
+    len += queue->_tx.size() * 6; // the tx samples
 
-	WritablePacket *p = Packet::make(len);
+    WritablePacket *p = Packet::make(len);
 
-	if (!p) {
-		click_chatter("%{element} :: %s :: cannot make packet!",
-					  this,
-					  __func__);
-		return;
-	}
+    if (!p) {
+        click_chatter("%{element} :: %s :: cannot make packet!",
+                      this,
+                      __func__);
+        return;
+    }
 
-	memset(p->data(), 0, p->length());
+    memset(p->data(), 0, p->length());
 
-	empower_traffic_rule_stats_response *stats = (struct empower_traffic_rule_stats_response *) (p->data());
-	stats->set_version(_empower_version);
-	stats->set_length(len);
-	stats->set_type(EMPOWER_PT_TRAFFIC_RULE_STATS_RESPONSE);
-	stats->set_seq(get_next_seq());
-	stats->set_wtp(_wtp);
-	stats->set_max_queue_length(queue->_max_queue_length);
-	stats->set_deficit_used(queue->_deficit_used);
-	stats->set_transm_pkts(queue->_transm_pkts);
-	stats->set_transm_bytes(queue->_transm_bytes);
-	stats->set_tr_stats_id(tr_stats_id);
+    empower_trq_counters_response *counters = (struct empower_trq_counters_response *) (p->data());
+    counters->set_version(_empower_version);
+    counters->set_length(len);
+    counters->set_type(EMPOWER_PT_TRQ_COUNTERS_RESPONSE);
+    counters->set_seq(get_next_seq());
+    counters->set_counters_id(counters_id);
+    counters->set_wtp(_wtp);
+    counters->set_max_queue_length(queue->_max_queue_length);
+    counters->set_deficit_used(queue->_deficit_used);
 
-	if (queue->_amsdu_aggregation) {
-		stats->set_flags(EMPOWER_AMSDU_AGGREGATION);
-	}
+    counters->set_nb_tx(queue->_tx.size());
 
-	send_message(p);
+    uint8_t *ptr = (uint8_t *) counters;
+    ptr += sizeof(struct empower_trq_counters_response);
+
+    uint8_t *end = ptr + (len - sizeof(struct empower_trq_counters_response));
+
+    for (CBytesIter iter = queue->_tx.begin(); iter.live(); iter++) {
+        assert (ptr <= end);
+        counters_entry *entry = (counters_entry *) ptr;
+        entry->set_size(iter.key());
+        entry->set_count(iter.value());
+        ptr += sizeof(struct counters_entry);
+    }
+
+    send_message(p);
+
 }
 
 void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
@@ -2080,8 +2093,8 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 		case EMPOWER_PT_DEL_TRAFFIC_RULE:
 			handle_del_traffic_rule(p, offset);
 			break;
-		case EMPOWER_PT_TRAFFIC_RULE_STATS_REQUEST:
-			handle_traffic_rule_stats_request(p, offset);
+		case EMPOWER_PT_TRQ_COUNTERS_REQUEST:
+			handle_trq_counters_request(p, offset);
 			break;
 		case EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ:
 			handle_traffic_rule_status_request(p, offset);

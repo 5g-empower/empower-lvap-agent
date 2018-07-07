@@ -210,6 +210,9 @@ class TrafficRule {
 
 };
 
+typedef HashTable<uint16_t, uint32_t> CBytes;
+typedef CBytes::iterator CBytesIter;
+
 class TrafficRuleQueue {
 
 public:
@@ -226,14 +229,13 @@ public:
     bool _amsdu_aggregation;
     uint32_t _max_aggr_length;
     uint32_t _deficit_used;
-    uint32_t _transm_pkts;
-    uint32_t _transm_bytes;
     uint32_t _max_queue_length;
+	CBytes _tx;
 
 	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation) :
 			_tr(tr), _capacity(capacity), _size(0), _drops(0), _deficit(0),
 			_quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _max_aggr_length(7935),
-			_deficit_used(0), _transm_pkts(0), _transm_bytes(0), _max_queue_length(0) {
+			_deficit_used(0), _max_queue_length(0) {
 	}
 
 	~TrafficRuleQueue() {
@@ -244,6 +246,13 @@ public:
 			itr++;
 		}
 		_queues.clear();
+	}
+
+	void update_tx(uint16_t len) {
+		if (_tx.find(len) == _tx.end()) {
+			_tx.set(len, 0);
+		}
+		(*_tx.get_pointer(len))++;
 	}
 
 	uint32_t size() { return _size; }

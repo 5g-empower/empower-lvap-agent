@@ -258,8 +258,7 @@ Packet * EmpowerQOSManager::pull(int) {
 		uint32_t deficit = _rc->estimate_usecs_wifi_packet(p);
 		queue->_deficit -= deficit;
 		queue->_deficit_used += deficit;
-		queue->_transm_bytes += p->length();
-		queue->_transm_pkts += 1;
+		queue->update_tx(p->length());
 		if (queue->size() > 0) {
 			_active_list.push_front(tr);
 		}
