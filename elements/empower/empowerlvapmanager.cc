@@ -1696,7 +1696,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 		_edeauthr->send_deauth_request(ess->_sta, 0x0001, ess->_iface_id);
 		// The receiver must be flush from all the groups in the multicast table
 		if (_mtbl) {
-			_mtbl->leaveallgroups(ess->_sta);
+			_mtbl->leave_all_groups(ess->_sta);
 		}
 		// remove lvap
 		remove_lvap(ess);
@@ -1988,7 +1988,7 @@ int EmpowerLVAPManager::handle_del_mcast_receiver(Packet *p, uint32_t offset) {
 				  sta.unparse().c_str());
 
 	if (_mtbl) {
-		_mtbl->leaveallgroups(sta);
+		_mtbl->leave_all_groups(sta);
 	}
 
 	return 0;

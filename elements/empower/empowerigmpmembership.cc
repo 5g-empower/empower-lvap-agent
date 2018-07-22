@@ -111,8 +111,8 @@ void EmpowerIgmpMembership::push(int, Packet *p)
 			}
 			igmp_types.push_back(V1_MEMBERSHIP_REPORT);
 			mcast_addresses.push_back(IPAddress(ip->ip_dst));
-			_mtbl->addgroup(IPAddress(ip->ip_dst));
-			_mtbl->joingroup(src, IPAddress(ip->ip_dst));
+			_mtbl->add_group(IPAddress(ip->ip_dst));
+			_mtbl->join_group(src, IPAddress(ip->ip_dst));
 			break;
 		}
 		case 0x16:
@@ -127,8 +127,8 @@ void EmpowerIgmpMembership::push(int, Packet *p)
 			}
 			igmp_types.push_back(V2_JOIN_GROUP);
 			mcast_addresses.push_back(IPAddress(ip->ip_dst));
-			_mtbl->addgroup(IPAddress(ip->ip_dst));
-			_mtbl->joingroup(src, IPAddress(ip->ip_dst));
+			_mtbl->add_group(IPAddress(ip->ip_dst));
+			_mtbl->join_group(src, IPAddress(ip->ip_dst));
 			break;
 		}
 		case 0x17:
@@ -144,7 +144,7 @@ void EmpowerIgmpMembership::push(int, Packet *p)
 			v1andv2message = (igmpv1andv2message *) igmpmessage;
 			igmp_types.push_back(V2_LEAVE_GROUP);
 			mcast_addresses.push_back(IPAddress(v1andv2message->group));
-			_mtbl->leavegroup(src, IPAddress(v1andv2message->group));
+			_mtbl->leave_group(src, IPAddress(v1andv2message->group));
 			break;
 		}
 		case 0x22:
@@ -167,7 +167,7 @@ void EmpowerIgmpMembership::push(int, Packet *p)
 							__func__);
 					igmp_types.push_back(V3_MODE_IS_INCLUDE);
 					mcast_addresses.push_back(IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
-					_mtbl->leavegroup(src, IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
+					_mtbl->leave_group(src, IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
 					break;
 
 				case 0x02:
@@ -175,8 +175,8 @@ void EmpowerIgmpMembership::push(int, Packet *p)
 							__func__);
 					igmp_types.push_back(V3_MODE_IS_EXCLUDE);
 					mcast_addresses.push_back(IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
-					_mtbl->addgroup(IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
-					_mtbl->joingroup(src, IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
+					_mtbl->add_group(IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
+					_mtbl->join_group(src, IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
 					break;
 
 				case 0x03:
@@ -185,7 +185,7 @@ void EmpowerIgmpMembership::push(int, Packet *p)
 							this, __func__);
 					igmp_types.push_back(V3_CHANGE_TO_INCLUDE_MODE);
 					mcast_addresses.push_back(IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
-					_mtbl->leavegroup(src, IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
+					_mtbl->leave_group(src, IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
 					break;
 				case 0x04:
 					click_chatter(
@@ -193,8 +193,8 @@ void EmpowerIgmpMembership::push(int, Packet *p)
 							this, __func__);
 					igmp_types.push_back(V3_CHANGE_TO_EXCLUDE_MODE);
 					mcast_addresses.push_back(IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
-					_mtbl->addgroup(IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
-					_mtbl->joingroup(src, IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
+					_mtbl->add_group(IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
+					_mtbl->join_group(src, IPAddress(v3report->grouprecords[grouprecord_counter].multicast_address));
 					break;
 				case 0x05:
 					//TODO: "ALLOW_NEW_SOURCES". Sources management
@@ -226,21 +226,26 @@ void EmpowerIgmpMembership::push(int, Packet *p)
 		}
 	}
 
-	if (ess && !mcast_addresses.empty() && !igmp_types.empty() && mcast_addresses.size() == igmp_types.size())
-	{
-		click_chatter("%{element} :: %s :: IGMP packet received from %s, number of addresses %d, number of igmp reports %d."
-				"Sending message to lvapmannager to be sent to the controller",
-										this, __func__, src.unparse().c_str(), mcast_addresses.size(), igmp_types.size());
+	if (ess && !mcast_addresses.empty() && !igmp_types.empty() && mcast_addresses.size() == igmp_types.size()) {
+		click_chatter("%{element} :: %s :: IGMP packet received from %s, number of addresses %d, number of IGMP reports %d.",
+				      this,
+					  __func__,
+					  src.unparse().c_str(),
+					  mcast_addresses.size(),
+					  igmp_types.size());
 		_el->send_igmp_report(src, &mcast_addresses, &igmp_types);
-	}
-	else
-	{
-		click_chatter("%{element} :: %s :: Problem with IGMP information. Src %s, number of addresses %d, number of igmp reports %d",
-								this, __func__, src.unparse().c_str(), mcast_addresses.size(), igmp_types.size());
+	} else {
+		click_chatter("%{element} :: %s :: Invalid IGMP packet received from %s, number of addresses %d, number of IGMP reports %d.",
+				      this,
+					  __func__,
+					  src.unparse().c_str(),
+					  mcast_addresses.size(),
+					  igmp_types.size());
 	}
 
 	p->kill();
 	return;
+
 }
 
 

@@ -77,13 +77,11 @@ public:
 
 	}
 
-	bool addgroup(IPAddress);
-	bool joingroup(EtherAddress, IPAddress);
-	//bool addsource(IPAddress, IPAddress, IPAddress);
-	//bool delsource(IPAddress, IPAddress, IPAddress);
-	bool leavegroup(EtherAddress, IPAddress);
-	bool leaveallgroups(EtherAddress);
-	Vector<struct EmpowerMulticastReceiver> *getIGMPreceivers(EtherAddress);
+	bool add_group(IPAddress);
+	bool join_group(EtherAddress, IPAddress);
+	bool leave_group(EtherAddress, IPAddress);
+	bool leave_all_groups(EtherAddress);
+	Vector<struct EmpowerMulticastReceiver> *get_receivers(EtherAddress);
 
 private:
 

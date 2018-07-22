@@ -44,168 +44,138 @@ int EmpowerMulticastTable::configure(Vector<String> &conf, ErrorHandler *errh) {
 
 }
 
-bool EmpowerMulticastTable::addgroup(IPAddress group) {
+bool EmpowerMulticastTable::add_group(IPAddress group) {
 
-	const unsigned char *p = group.data();
+    click_chatter("%{element} :: %s :: Adding IGMP group %s",
+                  this,
+                  __func__,
+				  group.unparse().c_str());
 
-	click_chatter("%{element} :: %s :: Adding IGMP group %d.%d.%d.%d",
-				  this,
-				  __func__,
-				  p[0], p[1], p[2], p[3]);
+    Vector<EmpowerMulticastGroup>::iterator i;
+    for (i = multicastgroups.begin(); i != multicastgroups.end(); i++) {
+        if (i->group == group) {
+            return false;
+        }
+    }
 
-	EmpowerMulticastGroup newgroup;
-	newgroup.group = group;
+    EmpowerMulticastGroup newgroup;
 
-	Vector<EmpowerMulticastGroup>::iterator i;
-	for (i = multicastgroups.begin(); i != multicastgroups.end(); i++) {
-		if (IPAddress((*i).group) == IPAddress(group))
-			return false;
-	}
+    newgroup.group = group;
+    newgroup.mac_group = ip_mcast_addr_to_mac(group);
 
-	newgroup.mac_group = ip_mcast_addr_to_mac(group);
-	multicastgroups.push_back(newgroup);
+    multicastgroups.push_back(newgroup);
 
-	return true;
+    return true;
 
 }
 
-bool EmpowerMulticastTable::joingroup(EtherAddress sta, IPAddress group)
-{
+bool EmpowerMulticastTable::join_group(EtherAddress sta, IPAddress group) {
 
 	Vector<EmpowerMulticastGroup>::iterator i;
-
-	for (i = multicastgroups.begin(); i != multicastgroups.end(); i++)
-	{
-		if ((*i).group.addr() == group.addr())
-		{
+	for (i = multicastgroups.begin(); i != multicastgroups.end(); i++) {
+		if (i->group == group) {
 			Vector<EmpowerMulticastReceiver>::iterator a;
-			for (a = (*i).receivers.begin(); a != (*i).receivers.end(); a++)
-			{
-				if ((*a).sta == sta)
-				{
-					click_chatter("%{element} :: %s :: Station %s already in IGMP group %d.%d.%d.%d!",
-							this, __func__, sta.unparse().c_str(), (*i).group.data()[0], (*i).group.data()[1],
-							(*i).group.data()[2], (*i).group.data()[3]);
+			for (a = i->receivers.begin(); a != i->receivers.end(); a++) {
+				if (a->sta == sta) {
+					click_chatter("%{element} :: %s :: Station %s already in IGMP group %s.",
+							      this,
+								  __func__,
+								  sta.unparse().c_str(),
+								  group.unparse().c_str());
 					return false;
 				}
 			}
 			EmpowerMulticastReceiver new_receiver;
 			new_receiver.sta = sta;
-			(*i).receivers.push_back(new_receiver);
-			click_chatter("%{element} :: %s :: Station %s added to IGMP group %d.%d.%d.%d!",
+			i->receivers.push_back(new_receiver);
+			click_chatter("%{element} :: %s :: Station %s added to IGMP group %s.",
 					      this,
 						  __func__,
-						  sta.unparse().c_str(),
-						  (*i).group.data()[0],
-						  (*i).group.data()[1],
-						  (*i).group.data()[2],
-						  (*i).group.data()[3]);
+						  group.unparse().c_str());
 
 			return true;
 		}
 	}
 
 	return false;
+
 }
 
-bool EmpowerMulticastTable::leavegroup(EtherAddress sta, IPAddress group)
-{
+bool EmpowerMulticastTable::leave_group(EtherAddress sta, IPAddress group) {
 
 	Vector<EmpowerMulticastGroup>::iterator i;
-
-	for (i = multicastgroups.begin(); i != multicastgroups.end(); i++)
-	{
-		if ((*i).group.addr() == group.addr())
-		{
+	for (i = multicastgroups.begin(); i != multicastgroups.end(); i++) {
+		if (i->group == group) {
 			Vector<EmpowerMulticastReceiver>::iterator a;
-			for (a = (*i).receivers.begin(); a != (*i).receivers.end(); a++)
-			{
-				if ((*a).sta == sta)
-				{
-					(*i).receivers.erase(a);
-					click_chatter("%{element} :: %s :: Station %s added removed from IGMP group %d.%d.%d.%d",
-										this, __func__, sta.unparse().c_str(),
-										(*i).group.data()[0], (*i).group.data()[1],
-										(*i).group.data()[2], (*i).group.data()[3]);
+			for (a = i->receivers.begin(); a != i->receivers.end(); a++) {
+				if (a->sta == sta) {
+					i->receivers.erase(a);
+					click_chatter("%{element} :: %s :: Station %s removed from IGMP group %s",
+								  this,
+								  __func__,
+								  sta.unparse().c_str(),
+								  group.unparse().c_str());
 					// The group is deleted if no more receivers belong to it
-					if ((*i).receivers.begin() == (*i).receivers.end())
-					{
+					if (i->receivers.begin() == i->receivers.end()) {
 						multicastgroups.erase(i);
-						click_chatter("%{element} :: %s :: IGMP group %d.%d.%d.%d is empty. It is about to be deleted",
-																this, __func__, (*i).group.data()[0], (*i).group.data()[1],
-																(*i).group.data()[2], (*i).group.data()[3]);
+						click_chatter("%{element} :: %s :: IGMP group %s is empty. Remove it.",
+									  this,
+									  __func__,
+									  group.unparse().c_str());
 					}
 					return true;
 				}
 			}
-
 		}
 	}
-	click_chatter("%{element} :: %s :: IGMP leave group request received from station %s not found in group %d.%d.%d.%d",
-														this, __func__, sta.unparse().c_str(), (*i).group.data()[0], (*i).group.data()[1],
-														(*i).group.data()[2], (*i).group.data()[3]);
+
 	return false;
+
 }
 
-Vector<EmpowerMulticastTable::EmpowerMulticastReceiver>* EmpowerMulticastTable::getIGMPreceivers(EtherAddress group)
+bool EmpowerMulticastTable::leave_all_groups(EtherAddress sta) {
+
+	Vector<EmpowerMulticastGroup>::iterator i;
+	for (i = multicastgroups.begin(); i != multicastgroups.end(); i++) {
+		Vector<EmpowerMulticastReceiver>::iterator a;
+		for (a = i->receivers.begin(); a != i->receivers.end(); a++) {
+			if (a->sta == sta) {
+				i->receivers.erase(a);
+				click_chatter("%{element} :: %s :: Station %s removed from IGMP group %s",
+							  this,
+							  __func__,
+							  sta.unparse().c_str(),
+							  i->group.unparse().c_str());
+				// The group is deleted if no more receivers belong to it
+				if (i->receivers.begin() == i->receivers.end()) {
+					multicastgroups.erase(i);
+					click_chatter("%{element} :: %s :: IGMP group %s is empty. Remove it.",
+								  this,
+								  __func__,
+								  i->group.unparse().c_str());
+				}
+			}
+		}
+	}
+
+	return true;
+
+}
+
+Vector<EmpowerMulticastTable::EmpowerMulticastReceiver>* EmpowerMulticastTable::get_receivers(EtherAddress group)
 {
 	Vector<struct EmpowerMulticastGroup>::iterator i;
 
-	for (i = multicastgroups.begin(); i != multicastgroups.end(); i++)
-	{
-		if (i->mac_group == group)
-		{
+	for (i = multicastgroups.begin(); i != multicastgroups.end(); i++) {
+		if (i->mac_group == group) {
 			return &(i->receivers);
 		}
 	}
 
-	click_chatter("%{element} :: %s :: IGMP group %s not found.",
-														  this,
-														  __func__, group.unparse().c_str());
+	return 0;
 
-	return NULL;
 }
 
-bool EmpowerMulticastTable::leaveallgroups(EtherAddress sta)
-{
-
-	click_chatter("%{element} :: %s :: Station %s is about to leave all IGMP groups",
-										  this,
-										  __func__, sta.unparse().c_str());
-
-	Vector<EmpowerMulticastGroup>::iterator i;
-
-	for (i = multicastgroups.begin(); i != multicastgroups.end();)
-	{
-		Vector<EmpowerMulticastReceiver>::iterator a;
-		for (a = (*i).receivers.begin(); a != (*i).receivers.end(); a++)
-		{
-			if ((*a).sta == sta)
-			{
-				(*i).receivers.erase(a);
-				click_chatter("%{element} :: %s :: Station %s removed from  IGMP group %d.%d.%d.%d",
-									this, __func__, sta.unparse().c_str(),
-									(*i).group.data()[0], (*i).group.data()[1],
-									(*i).group.data()[2], (*i).group.data()[3]);
-
-				break;
-			}
-		}
-
-		// The group is deleted if no more receivers belong to it
-		if ((*i).receivers.begin() == (*i).receivers.end())
-		{
-			i = multicastgroups.erase(i);
-			click_chatter("%{element} :: %s :: IGMP group %d.%d.%d.%d is empty. It is about to be deleted",
-													this, __func__, (*i).group.data()[0], (*i).group.data()[1],
-													(*i).group.data()[2], (*i).group.data()[3]);
-		}
-		else
-			i++;
-	}
-
-	return true;
-}
 
 enum {
 	H_DEBUG, H_MULTICAST_TABLE
@@ -220,8 +190,7 @@ String EmpowerMulticastTable::read_handler(Element *e, void *thunk) {
 		StringAccum sa;
 		Vector<EmpowerMulticastGroup>::iterator i;
 		for (i = td->multicastgroups.begin(); i != td->multicastgroups.end(); i++) {
-			sa << i->group.unparse() << " " <<  i->mac_group.unparse();
-
+			sa << i->group.unparse() << " " << i->mac_group.unparse();
 			Vector<EmpowerMulticastReceiver>::iterator a;
 			sa << " receivers [ ";
 			for (a = (*i).receivers.begin(); a != (*i).receivers.end(); a++) {
