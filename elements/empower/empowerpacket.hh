@@ -26,6 +26,7 @@ enum empower_packet_types {
     EMPOWER_PT_ADD_LVAP = 0x11,                     // ac -> wtp
     EMPOWER_PT_DEL_LVAP = 0x12,                     // ac -> wtp
     EMPOWER_PT_STATUS_LVAP = 0x13,                  // wtp -> ac
+    EMPOWER_PT_LVAP_STATUS_REQ = 0x53,              // ac -> wtp
 
     // ADD/DEL response messages
     EMPOWER_PT_ADD_LVAP_RESPONSE = 0x51,            // ac -> wtp
@@ -35,9 +36,6 @@ enum empower_packet_types {
     EMPOWER_PT_ADD_VAP = 0x32,                      // ac -> wtp
     EMPOWER_PT_DEL_VAP = 0x33,                      // ac -> wtp
     EMPOWER_PT_STATUS_VAP = 0x34,                   // wtp -> ac
-
-    // STATUSES requests
-    EMPOWER_PT_LVAP_STATUS_REQ = 0x53,              // ac -> wtp
     EMPOWER_PT_VAP_STATUS_REQ = 0x54,               // ac -> wtp
 
     // TX Policies
@@ -52,11 +50,9 @@ enum empower_packet_types {
     EMPOWER_PT_STATUS_TRAFFIC_RULE = 0x58,          // wtp -> ac
     EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ = 0x61,      // ac -> wtp
 
-    // Multicast address transmission policies
+    // IGMP messages
     EMPOWER_PT_INCOM_MCAST_REQUEST = 0x46,          // wtp -> ac
     EMPOWER_PT_INCOM_MCAST_RESPONSE = 0x47,         // ac -> wtp
-
-    // IGMP messages
     EMPOWER_PT_IGMP_REQUEST = 0x48,                 // wtp -> ac
     EMPOWER_PT_DEL_MCAST_ADDR = 0x49,               // ac -> wtp
     EMPOWER_PT_DEL_MCAST_RECEIVER = 0x50,           // ac -> wtp
@@ -95,10 +91,6 @@ enum empower_packet_types {
     // TXP Packet/Bytes counters
     EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x35,         // ac -> wtp
     EMPOWER_PT_TXP_COUNTERS_RESPONSE = 0x36,        // wtp -> ac
-
-    // WTP Packet/Bytes counters
-    EMPOWER_PT_WTP_COUNTERS_REQUEST = 0x42,         // ac -> wtp
-    EMPOWER_PT_WTP_COUNTERS_RESPONSE = 0x43,        // wtp -> ac
 
 };
 
@@ -429,40 +421,6 @@ struct counters_entry {
     uint16_t _size;     /* Frame size in bytes (int) */
     uint32_t _count;    /* Number of frames (int) */
   public:
-    void set_size(uint16_t size)   { _size = htons(size); }
-    void set_count(uint32_t count) { _count = htonl(count); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* counters request packet format */
-struct empower_wtp_counters_request : public empower_header {
-private:
-  uint32_t  _counters_id;   /* Module id (int) */
-public:
-    uint32_t counters_id() { return ntohl(_counters_id); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* counters response packet format */
-struct empower_wtp_counters_response : public empower_header {
-private:
-  uint32_t _counters_id;    /* Module id (int) */
-  uint8_t  _wtp[6];         /* EtherAddress */
-  uint16_t _nb_tx;          /* Int */
-  uint16_t _nb_rx;          /* Int */
-public:
-    void set_wtp(EtherAddress wtp)             { memcpy(_wtp, wtp.data(), 6); }
-    void set_nb_tx(uint16_t nb_tx)             { _nb_tx = htons(nb_tx); }
-    void set_nb_rx(uint16_t nb_rx)             { _nb_rx = htons(nb_rx); }
-    void set_counters_id(uint32_t counters_id) { _counters_id = htonl(counters_id); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* counters entry format */
-struct wtp_counters_entry {
-  private:
-    uint8_t  _sta[6];   /* EtherAddress */
-    uint16_t _size;     /* Frame size in bytes (int) */
-    uint32_t _count;    /* Number of frames (int) */
-  public:
-    void set_sta(EtherAddress sta) { memcpy(_sta, sta.data(), 6); }
     void set_size(uint16_t size)   { _size = htons(size); }
     void set_count(uint32_t count) { _count = htonl(count); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;

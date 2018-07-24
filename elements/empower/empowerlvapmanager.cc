@@ -967,75 +967,6 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 
 }
 
-void EmpowerLVAPManager::send_wtp_counters_response(uint32_t counters_id) {
-
-	int len = sizeof(empower_counters_response);
-
-	int nb_tx = 0;
-	int nb_rx = 0;
-
-	for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
-		TxPolicyInfo * txp = get_txp(it.key());
-		len += txp->_tx.size() * 12; // the tx samples
-		len += txp->_rx.size() * 12; // the rx samples
-		nb_tx += txp->_tx.size();
-		nb_rx += txp->_rx.size();
-	}
-
-	WritablePacket *p = Packet::make(len);
-
-	if (!p) {
-		click_chatter("%{element} :: %s :: cannot make packet!",
-					  this,
-					  __func__);
-		return;
-	}
-
-	memset(p->data(), 0, p->length());
-
-	empower_wtp_counters_response *counters = (struct empower_wtp_counters_response *) (p->data());
-	counters->set_version(_empower_version);
-	counters->set_length(len);
-	counters->set_type(EMPOWER_PT_WTP_COUNTERS_RESPONSE);
-	counters->set_seq(get_next_seq());
-	counters->set_counters_id(counters_id);
-	counters->set_wtp(_wtp);
-	counters->set_nb_tx(nb_tx);
-	counters->set_nb_rx(nb_rx);
-
-	uint8_t *ptr = (uint8_t *) counters;
-	ptr += sizeof(struct empower_wtp_counters_response);
-
-	uint8_t *end = ptr + (len - sizeof(struct empower_counters_response));
-
-	for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
-		TxPolicyInfo * txp = get_txp(it.key());
-		for (CBytesIter iter = txp->_tx.begin(); iter.live(); iter++) {
-			assert (ptr <= end);
-			wtp_counters_entry *entry = (wtp_counters_entry *) ptr;
-			entry->set_size(iter.key());
-			entry->set_count(iter.value());
-			entry->set_sta(it.key());
-			ptr += sizeof(struct wtp_counters_entry);
-		}
-	}
-
-	for (LVAPIter it = _lvaps.begin(); it.live(); it++) {
-		TxPolicyInfo * txp = get_txp(it.key());
-		for (CBytesIter iter = txp->_rx.begin(); iter.live(); iter++) {
-			assert (ptr <= end);
-			wtp_counters_entry *entry = (wtp_counters_entry *) ptr;
-			entry->set_size(iter.key());
-			entry->set_count(iter.value());
-			entry->set_sta(it.key());
-			ptr += sizeof(struct wtp_counters_entry);
-		}
-	}
-
-	send_message(p);
-
-}
-
 void EmpowerLVAPManager::send_incomming_mcast_address(EtherAddress mcast_address, int iface) {
 
 	int len = sizeof(empower_incom_mcast_addr);
@@ -1834,12 +1765,6 @@ int EmpowerLVAPManager::handle_counters_request(Packet *p, uint32_t offset) {
 	return 0;
 }
 
-int EmpowerLVAPManager::handle_wtp_counters_request(Packet *p, uint32_t offset) {
-	struct empower_wtp_counters_request *q = (struct empower_wtp_counters_request *) (p->data() + offset);
-	send_wtp_counters_response(q->counters_id());
-	return 0;
-}
-
 int EmpowerLVAPManager::handle_wifi_stats_request(Packet *p, uint32_t offset) {
 	struct empower_wifi_stats_request *q = (struct empower_wifi_stats_request *) (p->data() + offset);
 	EtherAddress hwaddr = q->hwaddr();
@@ -2033,9 +1958,6 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_COUNTERS_REQUEST:
 			handle_counters_request(p, offset);
-			break;
-		case EMPOWER_PT_WTP_COUNTERS_REQUEST:
-			handle_wtp_counters_request(p, offset);
 			break;
 		case EMPOWER_PT_TXP_COUNTERS_REQUEST:
 			handle_txp_counters_request(p, offset);
