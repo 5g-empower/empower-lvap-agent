@@ -51,11 +51,8 @@ enum empower_packet_types {
     EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ = 0x61,      // ac -> wtp
 
     // IGMP messages
-    EMPOWER_PT_INCOM_MCAST_REQUEST = 0x46,          // wtp -> ac
-    EMPOWER_PT_INCOM_MCAST_RESPONSE = 0x47,         // ac -> wtp
-    EMPOWER_PT_IGMP_REQUEST = 0x48,                 // wtp -> ac
-    EMPOWER_PT_DEL_MCAST_ADDR = 0x49,               // ac -> wtp
-    EMPOWER_PT_DEL_MCAST_RECEIVER = 0x50,           // ac -> wtp
+    EMPOWER_PT_IGMP_REPORT = 0x48,                  // wtp -> ac
+	EMPOWER_PT_INCOMING_MCAST_ADDRESS = 0x46,       // wtp -> ac
 
     // Link Stats
     EMPOWER_PT_LVAP_STATS_REQUEST = 0x30,           // ac -> wtp
@@ -749,28 +746,22 @@ public:
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* incomming multicast address request format */
-struct empower_incom_mcast_addr : public empower_header {
+struct empower_incoming_mcast_address : public empower_header {
   private:
-    uint8_t  _wtp[6];           /* EtherAddress */
-    uint8_t  _mcast_addr[6];    /* EtherAddress */
-    uint8_t  _iface;            /* OVS interface name (String) */
+    uint8_t _wtp[6];           /* EtherAddress */
+    uint8_t _mcast_addr[6];    /* EtherAddress */
+    uint8_t _hwaddr[6];        /* EtherAddress */
+    uint8_t _channel;          /* WiFi channel (int) */
+    uint8_t _band;             /* WiFi band (empower_band_types) */
   public:
     void set_mcast_addr(EtherAddress mcast_addr)    { memcpy(_mcast_addr, mcast_addr.data(), 6); }
     void set_wtp(EtherAddress wtp)                  { memcpy(_wtp, wtp.data(), 6); }
-    void set_iface(int iface)                       { _iface = iface; }
+    void set_band(uint8_t band)            			{ _band = band; }
+    void set_hwaddr(EtherAddress hwaddr)   			{ memcpy(_hwaddr, hwaddr.data(), 6); }
+    void set_channel(uint8_t channel)      			{ _channel = channel; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* incomming multicast address response format */
-struct empower_incom_mcast_addr_response : public empower_header {
-  private:
-    uint8_t  _mcast_addr[6];    /* EtherAddress */
-    uint8_t  _iface;            /* OVS interface name (String) */
-  public:
-    EtherAddress mcast_addr()   { return EtherAddress(_mcast_addr); }
-    uint8_t iface()             { return _iface; }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-struct empower_igmp_request : public empower_header {
+struct empower_igmp_report : public empower_header {
   private:
     uint8_t  _wtp[6];           /* EtherAddress */
     uint8_t  _sta [6];          /* EtherAddress */
@@ -781,34 +772,6 @@ struct empower_igmp_request : public empower_header {
     void set_sta(EtherAddress sta)                  { memcpy(_sta, sta.data(), 6); }
     void set_mcast_addr(IPAddress mcast_addr)       { memcpy(_mcast_addr, mcast_addr.data(), 4); }
     void set_igmp_type(int igmp_type)               { _igmp_type = igmp_type; }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* delete multicast address format */
-struct empower_del_mcast_addr : public empower_header {
-  private:
-    uint8_t  _mcast_addr[6];    /* EtherAddress */
-    uint8_t  _hwaddr[6];        /* EtherAddress */
-    uint8_t  _channel;          /* WiFi channel (int) */
-    uint8_t  _band;             /* WiFi band (empower_band_types) */
-  public:
-    EtherAddress mcast_addr()   { return EtherAddress(_mcast_addr); }
-    uint8_t      band()         { return _band; }
-    uint8_t      channel()      { return _channel; }
-    EtherAddress hwaddr()       { return EtherAddress(_hwaddr); }
-} CLICK_SIZE_PACKED_ATTRIBUTE;
-
-/* delete multicast receiver format */
-struct empower_del_mcast_receiver : public empower_header {
-  private:
-    uint8_t  _sta[6];           /* EtherAddress */
-    uint8_t  _hwaddr[6];            /* EtherAddress */
-    uint8_t  _channel;          /* WiFi channel (int) */
-    uint8_t  _band;             /* WiFi band (empower_band_types) */
-  public:
-    EtherAddress sta()          { return EtherAddress(_sta); }
-    uint8_t      band()         { return _band; }
-    uint8_t      channel()      { return _channel; }
-    EtherAddress hwaddr()       { return EtherAddress(_hwaddr); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 struct empower_set_traffic_rule : public empower_header {

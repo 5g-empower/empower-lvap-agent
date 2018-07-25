@@ -967,9 +967,9 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 
 }
 
-void EmpowerLVAPManager::send_incomming_mcast_address(EtherAddress mcast_address, int iface) {
+void EmpowerLVAPManager::send_empower_incoming_mcast_address(EtherAddress mcast_address, EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
 
-	int len = sizeof(empower_incom_mcast_addr);
+	int len = sizeof(empower_incoming_mcast_address);
 	WritablePacket *p = Packet::make(len);
 
 	if (!p) {
@@ -981,19 +981,22 @@ void EmpowerLVAPManager::send_incomming_mcast_address(EtherAddress mcast_address
 
 	memset(p->data(), 0, p->length());
 
-	struct empower_incom_mcast_addr *mcast_addr = (struct empower_incom_mcast_addr *) (p->data());
+	struct empower_incoming_mcast_address *incoming_mcast_addr = (struct empower_incoming_mcast_address *) (p->data());
 
-	mcast_addr->set_version(_empower_version);
-	mcast_addr->set_length(sizeof(empower_incom_mcast_addr));
-	mcast_addr->set_type(EMPOWER_PT_INCOM_MCAST_REQUEST);
-	mcast_addr->set_seq(get_next_seq());
-	mcast_addr->set_mcast_addr(mcast_address);
-	mcast_addr->set_wtp(_wtp);
-	mcast_addr->set_iface(iface);
+	incoming_mcast_addr->set_version(_empower_version);
+	incoming_mcast_addr->set_length(sizeof(empower_incoming_mcast_address));
+	incoming_mcast_addr->set_type(EMPOWER_PT_INCOMING_MCAST_ADDRESS);
+	incoming_mcast_addr->set_seq(get_next_seq());
+	incoming_mcast_addr->set_mcast_addr(mcast_address);
+	incoming_mcast_addr->set_wtp(_wtp);
+	incoming_mcast_addr->set_channel(channel);
+	incoming_mcast_addr->set_band(band);
+	incoming_mcast_addr->set_hwaddr(hwaddr);
 
-	click_chatter("%{element} :: %s :: New mcast address %s address from iface %d in wtp %s",
+	click_chatter("%{element} :: %s :: New mcast address %s address",
 				  this,
-				  __func__, mcast_address.unparse().c_str(), iface, _wtp.unparse().c_str());
+				  __func__,
+				  mcast_address.unparse().c_str());
 
 	send_message(p);
 }
@@ -1005,7 +1008,7 @@ void EmpowerLVAPManager::send_igmp_report(EtherAddress src, Vector<IPAddress>* m
 	for (grouprecord_counter = 0; grouprecord_counter < mcast_addresses->size(); grouprecord_counter++) {
 
 		//send message to the controller
-		int len = sizeof(empower_igmp_request);
+		int len = sizeof(empower_igmp_report);
 		WritablePacket *p = Packet::make(len);
 
 		if (!p) {
@@ -1017,16 +1020,16 @@ void EmpowerLVAPManager::send_igmp_report(EtherAddress src, Vector<IPAddress>* m
 
 		memset(p->data(), 0, p->length());
 
-		struct empower_igmp_request *igmp_request = (struct empower_igmp_request *) (p->data());
+		struct empower_igmp_report *igmp_report = (struct empower_igmp_report *) (p->data());
 
-		igmp_request->set_version(_empower_version);
-		igmp_request->set_length(sizeof(empower_igmp_request));
-		igmp_request->set_type(EMPOWER_PT_IGMP_REQUEST);
-		igmp_request->set_seq(get_next_seq());
-		igmp_request->set_mcast_addr(mcast_addresses->at(grouprecord_counter));
-		igmp_request->set_wtp(_wtp);
-		igmp_request->set_sta(src);
-		igmp_request->set_igmp_type(igmp_types->at(grouprecord_counter));
+		igmp_report->set_version(_empower_version);
+		igmp_report->set_length(sizeof(empower_igmp_report));
+		igmp_report->set_type(EMPOWER_PT_IGMP_REPORT);
+		igmp_report->set_seq(get_next_seq());
+		igmp_report->set_mcast_addr(mcast_addresses->at(grouprecord_counter));
+		igmp_report->set_wtp(_wtp);
+		igmp_report->set_sta(src);
+		igmp_report->set_igmp_type(igmp_types->at(grouprecord_counter));
 
 		click_chatter("%{element} :: %s :: IGMP request type %d from sta %s for the mcast address %s from wtp %s",
 					  this,
@@ -1799,35 +1802,6 @@ int EmpowerLVAPManager::handle_nimg_request(Packet *p, uint32_t offset) {
 	return 0;
 }
 
-int EmpowerLVAPManager::handle_incom_mcast_addr_response(Packet *p, uint32_t offset) {
-
-	struct empower_incom_mcast_addr_response *q = (struct empower_incom_mcast_addr_response *) (p->data() + offset);
-	EtherAddress mcast_addr = q->mcast_addr();
-	int iface = q->iface();
-
-	click_chatter("%{element} :: %s :: Receiving incom mcast address %s response for iface %d",
-				  this,
-				  __func__, mcast_addr.unparse().c_str(), iface);
-
-	TxPolicyInfo* def_tx_policy = _rcs[iface]->tx_policies()->default_tx_policy();
-
-	Vector<int> mcs;
-	mcs.push_back(*(def_tx_policy->_mcs.begin()));
-
-	Vector<int> ht_mcs;
-	ht_mcs.push_back(*(def_tx_policy->_ht_mcs.begin()));
-
-	_rcs[iface]->tx_policies()->insert(mcast_addr, mcs, ht_mcs, def_tx_policy->_no_ack, TX_MCAST_LEGACY, def_tx_policy->_ur_mcast_count, def_tx_policy->_rts_cts);
-
-	for (TxTableIter it_txp = _rcs[iface]->tx_policies()->tx_table()->begin(); it_txp.live(); it_txp++) {
-		click_chatter("%{element} :: %s :: Check policies %s, %d",
-					  this,
-					  __func__, it_txp.key().unparse().c_str(), it_txp.value()->_tx_mcast);
-				}
-
-	return 0;
-}
-
 int EmpowerLVAPManager::handle_set_traffic_rule(Packet *p, uint32_t offset) {
 
 	struct empower_set_traffic_rule *add_traffic_rule = (struct empower_set_traffic_rule *) (p->data() + offset);
@@ -1875,40 +1849,6 @@ int EmpowerLVAPManager::handle_del_traffic_rule(Packet *p, uint32_t offset) {
 				  dscp);
 
 	_eqms[iface_id]->del_traffic_rule(ssid, dscp);
-
-	return 0;
-
-}
-
-int EmpowerLVAPManager::handle_del_mcast_addr(Packet *p, uint32_t offset) {
-
-	struct empower_del_mcast_addr *q = (struct empower_del_mcast_addr *) (p->data() + offset);
-	EtherAddress mcast_addr = q->mcast_addr();
-	EtherAddress hwaddr = q->hwaddr();
-	int channel = q->channel();
-	empower_bands_types band = (empower_bands_types) q->band();
-	int iface_id = element_to_iface(hwaddr, channel, band);
-
-	click_chatter("%{element} :: %s :: Receiving delete mcast address %s response",
-				  this,
-				  __func__, mcast_addr.unparse().c_str());
-
-	_rcs[iface_id]->tx_policies()->remove(mcast_addr);
-
-	return 0;
-}
-
-int EmpowerLVAPManager::handle_del_mcast_receiver(Packet *p, uint32_t offset) {
-
-	struct empower_del_mcast_receiver *q = (struct empower_del_mcast_receiver *) (p->data() + offset);
-	EtherAddress sta = q->sta();
-
-	click_chatter("%{element} :: %s :: Receiving delete mcast receiver %s response",
-				  this,
-				  __func__,
-				  sta.unparse().c_str());
-
-	_mtbl->leave_all_groups(sta);
 
 	return 0;
 
@@ -1991,9 +1931,6 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 			break;
 		case EMPOWER_PT_WIFI_STATS_REQUEST:
 			handle_wifi_stats_request(p, offset);
-			break;
-		case EMPOWER_PT_INCOM_MCAST_RESPONSE:
-			handle_incom_mcast_addr_response(p, offset);
 			break;
 		case EMPOWER_PT_CAPS_REQUEST:
 			handle_caps_request(p, offset);

@@ -270,7 +270,7 @@ int EmpowerIgmpMembership::write_handler(const String &in_s, Element *e,
 	String s = cp_uncomment(in_s);
 
 	switch ((intptr_t) vparam) {
-	case H_DEBUG: {    //debug
+	case H_DEBUG: {
 		bool debug;
 		if (!BoolArg().parse(s, debug))
 			return errh->error("debug parameter must be boolean");

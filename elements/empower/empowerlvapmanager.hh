@@ -275,9 +275,6 @@ public:
 	int handle_frames_request(Packet *, uint32_t);
 	int handle_lvap_stats_request(Packet *, uint32_t);
 	int handle_wifi_stats_request(Packet *, uint32_t);
-	int handle_incom_mcast_addr_response(Packet *, uint32_t);
-	int handle_del_mcast_addr(Packet *, uint32_t);
-	int handle_del_mcast_receiver(Packet *, uint32_t);
 	int handle_caps_request(Packet *, uint32_t);
 	int handle_lvap_status_request(Packet *, uint32_t);
 	int handle_vap_status_request(Packet *, uint32_t);
@@ -303,7 +300,7 @@ public:
 	void send_rssi_trigger(uint32_t, uint32_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);
 	void send_lvap_stats_response(EtherAddress, uint32_t);
-	void send_incomming_mcast_address (EtherAddress, int);
+	void send_empower_incoming_mcast_address (EtherAddress, EtherAddress, uint8_t, empower_bands_types);
 	void send_igmp_report(EtherAddress, Vector<IPAddress>*, Vector<enum empower_igmp_record_type>*);
 	void send_add_del_lvap_response(uint8_t, EtherAddress, uint32_t, uint32_t);
 	void send_trq_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, String, int);

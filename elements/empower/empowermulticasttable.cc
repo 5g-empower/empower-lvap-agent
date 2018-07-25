@@ -91,6 +91,7 @@ bool EmpowerMulticastTable::join_group(EtherAddress sta, IPAddress group) {
 			click_chatter("%{element} :: %s :: Station %s added to IGMP group %s.",
 					      this,
 						  __func__,
+						  sta.unparse().c_str(),
 						  group.unparse().c_str());
 
 			return true;
