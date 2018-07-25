@@ -349,6 +349,10 @@ public:
 		return rc->tx_policies();
 	}
 
+	EmpowerMulticastTable * get_mtbl() {
+		return _mtbl;
+	}
+
 private:
 
 	RETable _ifaces_to_elements;

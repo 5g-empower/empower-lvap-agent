@@ -1043,6 +1043,40 @@ void EmpowerLVAPManager::send_igmp_report(EtherAddress src, Vector<IPAddress>* m
 	}
 }
 
+void EmpowerLVAPManager::send_incomming_mcast_address(EtherAddress mcast_address, int iface) {
+
+	int len = sizeof(empower_incom_mcast_addr);
+	WritablePacket *p = Packet::make(len);
+
+	if (!p) {
+		click_chatter("%{element} :: %s :: cannot make packet!",
+					  this,
+					  __func__);
+		return;
+	}
+
+	memset(p->data(), 0, p->length());
+
+	struct empower_incom_mcast_addr *mcast_addr = (struct empower_incom_mcast_addr *) (p->data());
+
+	mcast_addr->set_version(_empower_version);
+	mcast_addr->set_length(sizeof(empower_incom_mcast_addr));
+	mcast_addr->set_type(EMPOWER_PT_INCOM_MCAST_REQUEST);
+	mcast_addr->set_seq(get_next_seq());
+	mcast_addr->set_mcast_addr(mcast_address);
+	mcast_addr->set_wtp(_wtp);
+	mcast_addr->set_iface(iface);
+
+	click_chatter("%{element} :: %s :: New multicast address %s from iface %d in WTP %s",
+						  this,
+						  __func__,
+						  mcast_address.unparse().c_str(),
+						  iface,
+						  _wtp.unparse().c_str());
+
+	send_message(p);
+}
+
 void EmpowerLVAPManager::send_txp_counters_response(uint32_t counters_id, EtherAddress hwaddr, uint8_t channel, empower_bands_types band, EtherAddress mcast) {
 
 	int iface_id = element_to_iface(hwaddr, channel, band);
