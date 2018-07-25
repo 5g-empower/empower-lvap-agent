@@ -422,6 +422,7 @@ private:
     ActiveNotifier _empty_note;
 	class EmpowerLVAPManager *_el;
 	class Minstrel * _rc;
+	class EmpowerMulticastTable * _mtbl;
 
 	TrafficRules _rules;
     HeadTable _head_table;
