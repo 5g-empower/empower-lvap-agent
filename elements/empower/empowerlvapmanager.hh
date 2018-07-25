@@ -300,7 +300,7 @@ public:
 	void send_rssi_trigger(uint32_t, uint32_t, uint8_t);
 	void send_summary_trigger(SummaryTrigger *);
 	void send_lvap_stats_response(EtherAddress, uint32_t);
-	void send_empower_incoming_mcast_address (EtherAddress, EtherAddress, uint8_t, empower_bands_types);
+	void send_incoming_mcast_address (EtherAddress, int);
 	void send_igmp_report(EtherAddress, Vector<IPAddress>*, Vector<enum empower_igmp_record_type>*);
 	void send_add_del_lvap_response(uint8_t, EtherAddress, uint32_t, uint32_t);
 	void send_trq_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, String, int);
@@ -347,6 +347,10 @@ public:
 	TransmissionPolicies * get_tx_policies(int iface_id) {
 		Minstrel * rc = _rcs[iface_id];
 		return rc->tx_policies();
+	}
+
+	Vector<EmpowerMulticastTable :: EmpowerMulticastReceiver> * get_mcast_receivers(EtherAddress sta) {
+		return _mtbl->get_receivers(sta);
 	}
 
 private:

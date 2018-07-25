@@ -967,7 +967,7 @@ void EmpowerLVAPManager::send_counters_response(EtherAddress sta, uint32_t count
 
 }
 
-void EmpowerLVAPManager::send_empower_incoming_mcast_address(EtherAddress mcast_address, EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
+void EmpowerLVAPManager::send_incoming_mcast_address(EtherAddress mcast_address, int iface_id) {
 
 	int len = sizeof(empower_incoming_mcast_address);
 	WritablePacket *p = Packet::make(len);
@@ -979,6 +979,8 @@ void EmpowerLVAPManager::send_empower_incoming_mcast_address(EtherAddress mcast_
 		return;
 	}
 
+	ResourceElement* re = iface_to_element(iface_id);
+
 	memset(p->data(), 0, p->length());
 
 	struct empower_incoming_mcast_address *incoming_mcast_addr = (struct empower_incoming_mcast_address *) (p->data());
@@ -989,9 +991,9 @@ void EmpowerLVAPManager::send_empower_incoming_mcast_address(EtherAddress mcast_
 	incoming_mcast_addr->set_seq(get_next_seq());
 	incoming_mcast_addr->set_mcast_addr(mcast_address);
 	incoming_mcast_addr->set_wtp(_wtp);
-	incoming_mcast_addr->set_channel(channel);
-	incoming_mcast_addr->set_band(band);
-	incoming_mcast_addr->set_hwaddr(hwaddr);
+	incoming_mcast_addr->set_channel(re->_channel);
+	incoming_mcast_addr->set_band(re->_band);
+	incoming_mcast_addr->set_hwaddr(re->_hwaddr);
 
 	click_chatter("%{element} :: %s :: New mcast address %s address",
 				  this,
@@ -999,6 +1001,7 @@ void EmpowerLVAPManager::send_empower_incoming_mcast_address(EtherAddress mcast_
 				  mcast_address.unparse().c_str());
 
 	send_message(p);
+
 }
 
 void EmpowerLVAPManager::send_igmp_report(EtherAddress src, Vector<IPAddress>* mcast_addresses, Vector<enum empower_igmp_record_type>* igmp_types) {
