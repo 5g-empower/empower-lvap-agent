@@ -124,7 +124,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 			return;
 		}
         TxPolicyInfo * txp = _el->get_txp(ess->_sta);
-	txp->update_tx(p->length());
+        txp->update_tx(p->length());
         store(ess->_ssid, dscp, p, dst, ess->_lvap_bssid);
 		return;
 	}
@@ -282,6 +282,8 @@ EmpowerQOSManager::push(int, Packet *p) {
 
 void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra, EtherAddress ta) {
 
+	_lock.acquire_write();
+
 	TrafficRule tr = TrafficRule(ssid, dscp);
 	TrafficRuleQueue *trq = 0;
 
@@ -307,6 +309,8 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 		q->kill();
 	}
 
+	_lock.release_write();
+
 }
 
 Packet * EmpowerQOSManager::pull(int) {
@@ -317,6 +321,8 @@ Packet * EmpowerQOSManager::pull(int) {
 		}
 		return 0;
 	}
+
+	_lock.acquire_write();
 
 	TrafficRule tr = _active_list[0];
 	_active_list.pop_front();
@@ -339,10 +345,12 @@ Packet * EmpowerQOSManager::pull(int) {
 		uint32_t deficit = _rc->estimate_usecs_wifi_packet(p);
 		queue->_deficit -= deficit;
 		queue->_deficit_used += deficit;
-		queue->update_tx(p->length());
+		queue->_tx_bytes += p->length();
+		queue->_tx_packets++;
 		if (queue->size() > 0) {
 			_active_list.push_front(tr);
 		}
+		_lock.release_write();
 		return p;
 	} else {
 		_head_table.set(tr, p);
@@ -350,10 +358,13 @@ Packet * EmpowerQOSManager::pull(int) {
 		queue->_deficit += queue->_quantum;
 	}
 
+	_lock.release_write();
+
 	return 0;
 }
 
 void EmpowerQOSManager::set_traffic_rule(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation) {
+	_lock.acquire_write();
 	TrafficRule tr = TrafficRule(ssid, dscp);
 	if (_rules.find(tr) == _rules.end()) {
 		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u quantum %u A-MSDU %s",
@@ -370,10 +381,26 @@ void EmpowerQOSManager::set_traffic_rule(String ssid, int dscp, uint32_t quantum
 		_active_list.push_back(tr);
 		_el->send_status_traffic_rule(ssid, dscp, _iface_id);
 	}
+	_lock.release_write();
 }
 
 void EmpowerQOSManager::del_traffic_rule(String ssid, int dscp) {
+
+	_lock.acquire_write();
+
+	// remove from active list
+	Vector<TrafficRule>::iterator it = _active_list.begin();
+	while (it != _active_list.end()) {
+		if (it->_ssid == ssid && it->_dscp == dscp) {
+			it = _active_list.erase(it);
+			break;
+		}
+		it++;
+	}
+
 	TrafficRule tr = TrafficRule(ssid, dscp);
+
+	// remove traffic rule
 	TRIter itr = _rules.find(tr);
 	if (itr == _rules.end()) {
 		click_chatter("%{element} :: %s :: unable to find traffic rule queue for ssid %s dscp %u",
@@ -386,6 +413,17 @@ void EmpowerQOSManager::del_traffic_rule(String ssid, int dscp) {
 	TrafficRuleQueue *trq = itr.value();
 	delete trq;
 	_rules.erase(itr);
+
+	// remove from head table
+	HItr itr2 = _head_table.find(tr);
+	Packet *p = itr2.value();
+	if (p){
+		p->kill();
+	}
+	_head_table.erase(itr2);
+
+	_lock.release_write();
+
 }
 
 String EmpowerQOSManager::list_queues() {
@@ -397,20 +435,6 @@ String EmpowerQOSManager::list_queues() {
 		itr++;
 	} // end while
 	return result.take_string();
-}
-
-void EmpowerQOSManager::clear() {
-	TRIter itr = _rules.begin();
-	while (itr != _rules.end()) {
-		TrafficRuleQueue *trq = itr.value();
-		if (trq->_tr._dscp == 0) {
-			itr++;
-		} else {
-			delete trq;
-			itr = _rules.erase(itr);
-		}
-	} // end while
-	_rules.clear();
 }
 
 enum {

@@ -855,13 +855,15 @@ struct empower_trq_counters_response : public empower_header {
     uint8_t     _wtp[6];            /* EtherAddress */
     uint32_t    _deficit_used;      /* Total deficit used by this queue */
     uint32_t    _max_queue_length;  /* Maximum queue length reached */
-    uint16_t	_nb_tx;          	/* Int */
+    uint32_t	_tx_packets;        /* Int */
+    uint32_t	_tx_bytes;          /* Int */
   public:
     void set_wtp(EtherAddress wtp)                          { memcpy(_wtp, wtp.data(), 6); }
     void set_counters_id(uint32_t counters_id)              { _counters_id = htonl(counters_id); }
     void set_deficit_used(uint32_t deficit_used)            { _deficit_used = htonl(deficit_used); }
     void set_max_queue_length(uint32_t max_queue_length)    { _max_queue_length = htonl(max_queue_length); }
-    void set_nb_tx(uint16_t nb_tx)             				{ _nb_tx = htons(nb_tx); }
+    void set_tx_packets(uint32_t tx_packets)    			{ _tx_packets = htonl(tx_packets); }
+    void set_tx_bytes(uint32_t tx_bytes)    				{ _tx_bytes = htonl(tx_bytes); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 CLICK_ENDDECLS

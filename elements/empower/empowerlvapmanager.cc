@@ -453,7 +453,6 @@ void EmpowerLVAPManager::send_trq_counters_response(uint32_t counters_id, EtherA
 	}
 
     int len = sizeof(empower_trq_counters_response);
-    len += queue->_tx.size() * 6; // the tx samples
 
     WritablePacket *p = Packet::make(len);
 
@@ -475,21 +474,8 @@ void EmpowerLVAPManager::send_trq_counters_response(uint32_t counters_id, EtherA
     counters->set_wtp(_wtp);
     counters->set_max_queue_length(queue->_max_queue_length);
     counters->set_deficit_used(queue->_deficit_used);
-
-    counters->set_nb_tx(queue->_tx.size());
-
-    uint8_t *ptr = (uint8_t *) counters;
-    ptr += sizeof(struct empower_trq_counters_response);
-
-    uint8_t *end = ptr + (len - sizeof(struct empower_trq_counters_response));
-
-    for (CBytesIter iter = queue->_tx.begin(); iter.live(); iter++) {
-        assert (ptr <= end);
-        counters_entry *entry = (counters_entry *) ptr;
-        entry->set_size(iter.key());
-        entry->set_count(iter.value());
-        ptr += sizeof(struct counters_entry);
-    }
+    counters->set_tx_bytes(queue->_tx_bytes);
+    counters->set_tx_packets(queue->_tx_packets);
 
     send_message(p);
 

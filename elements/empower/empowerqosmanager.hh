@@ -230,12 +230,13 @@ public:
     uint32_t _max_aggr_length;
     uint32_t _deficit_used;
     uint32_t _max_queue_length;
-	CBytes _tx;
+    uint32_t _tx_packets;
+    uint32_t _tx_bytes;
 
 	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation) :
 			_tr(tr), _capacity(capacity), _size(0), _drops(0), _deficit(0),
 			_quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _max_aggr_length(7935),
-			_deficit_used(0), _max_queue_length(0) {
+			_deficit_used(0), _max_queue_length(0), _tx_packets(0), _tx_bytes(0) {
 	}
 
 	~TrafficRuleQueue() {
@@ -246,13 +247,6 @@ public:
 			itr++;
 		}
 		_queues.clear();
-	}
-
-	void update_tx(uint16_t len) {
-		if (_tx.find(len) == _tx.end()) {
-			_tx.set(len, 0);
-		}
-		(*_tx.get_pointer(len))++;
 	}
 
 	uint32_t size() { return _size; }
@@ -413,9 +407,10 @@ public:
 	void del_traffic_rule(String, int);
 
 	TrafficRules * rules() { return &_rules; }
-	void clear();
 
 private:
+
+	ReadWriteLock _lock;
 
     enum { SLEEPINESS_TRIGGER = 9 };
 
