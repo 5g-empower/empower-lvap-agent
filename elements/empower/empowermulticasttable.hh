@@ -54,7 +54,6 @@ public:
 	};
 
 	struct EmpowerMulticastGroup {
-		//unsigned int interface_id;
 		IPAddress group; // group address
 		EtherAddress mac_group;
 		Vector<struct EmpowerMulticastReceiver> receivers;
