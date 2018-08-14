@@ -163,8 +163,8 @@ bool EmpowerMulticastTable::leave_all_groups(EtherAddress sta) {
 
 }
 
-Vector<EmpowerMulticastTable::EmpowerMulticastReceiver>* EmpowerMulticastTable::get_receivers(EtherAddress group)
-{
+Vector<EmpowerMulticastTable::EmpowerMulticastReceiver>* EmpowerMulticastTable::get_receivers(EtherAddress group) {
+
 	Vector<struct EmpowerMulticastGroup>::iterator i;
 
 	for (i = multicastgroups.begin(); i != multicastgroups.end(); i++) {

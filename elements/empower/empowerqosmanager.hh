@@ -258,6 +258,10 @@ public:
 
     Packet * wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
 
+    	if (!p) {
+    		click_chatter("WHY NOT P!!!!!");
+    	}
+
         WritablePacket *q = p->uniqueify();
 
 		if (!q) {

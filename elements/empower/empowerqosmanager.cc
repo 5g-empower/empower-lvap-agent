@@ -149,6 +149,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 		}
 
 		for (a = mcast_receivers->begin() ; a != mcast_receivers->end(); a++) {
+
 			EtherAddress sta = a->sta;
 			EmpowerStationState * ess = _el->lvaps()->get_pointer(sta);
 
@@ -166,6 +167,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 			}
 
 			Packet *q = p->clone();
+
 			if (!q) {
 				continue;
 			}
@@ -185,7 +187,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 
 		// If this multicast address is not being currently handled, it should be
 		// notified to the controller.
-		if (dst.is_group() && !mcast_tx_policy) {
+		if (!dst.is_broadcast() && dst.is_group() && !mcast_tx_policy) {
 			click_chatter("%{element} :: %s :: Missing transmission policy for multicast address %s in interface %d. Sending request to the controller.",
 															 this,
 															 __func__,
@@ -207,10 +209,16 @@ EmpowerQOSManager::push(int, Packet *p) {
 				return;
 			}
 
+			if (mcast_receivers->size() == 0) {
+				p->kill();
+				return;
+			}
+
 			EtherAddress sta = mcast_receivers->begin()->sta;
 			EmpowerStationState *first = _el->lvaps()->get_pointer(sta);
 
-			store(first->_ssid, dscp, p, dst, first->_lvap_bssid);
+			Packet *q = p->clone();
+			store(first->_ssid, dscp, q, dst, first->_lvap_bssid);
 
 		} else {
 
