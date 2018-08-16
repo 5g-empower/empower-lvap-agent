@@ -1594,10 +1594,11 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 	uint32_t module_id = q->module_id();
 
 	if (_debug) {
-		click_chatter("%{element} :: %s :: sta %s",
+		click_chatter("%{element} :: %s :: sta %s xid %u",
 				      this,
 				      __func__,
-				      sta.unparse_colon().c_str());
+				      sta.unparse_colon().c_str(),
+					  module_id);
 	}
 
 	// First make sure that this LVAP isn't here already, in which

@@ -35,6 +35,15 @@ Turn debug on/off
 =a EmpowerLVAPManager
 */
 
+struct EmpowerMulticastGroup {
+	IPAddress group; // group address
+	EtherAddress mac_group;
+	Vector<EtherAddress> receivers;
+};
+
+typedef Vector<EmpowerMulticastGroup> MulticastGroups;
+typedef MulticastGroups::iterator MGIter;
+
 
 class EmpowerMulticastTable: public Element {
 public:
@@ -48,18 +57,7 @@ public:
 	int configure(Vector<String> &, ErrorHandler *);
 	void add_handlers();
 
-	struct EmpowerMulticastReceiver {
-		EtherAddress sta;
-		Vector<IPAddress> sources;
-	};
-
-	struct EmpowerMulticastGroup {
-		IPAddress group; // group address
-		EtherAddress mac_group;
-		Vector<struct EmpowerMulticastReceiver> receivers;
-	};
-
-	Vector<struct EmpowerMulticastGroup> multicastgroups;
+	MulticastGroups multicastgroups;
 
 	EtherAddress ip_mcast_addr_to_mac(IPAddress ip) {
 
@@ -80,7 +78,7 @@ public:
 	bool join_group(EtherAddress, IPAddress);
 	bool leave_group(EtherAddress, IPAddress);
 	bool leave_all_groups(EtherAddress);
-	Vector<struct EmpowerMulticastReceiver> *get_receivers(EtherAddress);
+	Vector<EtherAddress> *get_receivers(EtherAddress);
 
 private:
 

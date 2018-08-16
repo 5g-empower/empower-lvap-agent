@@ -140,18 +140,17 @@ EmpowerQOSManager::push(int, Packet *p) {
 		// It delivers the frame just to the stations connected to
 		// this multicast group.
 
-		Vector<EmpowerMulticastTable :: EmpowerMulticastReceiver> *mcast_receivers = _el->get_mcast_receivers(dst);
-		Vector<EmpowerMulticastTable :: EmpowerMulticastReceiver>::iterator a;
+		Vector<EtherAddress> *mcast_receivers = _el->get_mcast_receivers(dst);
 
 		if (!mcast_receivers) {
 			p->kill();
 			return;
 		}
 
-		for (a = mcast_receivers->begin() ; a != mcast_receivers->end(); a++) {
+		Vector<EtherAddress>::iterator itr;
+		for (itr = mcast_receivers->begin() ; itr != mcast_receivers->end(); itr++) {
 
-			EtherAddress sta = a->sta;
-			EmpowerStationState * ess = _el->lvaps()->get_pointer(sta);
+			EmpowerStationState * ess = _el->lvaps()->get_pointer(*itr);
 
 			if (ess->_iface_id != iface_id) {
 				continue;
@@ -172,7 +171,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 				continue;
 			}
 
-			store(ess->_ssid, dscp, q, sta, ess->_lvap_bssid);
+			store(ess->_ssid, dscp, q, *itr, ess->_lvap_bssid);
 		}
 
 	} else {
@@ -202,7 +201,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 			// and the policy is set to legacy, so frames must be sent just to the bssids of the
 			// multicast receptors that subscribed that multicast stream
 
-			Vector<EmpowerMulticastTable :: EmpowerMulticastReceiver> *mcast_receivers = _el->get_mcast_receivers(dst);
+			Vector<EtherAddress> *mcast_receivers = _el->get_mcast_receivers(dst);
 
 			if (!mcast_receivers) {
 				p->kill();
@@ -214,8 +213,13 @@ EmpowerQOSManager::push(int, Packet *p) {
 				return;
 			}
 
-			EtherAddress sta = mcast_receivers->begin()->sta;
+			EtherAddress sta = mcast_receivers->front();
 			EmpowerStationState *first = _el->lvaps()->get_pointer(sta);
+
+			if (!first) {
+				p->kill();
+				return;
+			}
 
 			Packet *q = p->clone();
 			store(first->_ssid, dscp, q, dst, first->_lvap_bssid);

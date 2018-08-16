@@ -349,7 +349,7 @@ public:
 		return rc->tx_policies();
 	}
 
-	Vector<EmpowerMulticastTable :: EmpowerMulticastReceiver> * get_mcast_receivers(EtherAddress sta) {
+	Vector<EtherAddress> * get_mcast_receivers(EtherAddress sta) {
 		return _mtbl->get_receivers(sta);
 	}
 
