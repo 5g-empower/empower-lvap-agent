@@ -56,12 +56,20 @@ void EmpowerBeaconSource::run_timer(Timer *) {
 
 	// send LVAP beacon
 	for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-		send_lvap_csa_beacon(&it.value());
+		for (int i = 0; i < it.value()._networks.size(); i++) {
+			EtherAddress bssid = it.value()._networks[i]._bssid;
+			String ssid = it.value()._networks[i]._ssid;
+			if (it.value()._bssid == bssid && it.value()._ssid == ssid && it.value()._csa_active) {
+				send_lvap_csa_beacon(&it.value());
+			} else {
+				send_beacon(it.value()._sta, bssid, ssid, it.value()._channel, it.value()._iface_id, false, false, 0, 0, 0);
+			}
+		}
 	}
 
 	// send VAP beacons
 	for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
-		send_beacon(EtherAddress::make_broadcast(), it.value()._net_bssid,
+		send_beacon(EtherAddress::make_broadcast(), it.value()._bssid,
 				it.value()._ssid, it.value()._channel, it.value()._iface_id,
 				false, false, 0, 0, 0);
 	}
@@ -73,28 +81,20 @@ void EmpowerBeaconSource::run_timer(Timer *) {
 
 void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 
-	if (!ess->_csa_active) {
-		for (int i = 0; i < ess->_ssids.size(); i++) {
-			send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i],
-					ess->_channel, ess->_iface_id, false, false, 0, 0, 0);
-		}
-		return;
+	if (_debug) {
+		click_chatter("%{element} :: %s :: sending CSA to %s current channel %u target channel %u csa mode %u csa count %u",
+					  this,
+					  __func__,
+					  ess->_sta.unparse().c_str(),
+					  ess->_channel,
+					  ess->_csa_switch_channel,
+					  ess->_csa_switch_mode,
+					  ess->_csa_switch_count);
 	}
 
-	click_chatter("%{element} :: %s :: sending CSA to %s current channel %u target channel %u csa mode %u csa count %u",
-			      this,
-			      __func__,
-				  ess->_sta.unparse().c_str(),
-				  ess->_channel,
-				  ess->_csa_switch_channel,
-				  ess->_csa_switch_mode,
-				  ess->_csa_switch_count);
-
-	for (int i = 0; i < ess->_ssids.size(); i++) {
-		send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i], ess->_channel,
-				ess->_iface_id, false, true, ess->_csa_switch_mode,
-				ess->_csa_switch_count, ess->_csa_switch_channel);
-	}
+	send_beacon(ess->_sta, ess->_bssid, ess->_ssid, ess->_channel,
+			ess->_iface_id, false, true, ess->_csa_switch_mode,
+			ess->_csa_switch_count, ess->_csa_switch_channel);
 
 	ess->_csa_switch_count--;
 
@@ -106,7 +106,7 @@ void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 					  ess->_sta.unparse().c_str());
 
 		// remove lvap
-		_el->remove_lvap(ess);
+		_el->remove_lvap(ess->_sta);
 		// send del lvap response
 		_el->send_add_del_lvap_response(EMPOWER_PT_DEL_LVAP_RESPONSE, ess->_sta, ess->_module_id, 0);
 
@@ -117,6 +117,17 @@ void EmpowerBeaconSource::send_lvap_csa_beacon(EmpowerStationState *ess) {
 void EmpowerBeaconSource::send_beacon(EtherAddress dst, EtherAddress bssid,
 		String ssid, int channel, int iface_id, bool probe, bool csa_active,
 		int csa_mode, int csa_count, int csa_channel) {
+
+	if (_debug) {
+		click_chatter("%{element} :: %s :: dst %s bssid %s ssid %s channel %u iface_id %u",
+					  this,
+					  __func__,
+					  dst.unparse().c_str(),
+					  bssid.unparse().c_str(),
+					  ssid.c_str(),
+					  channel,
+					  iface_id);
+	}
 
 	/* order elements by standard
 	 * needed by sloppy 802.11b driver implementations
@@ -613,45 +624,13 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 				      sa.take_string().c_str());
 	}
 
-	/* If we're not aware of this LVAP, then send to the controller.
-	 * The controller may also decide not to reply for example if the
-	 * STA is already handled by another LVAP (which is in charge for
-	 * generating the probe response).
-	 */
-
-	EmpowerStationState *ess = _el->get_ess(src);
-
-	if (!ess) {
-		if (_debug) {
-			click_chatter("%{element} :: %s :: sending probe request to ctrl %s",
-					      this,
-					      __func__,
-					      src.unparse().c_str());
-		}
-		ResourceElement *el = _el->iface_to_element(iface_id);
-		if (htcaps && (el->_band == EMPOWER_BT_HT20)) {
-			_el->send_probe_request(src, ssid, el->_hwaddr, el->_channel, el->_band, EMPOWER_BT_HT20);
-		} else {
-			_el->send_probe_request(src, ssid, el->_hwaddr, el->_channel, el->_band, EMPOWER_BT_L20);
-		}
-		p->kill();
-		return;
+	// always ask to the controller because we may want to reject this request
+	ResourceElement *el = _el->iface_to_element(iface_id);
+	if (htcaps && (el->_band == EMPOWER_BT_HT20)) {
+		_el->send_probe_request(src, ssid, el->_hwaddr, el->_channel, el->_band, EMPOWER_BT_HT20);
+	} else {
+		_el->send_probe_request(src, ssid, el->_hwaddr, el->_channel, el->_band, EMPOWER_BT_L20);
 	}
-
-	// if this is an uplink only lvap then ignore request
-	if (!ess->_set_mask) {
-		p->kill();
-		return;
-	}
-
-	/* If the client is performing an active scan, then
-     * then respond from all available SSIDs. Else, if
-     * the client is probing for a particular SSID, check
-     * if we're indeed hosting that SSID and respond
-     * accordingly.
-     */
-
-	send_probe_response(ess, ssid);
 
 	/* probe processed */
 	p->kill();
@@ -662,15 +641,15 @@ void EmpowerBeaconSource::send_probe_response(EmpowerStationState *ess, String s
 
 	if (ssid == "") {
 
-		// reply with lvap's ssid
-		for (int i = 0; i < ess->_ssids.size(); i++) {
-			send_beacon(ess->_sta, ess->_net_bssid, ess->_ssids[i], ess->_channel,
-					ess->_iface_id, true, false, 0, 0, 0);
+		// reply with all ssids
+		for (int i = 0; i < ess->_networks.size(); i++) {
+			send_beacon(ess->_sta, ess->_networks[i]._bssid, ess->_networks[i]._ssid,
+					ess->_channel, ess->_iface_id, true, false, 0, 0, 0);
 		}
 
 		// reply also with all vaps
 		for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
-			send_beacon(ess->_sta, it.value()._net_bssid, it.value()._ssid,
+			send_beacon(ess->_sta, it.value()._bssid, it.value()._ssid,
 					it.value()._channel, it.value()._iface_id, true, false, 0,
 					0, 0);
 		}
@@ -678,10 +657,10 @@ void EmpowerBeaconSource::send_probe_response(EmpowerStationState *ess, String s
 	} else {
 
 		// reply with lvap's ssid
-		for (int i = 0; i < ess->_ssids.size(); i++) {
-			if (ess->_ssids[i] == ssid) {
-				send_beacon(ess->_sta, ess->_net_bssid, ssid, ess->_channel,
-						ess->_iface_id, true, false, 0, 0, 0);
+		for (int i = 0; i < ess->_networks.size(); i++) {
+			if (ess->_networks[i]._ssid == ssid) {
+				send_beacon(ess->_sta, ess->_networks[i]._bssid, ess->_networks[i]._ssid,
+						ess->_channel, ess->_iface_id, true, false, 0, 0, 0);
 				break;
 			}
 		}
@@ -689,7 +668,7 @@ void EmpowerBeaconSource::send_probe_response(EmpowerStationState *ess, String s
 		// reply also with all vaps
 		for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
 			if (it.value()._ssid == ssid) {
-				send_beacon(ess->_sta, it.value()._net_bssid, it.value()._ssid,
+				send_beacon(ess->_sta, it.value()._bssid, it.value()._ssid,
 						it.value()._channel, it.value()._iface_id, true, false,
 						0, 0, 0);
 			}

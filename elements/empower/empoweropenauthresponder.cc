@@ -165,56 +165,20 @@ void EmpowerOpenAuthResponder::push(int, Packet *p) {
 
 	EtherAddress bssid = EtherAddress(w->i_addr3);
 
-	//If the BSSID matches, then reply without reaching the controller
-	if (ess->_lvap_bssid == bssid) {
-
-		if (_debug) {
-
-			click_chatter("%{element} :: %s :: BSSID match, expected %s received %s, replying",
-						  this,
-						  __func__,
-						  ess->_lvap_bssid.unparse().c_str(),
-						  bssid.unparse().c_str());
-
-		}
-
-		send_auth_response(src, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
-		p->kill();
-		return;
-
-	}
-
-	if (_debug) {
-
-		click_chatter("%{element} :: %s :: BSSID does not match, expected %s received %s, sending to controller",
-					  this,
-					  __func__,
-					  ess->_lvap_bssid.unparse().c_str(),
-					  bssid.unparse().c_str());
-
-	}
-
+	// always ask to the controller because we may want to reject this request
 	_el->send_auth_request(src, bssid);
+
 	p->kill();
 
 }
 
-void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst, uint16_t seq, uint16_t status, int iface_id) {
+void EmpowerOpenAuthResponder::send_auth_response(EtherAddress dst) {
 
     EmpowerStationState *ess = _el->get_ess(dst);
-
-	ess->_authentication_status = true;
-
-	if (_debug) {
-		click_chatter("%{element} :: %s :: resetting assoc status", this, __func__);
-	}
-
-	// transition lvap to disassoc state
-	ess->_association_status = false;
-	ess->_assoc_id = 0;
-	ess->_ssid = "";
-
-	EtherAddress bssid = ess->_lvap_bssid;
+	EtherAddress bssid = ess->_bssid;
+	int iface_id = ess->_iface_id;
+	uint16_t seq = 2;
+	uint16_t status = WIFI_STATUS_SUCCESS;
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: authentication %s bssid %s sequence number %u status %u",

@@ -128,7 +128,7 @@ struct empower_probe_request : public empower_header {
     uint8_t _channel;           /* WiFi channel (int) */
     uint8_t _band;              /* WiFi band (empower_bands_types) */
     uint8_t _supported_band;    /* WiFi band supported by client (empower_bands_types) */
-    char    _ssid[];            /* SSID (string) */
+    char _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
     void set_hwaddr(EtherAddress hwaddr)            { memcpy(_hwaddr, hwaddr.data(), 6); }
     void set_band(uint8_t band)                     { _band = band; }
@@ -136,17 +136,17 @@ struct empower_probe_request : public empower_header {
     void set_channel(uint8_t channel)               { _channel = channel; }
     void set_wtp(EtherAddress wtp)                  { memcpy(_wtp, wtp.data(), 6); }
     void set_sta(EtherAddress sta)                  { memcpy(_sta, sta.data(), 6); }
-    void set_ssid(String ssid)                      { memcpy(&_ssid, ssid.data(), ssid.length()); }
+    void set_ssid(String ssid)          			{ memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* probe response packet format */
 struct empower_probe_response : public empower_header {
   private:
     uint8_t _sta[6]; /* EtherAddress */
-    char    _ssid[];    /* SSID (string) */
+    char _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
     EtherAddress sta()  { return EtherAddress(_sta); }
-    String ssid()       { int len = length() - 16; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    String ssid()       { return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* auth request packet format */
@@ -179,12 +179,12 @@ struct empower_assoc_request : public empower_header {
     uint8_t _channel;   /* WiFi channel (int) */
     uint8_t _band;      /* WiFi band (empower_bands_types) */
     uint8_t _supported_band;    /* WiFi band supported by client (empower_bands_types) */
-    char    _ssid[];    /* SSID (String) */
+    char _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
     void set_wtp(EtherAddress wtp)     { memcpy(_wtp, wtp.data(), 6); }
     void set_sta(EtherAddress sta)     { memcpy(_sta, sta.data(), 6); }
     void set_bssid(EtherAddress bssid) { memcpy(_bssid, bssid.data(), 6); }
-    void set_ssid(String ssid)         { memcpy(&_ssid, ssid.data(), ssid.length()); }
+    void set_ssid(String ssid)         { memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
     void set_hwaddr(EtherAddress hwaddr) { memcpy(_hwaddr, hwaddr.data(), 6); }
     void set_band(uint8_t band)          { _band = band; }
     void set_channel(uint8_t channel)    { _channel = channel; }
@@ -425,13 +425,13 @@ struct counters_entry {
 /* SSID entry */
 struct ssid_entry {
   private:
-    uint8_t _length;    /* Length of the ssid in bytes (int) */
-    char *  _ssid[];    /* SSID (String) */
+    uint8_t      _bssid[6];     				/* EtherAddress */
+    char	     _ssid[WIFI_NWID_MAXSIZE+1]; 	/* Null terminated SSID */
   public:
-    uint8_t length()                   { return _length; }
-    String  ssid()                     { return String((char *) _ssid, WIFI_MIN(_length, WIFI_NWID_MAXSIZE)); }
-    void    set_length(uint8_t lenght) { _length = lenght; }
-    void    set_ssid(String ssid)      { memset(_ssid, 0, _length); memcpy(_ssid, ssid.data(), ssid.length()); }
+    EtherAddress bssid()        	   	{ return EtherAddress(_bssid); }
+    String ssid()                     	{ return String((char *) _ssid); }
+    void set_bssid(EtherAddress bssid)  { memcpy(_bssid, bssid.data(), 6); }
+    void set_ssid(String ssid)      	{ memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* add lvap packet format */
@@ -446,9 +446,8 @@ private:
     uint8_t      _supported_band;   /* WiFi band supported by client(empower_band_types) */
     uint8_t      _sta[6];           /* EtherAddress */
     uint8_t      _encap[6];         /* EtherAddress */
-    uint8_t      _net_bssid[6];     /* EtherAddress */
-    uint8_t      _lvap_bssid[6];    /* EtherAddress */
-    ssid_entry * _ssids[];          /* SSIDs (ssid_entry) */
+    uint8_t      _bssid[6];     	/* EtherAddress */
+    char	     _ssid[WIFI_NWID_MAXSIZE+1]; /* Null terminated SSID */
 public:
     uint32_t     module_id()        { return ntohl(_module_id); }
     uint8_t      band()             { return _band; }
@@ -459,8 +458,8 @@ public:
     EtherAddress sta()              { return EtherAddress(_sta); }
     EtherAddress hwaddr()           { return EtherAddress(_hwaddr); }
     EtherAddress encap()            { return EtherAddress(_encap); }
-    EtherAddress net_bssid()        { return EtherAddress(_net_bssid); }
-    EtherAddress lvap_bssid()       { return EtherAddress(_lvap_bssid); }
+    EtherAddress bssid()        	{ return EtherAddress(_bssid); }
+    String       ssid()             { return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del lvap packet format */
@@ -505,9 +504,8 @@ private:
     uint8_t      _channel;          /* WiFi channel (int) */
     uint8_t      _band;             /* WiFi band (empower_band_types) */
     uint8_t      _supported_band;   /* WiFi band supported by client (empower_band_types) */
-    uint8_t      _net_bssid[6];     /* EtherAddress */
-    uint8_t      _lvap_bssid[6];    /* EtherAddress */
-    ssid_entry  *_ssids[];          /* SSIDs (ssid_entry) */
+    uint8_t      _bssid[6];     	/* EtherAddress */
+    char	     _ssid[WIFI_NWID_MAXSIZE+1]; /* Null terminated SSID */
 public:
     void set_band(uint8_t band)             { _band = band; }
     void set_channel(uint8_t channel)       { _channel = channel; }
@@ -517,8 +515,8 @@ public:
     void set_wtp(EtherAddress wtp)          { memcpy(_wtp, wtp.data(), 6); }
     void set_sta(EtherAddress sta)          { memcpy(_sta, sta.data(), 6); }
     void set_encap(EtherAddress encap)      { memcpy(_encap, encap.data(), 6); }
-    void set_net_bssid(EtherAddress bssid)  { memcpy(_net_bssid, bssid.data(), 6); }
-    void set_lvap_bssid(EtherAddress bssid) { memcpy(_lvap_bssid, bssid.data(), 6); }
+    void set_bssid(EtherAddress bssid)  	{ memcpy(_bssid, bssid.data(), 6); }
+    void set_ssid(String ssid)              { memcpy(&_ssid, ssid.data(), ssid.length()); }
     void set_supported_band(uint8_t supported_band) { _supported_band = supported_band; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
@@ -709,22 +707,22 @@ private:
     uint8_t _hwaddr[6];     /* EtherAddress */
     uint8_t _channel;       /* WiFi channel (int) */
     uint8_t _band;          /* WiFi band (empower_band_types) */
-    uint8_t _net_bssid[6];  /* EtherAddress */
-    char    _ssid[];        /* SSID (String) */
+    uint8_t _bssid[6];  	/* EtherAddress */
+    char _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
 public:
     uint8_t      band()      { return _band; }
     uint8_t      channel()   { return _channel; }
     EtherAddress hwaddr()    { return EtherAddress(_hwaddr); }
-    EtherAddress net_bssid() { return EtherAddress(_net_bssid); }
-    String       ssid()      { int len = length() - 24; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    EtherAddress bssid() 	 { return EtherAddress(_bssid); }
+    String       ssid()      { return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* del vap packet format */
 struct empower_del_vap : public empower_header {
   private:
-    uint8_t _net_bssid[6]; /* EtherAddress */
+    uint8_t _bssid[6]; /* EtherAddress */
   public:
-    EtherAddress net_bssid()   { return EtherAddress(_net_bssid); }
+    EtherAddress bssid()   { return EtherAddress(_bssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* lvap status packet format */
@@ -734,15 +732,15 @@ private:
     uint8_t _hwaddr[6];     /* EtherAddress */
     uint8_t _channel;           /* WiFi channel (int) */
     uint8_t _band;              /* WiFi band (empower_band_types) */
-    uint8_t _net_bssid[6];  /* EtherAddress */
-    char    _ssid[];            /* SSID (String) */
+    uint8_t _bssid[6];  /* EtherAddress */
+    char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
 public:
     void set_band(uint8_t band)            { _band = band; }
     void set_hwaddr(EtherAddress hwaddr)   { memcpy(_hwaddr, hwaddr.data(), 6); }
     void set_channel(uint8_t channel)      { _channel = channel; }
     void set_wtp(EtherAddress wtp)         { memcpy(_wtp, wtp.data(), 6); }
-    void set_net_bssid(EtherAddress bssid) { memcpy(_net_bssid, bssid.data(), 6); }
-    void set_ssid(String ssid)             { memcpy(&_ssid, ssid.data(), ssid.length()); }
+    void set_bssid(EtherAddress bssid) { memcpy(_bssid, bssid.data(), 6); }
+    void set_ssid(String ssid)          { memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* incomming multicast address request format */
@@ -782,7 +780,7 @@ struct empower_set_traffic_rule : public empower_header {
     uint8_t     _band;              /* WiFi band (empower_band_types) */
     uint32_t    _quantum;           /* Priority of the slice (int) */
     uint8_t     _dscp;              /* Traffic DSCP (int) */
-    char        _ssid[];            /* SSID (String) */
+    char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
     uint8_t         band()          { return _band; }
     uint8_t         channel()       { return _channel; }
@@ -790,7 +788,7 @@ struct empower_set_traffic_rule : public empower_header {
     uint32_t        quantum()       { return ntohl(_quantum); }
     bool            flags(int f)    { return ntohs(_flags) & f; }
     uint8_t         dscp()          { return _dscp; }
-    String          ssid()          { int len = length() - 25; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    String ssid()                       { return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 struct empower_del_traffic_rule : public empower_header {
@@ -799,13 +797,13 @@ struct empower_del_traffic_rule : public empower_header {
     uint8_t     _channel;           /* WiFi channel (int) */
     uint8_t     _band;              /* WiFi band (empower_band_types) */
     uint8_t     _dscp;              /* Traffic DSCP (int) */
-    char        _ssid[];            /* SSID (String) */
+    char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
     uint8_t         band()          { return _band; }
     uint8_t         channel()       { return _channel; }
     EtherAddress    hwaddr()        { return EtherAddress(_hwaddr); }
     uint8_t         dscp()          { return _dscp; }
-    String          ssid()          { int len = length() - 19; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    String ssid()                       { return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* traffic rule status packet format */
@@ -818,7 +816,7 @@ struct empower_status_traffic_rule : public empower_header {
     uint8_t     _band;              /* WiFi band (empower_band_types) */
     uint32_t    _quantum;           /* Priority of the slice (int) */
     uint8_t     _dscp;              /* Traffic DSCP (int) */
-    char        _ssid[];            /* SSID (String) */
+    char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
     void set_band(uint8_t band)             { _band = band; }
     void set_channel(uint8_t channel)       { _channel = channel; }
@@ -827,7 +825,7 @@ struct empower_status_traffic_rule : public empower_header {
     void set_dscp(uint8_t dscp)             { _dscp = dscp; }
     void set_quantum(uint32_t quantum)      { _quantum = htonl(quantum); }
     void set_flags(uint16_t f)              { _flags = htons(ntohs(_flags) | f); }
-    void set_ssid(String ssid)              { memcpy(&_ssid, ssid.data(), ssid.length()); }
+    void set_ssid(String ssid)          { memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* tr stats request packet format */
@@ -838,14 +836,14 @@ private:
   uint8_t  _channel;        /* WiFi Channel (int) */
   uint8_t  _band;           /* WiFi band (empower_band_types) */
   uint8_t  _dscp;           /* Traffic DSCP (int) */
-  char     _ssid[];         /* SSID (String) */
+  char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
 public:
     uint32_t tr_stats_id()  { return ntohl(_tr_stats_id); }
     uint8_t channel()       { return _channel; }
     uint8_t band()          { return _band; }
     EtherAddress hwaddr()   { return EtherAddress(_hwaddr); }
     uint8_t dscp()          { return _dscp; }
-    String ssid()           { int len = length() - 23; return String((char *) _ssid, WIFI_MIN(len, WIFI_NWID_MAXSIZE)); }
+    String ssid()                       { return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* traffic rule status packet format */

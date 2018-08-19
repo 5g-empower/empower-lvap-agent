@@ -46,10 +46,12 @@ int EmpowerMulticastTable::configure(Vector<String> &conf, ErrorHandler *errh) {
 
 bool EmpowerMulticastTable::add_group(IPAddress group) {
 
-    click_chatter("%{element} :: %s :: Adding IGMP group %s",
-                  this,
-                  __func__,
-				  group.unparse().c_str());
+	if (_debug) {
+		click_chatter("%{element} :: %s :: Adding IGMP group %s",
+					  this,
+					  __func__,
+					  group.unparse().c_str());
+	}
 
     Vector<EmpowerMulticastGroup>::iterator i;
     for (i = multicastgroups.begin(); i != multicastgroups.end(); i++) {
@@ -77,21 +79,24 @@ bool EmpowerMulticastTable::join_group(EtherAddress sta, IPAddress group) {
 			Vector<EtherAddress>::iterator a;
 			for (a = i->receivers.begin(); a != i->receivers.end(); a++) {
 				if (*a == sta) {
-					click_chatter("%{element} :: %s :: Station %s already in IGMP group %s.",
-							      this,
-								  __func__,
-								  sta.unparse().c_str(),
-								  group.unparse().c_str());
+					if (_debug) {
+						click_chatter("%{element} :: %s :: Station %s already in IGMP group %s.",
+									  this,
+									  __func__,
+									  sta.unparse().c_str(),
+									  group.unparse().c_str());
+					}
 					return false;
 				}
 			}
 			i->receivers.push_back(sta);
-			click_chatter("%{element} :: %s :: Station %s added to IGMP group %s.",
-					      this,
-						  __func__,
-						  sta.unparse().c_str(),
-						  group.unparse().c_str());
-
+			if (_debug) {
+				click_chatter("%{element} :: %s :: Station %s added to IGMP group %s.",
+							  this,
+							  __func__,
+							  sta.unparse().c_str(),
+							  group.unparse().c_str());
+			}
 			return true;
 		}
 	}
@@ -109,18 +114,22 @@ bool EmpowerMulticastTable::leave_group(EtherAddress sta, IPAddress group) {
 			for (a = i->receivers.begin(); a != i->receivers.end(); a++) {
 				if (*a == sta) {
 					i->receivers.erase(a);
-					click_chatter("%{element} :: %s :: Station %s removed from IGMP group %s",
-								  this,
-								  __func__,
-								  sta.unparse().c_str(),
-								  group.unparse().c_str());
+					if (_debug) {
+						click_chatter("%{element} :: %s :: Station %s removed from IGMP group %s",
+									  this,
+									  __func__,
+									  sta.unparse().c_str(),
+									  group.unparse().c_str());
+					}
 					// The group is deleted if no more receivers belong to it
 					if (i->receivers.begin() == i->receivers.end()) {
 						multicastgroups.erase(i);
-						click_chatter("%{element} :: %s :: IGMP group %s is empty. Remove it.",
-									  this,
-									  __func__,
-									  group.unparse().c_str());
+						if (_debug) {
+							click_chatter("%{element} :: %s :: IGMP group %s is empty. Remove it.",
+										  this,
+										  __func__,
+										  group.unparse().c_str());
+						}
 					}
 					return true;
 				}

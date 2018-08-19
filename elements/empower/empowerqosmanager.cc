@@ -90,55 +90,30 @@ EmpowerQOSManager::push(int, Packet *p) {
 
 	EtherAddress dst = EtherAddress(eh->ether_dhost);
 
-	// If traffic is unicast we need to check if the lvap is active and if it is on the same interface of
-	// this element, then we lookup the traffic rule queue and enqueue the Ethernet packet with all the info
-	// necessary later to build the wifi frame.
+	// If traffic is unicast we need to check if the lvap is active
 	if (!dst.is_broadcast() && !dst.is_group()) {
 		EmpowerStationState *ess = _el->get_ess(dst);
 		if (!ess) {
 			p->kill();
 			return;
 		}
-		if (ess->_iface_id != iface_id) {
+		_el->lock()->acquire_read();
+		if (!ess->is_valid(iface_id)){
 			p->kill();
-			return;
+		} else {
+	        _el->get_txp(ess->_sta)->update_tx(p->length());
+	        store(ess->_ssid, dscp, p, dst, ess->_bssid);
 		}
-		if (!ess->_set_mask) {
-			p->kill();
-			return;
-		}
-        if (!ess->_authentication_status) {
-			click_chatter("%{element} :: %s :: station %s not authenticated",
-						  this,
-						  __func__,
-						  dst.unparse().c_str());
-			p->kill();
-			return;
-		}
-        if (!ess->_association_status) {
-			click_chatter("%{element} :: %s :: station %s not associated",
-						  this,
-						  __func__,
-						  dst.unparse().c_str());
-			p->kill();
-			return;
-		}
-        TxPolicyInfo * txp = _el->get_txp(ess->_sta);
-        txp->update_tx(p->length());
-        store(ess->_ssid, dscp, p, dst, ess->_lvap_bssid);
+		_el->lock()->release_read();
 		return;
 	}
 
 	if (_rc->tx_policies()->lookup(dst)->_tx_mcast == TX_MCAST_DMS) {
 
-		// DMS mcast policy, duplicate the frame for each station in
-		// each bssid and use unicast destination addresses. note that
-		// a given station cannot be in more than one bssid, so just
-		// track if the frame has already been delivered to a given
-		// station.
-
-		// It delivers the frame just to the stations connected to
-		// this multicast group.
+		/*
+		 * DMS mcast policy. Duplicate the frame for each station in the mcast group
+		 * and use unicast destination addresses.
+		 */
 
 		Vector<EtherAddress> *mcast_receivers = _el->get_mcast_receivers(dst);
 
@@ -148,58 +123,54 @@ EmpowerQOSManager::push(int, Packet *p) {
 		}
 
 		Vector<EtherAddress>::iterator itr;
-		for (itr = mcast_receivers->begin() ; itr != mcast_receivers->end(); itr++) {
-
+		for (itr = mcast_receivers->begin(); itr != mcast_receivers->end(); itr++) {
 			EmpowerStationState * ess = _el->lvaps()->get_pointer(*itr);
-
-			if (ess->_iface_id != iface_id) {
+			if (!ess) {
 				continue;
 			}
-			if (!ess->_set_mask) {
+			_el->lock()->acquire_read();
+			if (!ess->is_valid(iface_id)){
 				continue;
+			} else {
+				Packet *q = p->clone();
+				if (!q) {
+					continue;
+				}
+				store(ess->_ssid, dscp, q, *itr, ess->_bssid);
 			}
-			if (!ess->_authentication_status) {
-				continue;
-			}
-			if (!ess->_association_status) {
-				continue;
-			}
-
-			Packet *q = p->clone();
-
-			if (!q) {
-				continue;
-			}
-
-			store(ess->_ssid, dscp, q, *itr, ess->_lvap_bssid);
+			_el->lock()->release_read();
 		}
 
 	} else {
 
-		// Legacy mcast policy, we have two cases. Frames must still be duplicated for unique tenants
-		// since the lvap model does not support broadcasting. then the frame must be send also to the
-		// shared tenants
+		/*
+		 * Legacy mcast policy. Frames must still be duplicated for unique tenants
+		 * since the lvap model does not support broadcasting. After frames must be
+		 * send also to the shared tenants.
+		 *
+		 * Notice that here we can have both mcast and bcast address.
+		 */
 
-		// broadcast and multicast traffic, we need to transmit one frame for each unique
-		// bssid. this is due to the fact that we can have the same bssid for multiple LVAPs.
 		TxPolicyInfo *mcast_tx_policy = _rc->tx_policies()->supported(dst);
 
-		// If this multicast address is not being currently handled, it should be
-		// notified to the controller.
+		// Mcast address unknown, report to the controller
 		if (!dst.is_broadcast() && dst.is_group() && !mcast_tx_policy) {
-			click_chatter("%{element} :: %s :: Missing transmission policy for multicast address %s in interface %d. Sending request to the controller.",
-															 this,
-															 __func__,
-															 dst.unparse().c_str(), iface_id);
-
+			if (_debug){
+				click_chatter("%{element} :: %s :: Missing transmission policy for multicast address %s on interface %d. Sending request to the controller.",
+																 this,
+																 __func__,
+																 dst.unparse().c_str(),
+																 iface_id);
+			}
 			_el->send_incoming_mcast_address(dst, iface_id);
 		}
 
 		if (mcast_tx_policy) {
 
-			// If there is a transmission policy, it means that destination is a multicast address
-			// and the policy is set to legacy, so frames must be sent just to the bssids of the
-			// multicast receptors that subscribed that multicast stream
+			/* If there is a transmission policy, it means that destination is a multicast address
+			 * and the policy is set to legacy, so frames must be sent just to the bssids of the
+			 * multicast receptors that subscribed that multicast group.
+			 */
 
 			Vector<EtherAddress> *mcast_receivers = _el->get_mcast_receivers(dst);
 
@@ -222,33 +193,30 @@ EmpowerQOSManager::push(int, Packet *p) {
 			}
 
 			Packet *q = p->clone();
-			store(first->_ssid, dscp, q, dst, first->_lvap_bssid);
+			store(first->_ssid, dscp, q, dst, first->_bssid);
 
 		} else {
 
-			// If there is no transmission policy for the multicast address or it is a broadcast
-			// destination, all of the lvaps and vaps have to receive it.
+			/* If there is no transmission policy for the multicast address or it is a broadcast
+			 * destination, all of the lvaps and vaps have to receive it.
+			 */
 
 			// handle unique LVAPs
+			_el->lock()->acquire_read();
 			for (LVAPIter it = _el->lvaps()->begin(); it.live(); it++) {
-				if (it.value()._iface_id != iface_id) {
+				if (!it.value().is_valid(iface_id)) {
 					continue;
 				}
-				if (!it.value()._set_mask) {
-					continue;
-				}
-				if (!it.value()._authentication_status) {
-					continue;
-				}
-				if (!it.value()._association_status) {
-					continue;
-				}
-				if (it.value()._lvap_bssid != it.value()._net_bssid) {
+				if (!_el->is_unique_lvap(it.value()._sta)) {
 					continue;
 				}
 				Packet *q = p->clone();
-				store(it.value()._ssid, dscp, q, it.value()._sta, it.value()._lvap_bssid);
+				if (!q) {
+					continue;
+				}
+				store(it.value()._ssid, dscp, q, it.value()._sta, it.value()._bssid);
 			}
+			_el->lock()->release_read();
 
 			// handle VAPs
 			for (VAPIter it = _el->vaps()->begin(); it.live(); it++) {
@@ -256,7 +224,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 					continue;
 				}
 				Packet *q = p->clone();
-				store(it.value()._ssid, dscp, q, dst, it.value()._net_bssid);
+				store(it.value()._ssid, dscp, q, dst, it.value()._bssid);
 			}
 		}
 	}
@@ -275,10 +243,17 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 
 	if (_rules.find(tr) == _rules.end()) {
 		tr = TrafficRule(ssid, 0);
-		trq = (_rules.get(tr));
+		//set_default_traffic_rule(ssid);
+		if (_rules.find(tr) == _rules.end()) {
+			click_chatter(">>>%s", ssid.c_str());
+			click_chatter("ahahah");
+		}
+		trq = _rules.get(tr);
 	} else {
 		trq = _rules.get(tr);
 	}
+
+	trq = _rules.get(tr);
 
 	if (trq->enqueue(q, ra, ta)) {
 		// check if tr is in active list
@@ -349,17 +324,23 @@ Packet * EmpowerQOSManager::pull(int) {
 	return 0;
 }
 
+void EmpowerQOSManager::set_default_traffic_rule(String ssid) {
+	set_traffic_rule(ssid, 0, 12000, false);
+}
+
 void EmpowerQOSManager::set_traffic_rule(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation) {
 	_lock.acquire_write();
 	TrafficRule tr = TrafficRule(ssid, dscp);
 	if (_rules.find(tr) == _rules.end()) {
-		click_chatter("%{element} :: %s :: creating new traffic rule queue for ssid %s dscp %u quantum %u A-MSDU %s",
-					  this,
-					  __func__,
-					  tr._ssid.c_str(),
-					  tr._dscp,
-					  quantum,
-					  amsdu_aggregation ? "yes." : "no");
+		if (_debug) {
+			click_chatter("%{element} :: %s :: Creating new traffic rule queue for ssid %s dscp %u quantum %u A-MSDU %s",
+						  this,
+						  __func__,
+						  tr._ssid.c_str(),
+						  tr._dscp,
+						  quantum,
+						  amsdu_aggregation ? "yes." : "no");
+		}
 		uint32_t tr_quantum = (quantum == 0) ? _quantum : quantum;
 		TrafficRuleQueue *queue = new TrafficRuleQueue(tr, _capacity, tr_quantum, amsdu_aggregation);
 		_rules.set(tr, queue);
@@ -373,6 +354,14 @@ void EmpowerQOSManager::set_traffic_rule(String ssid, int dscp, uint32_t quantum
 void EmpowerQOSManager::del_traffic_rule(String ssid, int dscp) {
 
 	_lock.acquire_write();
+
+	if (_debug) {
+		click_chatter("%{element} :: %s :: Deleting traffic rule queue for ssid %s dscp %u",
+					  this,
+					  __func__,
+					  ssid.c_str(),
+					  dscp);
+	}
 
 	// remove from active list
 	Vector<TrafficRule>::iterator it = _active_list.begin();
@@ -389,11 +378,6 @@ void EmpowerQOSManager::del_traffic_rule(String ssid, int dscp) {
 	// remove traffic rule
 	TRIter itr = _rules.find(tr);
 	if (itr == _rules.end()) {
-		click_chatter("%{element} :: %s :: unable to find traffic rule queue for ssid %s dscp %u",
-					  this,
-					  __func__,
-					  tr._ssid.c_str(),
-					  tr._dscp);
 		return;
 	}
 	TrafficRuleQueue *trq = itr.value();

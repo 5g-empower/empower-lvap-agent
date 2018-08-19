@@ -57,6 +57,9 @@ class EtherPair {
     EtherPair(EtherAddress ra, EtherAddress ta) : _ra(ra), _ta(ta) {
     }
 
+    EtherPair(const EtherPair &pair) : _ra(pair._ra), _ta(pair._ta) {
+    }
+
     inline hashcode_t hashcode() const {
     		return CLICK_NAME(hashcode)(_ra) + CLICK_NAME(hashcode)(_ta);
     }
@@ -210,9 +213,6 @@ class TrafficRule {
 
 };
 
-typedef HashTable<uint16_t, uint32_t> CBytes;
-typedef CBytes::iterator CBytesIter;
-
 class TrafficRuleQueue {
 
 public:
@@ -257,10 +257,6 @@ public:
 	}
 
     Packet * wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
-
-    	if (!p) {
-    		click_chatter("WHY NOT P!!!!!");
-    	}
 
         WritablePacket *q = p->uniqueify();
 
@@ -312,25 +308,20 @@ public:
     	EtherPair pair = EtherPair(ra, ta);
 
 		if (_queues.find(pair) == _queues.end()) {
-
-			click_chatter("%s :: creating new aggregation queue for %s",
-					      _tr.unparse().c_str(),
-						  pair.unparse().c_str());
-
 			AggregationQueue *queue = new AggregationQueue(_capacity, pair);
 			_queues.set(pair, queue);
 			_active_list.push_back(pair);
-
 		}
 
 		AggregationQueue *queue = _queues.get(pair);
+
 		if (queue->push(p)) {
 			// check if ra is in active list
 			if (find(_active_list.begin(), _active_list.end(), pair) == _active_list.end()) {
 				_active_list.push_back(pair);
 			}
 			if (queue->nb_pkts() > _max_queue_length) {
-				_max_queue_length = _queues.get(pair)->nb_pkts();
+				_max_queue_length = queue->nb_pkts();
 			}
 			return true;
 		}
@@ -407,6 +398,7 @@ public:
 	Packet *pull(int);
 
 	void add_handlers();
+	void set_default_traffic_rule(String);
 	void set_traffic_rule(String, int, uint32_t, bool);
 	void del_traffic_rule(String, int);
 

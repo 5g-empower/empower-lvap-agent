@@ -117,13 +117,10 @@ public:
 
 // An EmPOWER Virtual Access Point or VAP. This is an AP than
 // can be used by multiple clients (unlike the LVAP that is
-// specific to each client.
-// The _net_bssid is write only and is used to set the bssid
-// mask, meaning that the monitor interface must ACK frames
-// addressed to this VAP
+// specific to each client).
 class EmpowerVAPState {
 public:
-	EtherAddress _net_bssid;
+	EtherAddress _bssid;
 	String _ssid;
 	EtherAddress _hwaddr;
 	int _channel;
@@ -131,30 +128,36 @@ public:
 	int _iface_id;
 };
 
+// An EmPOWER Network. This is a tuple BSSID/SSID to be advertised
+// the LVAP
+class EmpowerNetwork {
+public:
+	EtherAddress _bssid;
+	String _ssid;
+	EmpowerNetwork(EtherAddress bssid, String ssid) :
+			_bssid(bssid), _ssid(ssid) {
+	}
+	String unparse() {
+		StringAccum sa;
+		sa << '<' << _bssid.unparse() << ", " << _ssid << '>';
+		return sa.take_string();
+	}
+};
+
 // An EmPOWER Light Virtual Access Point or LVAP. This is an
-// AP that is defined for a specific client. The net_bssid is
-// generated from a controller-specific prefix plus the last
-// three bytes of the station address. The net_bssid is write
-// only and is used to set the bssid mask. Meaning that frame
-// addressed to net_bssid must be acked by this WTP.
-// The lvap_bssid is the one to which the client is currently
-// attached. The lvap_bssid can be modified only as the result
-// of auth request and assoc request messages. Probe request
-// cannot modify the lvap_bssid.
+// AP that is defined for a specific client.
 class EmpowerStationState {
 public:
 	EtherAddress _sta;
-	EtherAddress _net_bssid;
-	EtherAddress _lvap_bssid;
-	EtherAddress _encap;
-	Vector<String> _ssids;
+	EtherAddress _bssid;
 	String _ssid;
+	EtherAddress _encap;
+	Vector<EmpowerNetwork> _networks;
 	int _assoc_id;
 	EtherAddress _hwaddr;
 	int _channel;
 	empower_bands_types _band;
 	empower_bands_types _supported_band;
-	empower_bands_types _target_band;
 	int _iface_id;
 	bool _set_mask;
 	bool _authentication_status;
@@ -163,10 +166,24 @@ public:
 	bool _csa_active;
 	int _csa_switch_mode;
 	int _csa_switch_count;
-	//EtherAddress _target_hwaddr;
 	int _csa_switch_channel;
 	// ADD/DEL LVAP response entries
 	uint32_t _module_id;
+	bool is_valid(int iface_id) {
+		if (_iface_id != iface_id) {
+			return false;
+		}
+		if (!_set_mask) {
+			return false;
+		}
+		if (!_authentication_status || !_association_status) {
+			return false;
+		}
+		if (!_ssid || !_bssid) {
+			return false;
+		}
+		return true;
+	}
 };
 
 // Cross structure mapping bssids to list of associated
@@ -305,12 +322,30 @@ public:
 	void send_add_del_lvap_response(uint8_t, EtherAddress, uint32_t, uint32_t);
 	void send_trq_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, String, int);
 
-	int remove_lvap(EmpowerStationState *);
+	ReadWriteLock* lock() { return &_lock; }
 	LVAP* lvaps() { return &_lvaps; }
 	VAP* vaps() { return &_vaps; }
 	EtherAddress wtp() { return _wtp; }
 
 	uint32_t get_next_seq() { return ++_seq; }
+
+	int remove_lvap(EtherAddress sta) {
+
+		EmpowerStationState *ess = _lvaps.get_pointer(sta);
+
+		// Forget station
+		_rcs[ess->_iface_id]->tx_policies()->tx_table()->erase(ess->_sta);
+		_rcs[ess->_iface_id]->forget_station(ess->_sta);
+
+		// Erase lvap
+		_lvaps.erase(_lvaps.find(ess->_sta));
+
+		// Remove this VAP's BSSID from the mask
+		compute_bssid_mask();
+
+		return 0;
+
+	}
 
 	int element_to_iface(EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
 		for (REIter iter = _ifaces_to_elements.begin(); iter.live(); iter++) {
@@ -345,15 +380,28 @@ public:
 	}
 
 	TransmissionPolicies * get_tx_policies(int iface_id) {
-		Minstrel * rc = _rcs[iface_id];
-		return rc->tx_policies();
+		return _rcs[iface_id]->tx_policies();
 	}
 
 	Vector<EtherAddress> * get_mcast_receivers(EtherAddress sta) {
 		return _mtbl->get_receivers(sta);
 	}
 
+	bool is_unique_lvap(EtherAddress sta) {
+		EmpowerStationState *ess = _lvaps.get_pointer(sta);
+		if (!ess) {
+			return false;
+		}
+		EmpowerVAPState *vap = _vaps.get_pointer(ess->_bssid);
+		if (!vap) {
+			return false;
+		}
+		return true;
+	}
+
 private:
+
+	ReadWriteLock _lock;
 
 	RETable _ifaces_to_elements;
 

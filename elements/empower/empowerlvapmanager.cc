@@ -312,9 +312,9 @@ void EmpowerLVAPManager::send_probe_request(EtherAddress src, String ssid, Ether
 
 void EmpowerLVAPManager::send_message(Packet *p) {
 	if (_ports.size() == 0) {
-		click_chatter("%{element} :: %s :: ports not set!",
-				      this,
-				      __func__);
+		if (_debug) {
+			click_chatter("%{element} :: %s :: ports not set!", this, __func__);
+		}
 		p->kill();
 		return;
 	}
@@ -342,13 +342,6 @@ void EmpowerLVAPManager::send_hello() {
 	hello->set_seq(get_next_seq());
 	hello->set_period(_period);
 	hello->set_wtp(_wtp);
-
-	if (_debug) {
-		click_chatter("%{element} :: %s :: sending hello (%u)!",
-				      this,
-				      __func__,
-					  hello->seq());
-	}
 
 	send_message(p);
 
@@ -483,19 +476,9 @@ void EmpowerLVAPManager::send_trq_counters_response(uint32_t counters_id, EtherA
 
 void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 
-	Vector<String> ssids;
-
-	int len = sizeof(empower_status_lvap);
-
 	EmpowerStationState ess = _lvaps.get(sta);
 
-	len += 1 + ess._ssid.length();
-	ssids.push_back(ess._ssid);
-
-	for (int i = 0; i < ess._ssids.size(); i++) {
-		len += 1 + ess._ssids[i].length();
-		ssids.push_back(ess._ssids[i]);
-	}
+	int len = sizeof(empower_status_lvap) + ess._networks.size() * (6 + WIFI_NWID_MAXSIZE + 1);
 
 	WritablePacket *p = Packet::make(len);
 
@@ -509,6 +492,7 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 	memset(p->data(), 0, p->length());
 
 	empower_status_lvap *status = (struct empower_status_lvap *) (p->data());
+
 	status->set_version(_empower_version);
 	status->set_length(len);
 	status->set_type(EMPOWER_PT_STATUS_LVAP);
@@ -523,23 +507,23 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 	status->set_wtp(_wtp);
 	status->set_sta(ess._sta);
 	status->set_encap(ess._encap);
-	status->set_net_bssid(ess._net_bssid);
-	status->set_lvap_bssid(ess._lvap_bssid);
+	status->set_bssid(ess._bssid);
 	status->set_hwaddr(ess._hwaddr);
 	status->set_channel(ess._channel);
 	status->set_band(ess._band);
 	status->set_supported_band(ess._supported_band);
+	status->set_ssid(ess._ssid);
 
 	uint8_t *ptr = (uint8_t *) status;
 	ptr += sizeof(struct empower_status_lvap);
 	uint8_t *end = ptr + (len - sizeof(struct empower_status_lvap));
 
-	for (int i = 0; i < ssids.size(); i++) {
+	for (int i = 0; i < ess._networks.size(); i++) {
 		assert (ptr <= end);
 		ssid_entry *entry = (ssid_entry *) ptr;
-		entry->set_length(ssids[i].length());
-		entry->set_ssid(ssids[i]);
-		ptr += entry->length() + 1;
+		entry->set_ssid(ess._networks[i]._ssid);
+		entry->set_bssid(ess._networks[i]._bssid);
+		ptr += sizeof(ssid_entry);
 	}
 
 	send_message(p);
@@ -571,7 +555,7 @@ void EmpowerLVAPManager::send_status_vap(EtherAddress bssid) {
 	status->set_type(EMPOWER_PT_STATUS_VAP);
 	status->set_seq(get_next_seq());
 	status->set_wtp(_wtp);
-	status->set_net_bssid(evs._net_bssid);
+	status->set_bssid(evs._bssid);
 	status->set_hwaddr(evs._hwaddr);
 	status->set_channel(evs._channel);
 	status->set_band(evs._band);
@@ -740,8 +724,6 @@ void EmpowerLVAPManager::send_wifi_stats_response(uint32_t wifi_stats_id, EtherA
 					  __func__);
 		return;
 	}
-
-
 
 	memset(p->data(), 0, p->length());
 
@@ -981,11 +963,6 @@ void EmpowerLVAPManager::send_incoming_mcast_address(EtherAddress mcast_address,
 	incoming_mcast_addr->set_band(re->_band);
 	incoming_mcast_addr->set_hwaddr(re->_hwaddr);
 
-	click_chatter("%{element} :: %s :: New mcast address %s address",
-				  this,
-				  __func__,
-				  mcast_address.unparse().c_str());
-
 	send_message(p);
 
 }
@@ -1019,14 +996,6 @@ void EmpowerLVAPManager::send_igmp_report(EtherAddress src, Vector<IPAddress>* m
 		igmp_report->set_wtp(_wtp);
 		igmp_report->set_sta(src);
 		igmp_report->set_igmp_type(igmp_types->at(grouprecord_counter));
-
-		click_chatter("%{element} :: %s :: IGMP request type %d from sta %s for the mcast address %s from wtp %s",
-					  this,
-					  __func__,
-					  igmp_types->at(grouprecord_counter),
-					  src.unparse().c_str(),
-					  mcast_addresses->at(grouprecord_counter).unparse().c_str(),
-					  _wtp.unparse().c_str());
 
 		send_message(p);
 	}
@@ -1126,12 +1095,6 @@ void EmpowerLVAPManager::send_caps() {
 		return;
 	}
 
-	if (_debug) {
-		click_chatter("%{element} :: %s :: sending caps response!",
-				      this,
-				      __func__);
-	}
-
 	memset(p->data(), 0, p->length());
 
 	empower_caps *caps = (struct empower_caps *) (p->data());
@@ -1198,7 +1161,7 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 
 	struct empower_add_vap *add_vap = (struct empower_add_vap *) (p->data() + offset);
 
-	EtherAddress net_bssid = add_vap->net_bssid();
+	EtherAddress bssid = add_vap->bssid();
 	String ssid = add_vap->ssid();
 	EtherAddress hwaddr = add_vap->hwaddr();
 	int channel = add_vap->channel();
@@ -1216,24 +1179,16 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		   return 0;
 	}
 
-	if (_debug) {
-		click_chatter("%{element} :: %s :: bssid %s ssid %s ",
-				      this,
-				      __func__,
-					  net_bssid.unparse().c_str(),
-					  ssid.c_str());
-	}
-
-	if (_vaps.find(net_bssid) == _vaps.end()) {
+	if (_vaps.find(bssid) == _vaps.end()) {
 
 		EmpowerVAPState state;
-		state._net_bssid = net_bssid;
+		state._bssid = bssid;
 		state._channel = channel;
 		state._hwaddr= hwaddr;
 		state._band = band;
 		state._ssid = ssid;
 		state._iface_id = iface;
-		_vaps.set(net_bssid, state);
+		_vaps.set(bssid, state);
 
 		/* Regenerate the BSSID mask */
 		compute_bssid_mask();
@@ -1255,18 +1210,11 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 int EmpowerLVAPManager::handle_del_vap(Packet *p, uint32_t offset) {
 
 	struct empower_del_vap *q = (struct empower_del_vap *) (p->data() + offset);
-	EtherAddress net_bssid = q->net_bssid();
-
-	if (_debug) {
-		click_chatter("%{element} :: %s :: sta %s",
-				      this,
-				      __func__,
-					  net_bssid.unparse_colon().c_str());
-	}
+	EtherAddress bssid = q->bssid();
 
 	// First make sure that this VAP isn't here already, in which
 	// case we'll just ignore the request
-	if (_vaps.find(net_bssid) == _vaps.end()) {
+	if (_vaps.find(bssid) == _vaps.end()) {
 		click_chatter("%{element} :: %s :: Ignoring VAP delete request because the agent isn't hosting the VAP",
 				      this,
 				      __func__);
@@ -1274,7 +1222,7 @@ int EmpowerLVAPManager::handle_del_vap(Packet *p, uint32_t offset) {
 		return -1;
 	}
 
-	_vaps.erase(_vaps.find(net_bssid));
+	_vaps.erase(_vaps.find(bssid));
 
 	// Remove this VAP's BSSID from the mask
 	compute_bssid_mask();
@@ -1288,9 +1236,10 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	struct empower_add_lvap *add_lvap = (struct empower_add_lvap *) (p->data() + offset);
 
 	EtherAddress sta = add_lvap->sta();
-	EtherAddress net_bssid = add_lvap->net_bssid();
-	EtherAddress lvap_bssid = add_lvap->lvap_bssid();
-	Vector<String> ssids;
+	EtherAddress bssid = add_lvap->bssid();
+	String ssid = add_lvap->ssid();
+
+	Vector<EmpowerNetwork> networks;
 
 	uint8_t *ptr = (uint8_t *) add_lvap;
 	ptr += sizeof(struct empower_add_lvap);
@@ -1299,20 +1248,18 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	while (ptr != end) {
 		assert (ptr <= end);
 		ssid_entry *entry = (ssid_entry *) ptr;
-		ssids.push_back(entry->ssid());
-		ptr += entry->length() + 1;
+		EmpowerNetwork network = EmpowerNetwork(entry->bssid(), entry->ssid());
+		networks.push_back(network);
+		ptr += sizeof(struct ssid_entry);
 	}
 
-	if (ssids.size() < 2) {
-		click_chatter("%{element} :: %s :: invalid ssids size (%u)",
+	if (networks.size() < 1) {
+		click_chatter("%{element} :: %s :: invalid networks size (%u)",
 				      this,
 				      __func__,
-				      ssids.size());
+					  networks.size());
 		return 0;
 	}
-
-	String ssid = *ssids.begin();
-	ssids.erase(ssids.begin());
 
 	int assoc_id = add_lvap->assoc_id();
 	EtherAddress hwaddr = add_lvap->hwaddr();
@@ -1337,37 +1284,17 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		   return 0;
 	}
 
-	if (_debug) {
-		StringAccum sa;
-		sa << ssids[0];
-		if (ssids.size() > 1) {
-			for (int i = 1; i < ssids.size(); i++) {
-				sa << ", " << ssids[i];
-			}
-		}
-		click_chatter("%{element} :: %s :: sta %s net_bssid %s lvap_bssid %s ssid %s [ %s ] assoc_id %d %s %s %s",
-					  this,
-					  __func__,
-					  sta.unparse_colon().c_str(),
-					  net_bssid.unparse().c_str(),
-					  lvap_bssid.unparse().c_str(),
-					  ssid.c_str(),
-				      sa.take_string().c_str(),
-				      assoc_id,
-				      set_mask ? "DL+UL" : "UL",
-				      authentication_state ? "AUTH" : "NO_AUTH",
-				      association_state ? "ASSOC" : "NO_ASSOC");
-	}
+	_lock.acquire_write();
 
 	// if no lvap can be found, then create it
 	if (_lvaps.find(sta) == _lvaps.end()) {
 
 		EmpowerStationState state;
 		state._sta = sta;
-		state._net_bssid = net_bssid;
-		state._lvap_bssid = lvap_bssid;
+		state._bssid = bssid;
+		state._ssid = ssid;
 		state._encap = encap;
-		state._ssids = ssids;
+		state._networks = networks;
 		state._assoc_id = assoc_id;
 		state._hwaddr = hwaddr;
 		state._channel = channel;
@@ -1377,7 +1304,6 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		state._authentication_status = authentication_state;
 		state._association_status = association_state;
 		state._set_mask = set_mask;
-		state._ssid = ssid;
 		state._iface_id = iface;
 
 		// set the CSA values to their default
@@ -1397,10 +1323,12 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 		/* send add lvap response message */
 		send_add_del_lvap_response(EMPOWER_PT_ADD_LVAP_RESPONSE, state._sta, module_id, 0);
 
+		_lock.release_write();
+
 		/* create default traffic rule */
 		if (ssid != "") {
 			// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
-			_eqms[iface]->set_traffic_rule(ssid, 0, 12000, false);
+			_eqms[iface]->set_default_traffic_rule(ssid);
 		}
 
 		return 0;
@@ -1409,23 +1337,24 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
 
-	ess->_lvap_bssid = lvap_bssid;
-	ess->_ssids = ssids;
+	ess->_bssid = bssid;
+	ess->_ssid = ssid;
+	ess->_networks = networks;
 	ess->_encap = encap;
-	ess->_assoc_id = assoc_id;
 	ess->_authentication_status = authentication_state;
 	ess->_association_status = association_state;
 	ess->_supported_band = supported_band;
 	ess->_set_mask = set_mask;
-	ess->_ssid = ssid;
 
 	/* send add lvap response message */
 	send_add_del_lvap_response(EMPOWER_PT_ADD_LVAP_RESPONSE, ess->_sta, module_id, 0);
 
+	_lock.release_write();
+
 	/* create default traffic rule */
 	if (ssid != "") {
 		// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
-		_eqms[iface]->set_traffic_rule(ssid, 0, 12000, false);
+		_eqms[iface]->set_default_traffic_rule(ssid);
 	}
 
 	return 0;
@@ -1514,12 +1443,6 @@ int EmpowerLVAPManager::handle_set_port(Packet *p, uint32_t offset) {
 	MinstrelDstInfo *nfo = _rcs.at(iface)->neighbors()->findp(addr);
 
 	if (!nfo || !nfo->rates.size()) {
-		if (_debug) {
-			click_chatter("%{element} :: %s :: adding %s",
-					      this,
-						  __func__,
-						  addr.unparse().c_str());
-		}
 		TxPolicyInfo * txp = _rcs[iface]->tx_policies()->tx_table()->find(addr);
 		nfo = _rcs.at(iface)->insert_neighbor(addr, txp);
 	}
@@ -1593,42 +1516,18 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 	EtherAddress sta = q->sta();
 	uint32_t module_id = q->module_id();
 
-	if (_debug) {
-		click_chatter("%{element} :: %s :: sta %s xid %u",
-				      this,
-				      __func__,
-				      sta.unparse_colon().c_str(),
-					  module_id);
-	}
-
 	// First make sure that this LVAP isn't here already, in which
 	// case we'll just ignore the request
 	if (_lvaps.find(sta) == _lvaps.end()) {
-		click_chatter("%{element} :: %s :: Ignoring LVAP delete request because the agent isn't hosting the LVAP",
-				      this,
-				      __func__);
-
 		return -1;
 	}
 
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
 
-	// If the BSSIDs are different, this is a shared lvap and a deauth message should be sent before removing the lvap
-	// CSA is not supported for shared LVAPs
-	if (ess->_lvap_bssid != ess->_net_bssid) {
-		// send de-auth
-		_edeauthr->send_deauth_request(ess->_sta, 0x0001, ess->_iface_id);
-		// remove lvap
-		remove_lvap(ess);
-		// send del lvap response message
-		send_add_del_lvap_response(EMPOWER_PT_DEL_LVAP_RESPONSE, ess->_sta, module_id, 0);
-		return 0;
-	}
-
 	// if this is an uplink only LVAP the CSA is not needed
 	if (!ess->_set_mask) {
 		// remove lvap
-		remove_lvap(ess);
+		remove_lvap(ess->_sta);
 		// send del lvap response message
 		send_add_del_lvap_response(EMPOWER_PT_DEL_LVAP_RESPONSE, ess->_sta, module_id, 0);
 		return 0;
@@ -1648,7 +1547,6 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 		ess->_csa_switch_count = q->csa_switch_count();
 		ess->_csa_switch_mode = q->csa_switch_mode();
 		ess->_csa_switch_channel = q->csa_switch_channel();
-
 		ess->_module_id = module_id;
 
 		return 0;
@@ -1656,7 +1554,7 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 	}
 
 	// remove lvap
-	remove_lvap(ess);
+	remove_lvap(ess->_sta);
 
 	// send del lvap response message
 	send_add_del_lvap_response(EMPOWER_PT_DEL_LVAP_RESPONSE, ess->_sta, module_id, 0);
@@ -1665,79 +1563,26 @@ int EmpowerLVAPManager::handle_del_lvap(Packet *p, uint32_t offset) {
 
 }
 
-int EmpowerLVAPManager::remove_lvap(EmpowerStationState *ess) {
-
-	// Forget station
-	_rcs[ess->_iface_id]->tx_policies()->tx_table()->erase(ess->_sta);
-	_rcs[ess->_iface_id]->forget_station(ess->_sta);
-
-	// Erase lvap
-	_lvaps.erase(_lvaps.find(ess->_sta));
-
-	// Remove this VAP's BSSID from the mask
-	compute_bssid_mask();
-
-	return 0;
-
-}
-
 int EmpowerLVAPManager::handle_probe_response(Packet *p, uint32_t offset) {
-
 	struct empower_probe_response *q = (struct empower_probe_response *) (p->data() + offset);
 	EtherAddress sta = q->sta();
 	String ssid = q->ssid();
-
-	if (_debug) {
-		click_chatter("%{element} :: %s :: sta %s",
-				      this,
-				      __func__,
-				      sta.unparse_colon().c_str());
-	}
-
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-
-	if (!ess) {
-		click_chatter("%{element} :: %s :: unknown LVAP %s ignoring",
-				      this,
-				      __func__,
-				      sta.unparse_colon().c_str());
-		return 0;
-	}
-
 	_ebs->send_probe_response(ess, ssid);
-
 	return 0;
-
 }
 
 int EmpowerLVAPManager::handle_auth_response(Packet *p, uint32_t offset) {
 	struct empower_auth_response *q = (struct empower_auth_response *) (p->data() + offset);
 	EtherAddress sta = q->sta();
-	if (_debug) {
-		click_chatter("%{element} :: %s :: sta %s",
-				      this,
-				      __func__,
-				      sta.unparse_colon().c_str());
-	}
-	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-	ess->_authentication_status = true;
-	ess->_association_status = false;
-	_eauthr->send_auth_response(ess->_sta, 2, WIFI_STATUS_SUCCESS, ess->_iface_id);
+	_eauthr->send_auth_response(sta);
 	return 0;
 }
 
 int EmpowerLVAPManager::handle_assoc_response(Packet *p, uint32_t offset) {
 	struct empower_assoc_response *q = (struct empower_assoc_response *) (p->data() + offset);
 	EtherAddress sta = q->sta();
-	if (_debug) {
-		click_chatter("%{element} :: %s :: sta %s",
-				      this,
-				      __func__,
-				      sta.unparse_colon().c_str());
-	}
-	EmpowerStationState *ess = _lvaps.get_pointer(sta);
-	int channel = ess->_channel;
-	_eassor->send_association_response(ess->_sta, WIFI_STATUS_SUCCESS, channel, ess->_iface_id);
+	_eassor->send_association_response(sta);
 	return 0;
 }
 
@@ -1807,12 +1652,6 @@ int EmpowerLVAPManager::handle_set_traffic_rule(Packet *p, uint32_t offset) {
 	uint32_t quantum = add_traffic_rule->quantum();
 	bool amsdu_aggregation = add_traffic_rule->flags(EMPOWER_AMSDU_AGGREGATION);
 
-	click_chatter("%{element} :: %s :: Receiving add traffic rule for ssid %s dscp %u",
-				  this,
-				  __func__,
-				  ssid.c_str(),
-				  dscp);
-
 	_eqms[iface_id]->set_traffic_rule(ssid, dscp, quantum, amsdu_aggregation);
 
 	return 0;
@@ -1831,12 +1670,6 @@ int EmpowerLVAPManager::handle_del_traffic_rule(Packet *p, uint32_t offset) {
 
 	int dscp = del_traffic_rule->dscp();
 	String ssid = del_traffic_rule->ssid();
-
-	click_chatter("%{element} :: %s :: Receiving del traffic rule for ssid %s dscp %u",
-				  this,
-				  __func__,
-				  ssid.c_str(),
-				  dscp);
 
 	_eqms[iface_id]->del_traffic_rule(ssid, dscp);
 
@@ -2000,16 +1833,17 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 			if (iface_id != j) {
 				continue;
 			}
-			// check set mask flag
-			bool set_mask = it.value()._set_mask;
-			if (!set_mask) {
+			// check if lvap is DL+UL
+			if (!it.value()._set_mask) {
 				continue;
 			}
-			// add to mask
-			for (i = 0; i < 6; i++) {
-				const uint8_t *hw = (const uint8_t *) _ifaces_to_elements[iface_id]->_hwaddr.data();
-				const uint8_t *bssid = (const uint8_t *) it.value()._net_bssid.data();
-				bssid_mask[i] &= ~(hw[i] ^ bssid[i]);
+			// add each bssid in the networks
+			const uint8_t *hw = (const uint8_t *) _ifaces_to_elements[iface_id]->_hwaddr.data();
+			for (int k = 0; k < it.value()._networks.size(); k ++) {
+				const uint8_t *bssid = (const uint8_t *) it.value()._networks[k]._bssid.data();
+				for (i = 0; i < 6; i++) {
+					bssid_mask[i] &= ~(hw[i] ^ bssid[i]);
+				}
 			}
 		}
 
@@ -2022,9 +1856,9 @@ void EmpowerLVAPManager::compute_bssid_mask() {
 				continue;
 			}
 			// add to mask
+			const uint8_t *hw = (const uint8_t *) _ifaces_to_elements[iface_id]->_hwaddr.data();
 			for (i = 0; i < 6; i++) {
-				const uint8_t *hw = (const uint8_t *) _ifaces_to_elements[iface_id]->_hwaddr.data();
-				const uint8_t *bssid = (const uint8_t *) it.value()._net_bssid.data();
+				const uint8_t *bssid = (const uint8_t *) it.value()._bssid.data();
 				bssid_mask[i] &= ~(hw[i] ^ bssid[i]);
 			}
 		}
@@ -2108,19 +1942,19 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 		    if (it.value()._authentication_status) {
 			    sa << " AUTH";
 		    }
-			sa << " net_bssid ";
-		    sa << it.value()._net_bssid.unparse();
-			sa << " lvap_bssid ";
-		    sa << it.value()._lvap_bssid.unparse();
+			sa << " bssid ";
+		    sa << it.value()._bssid.unparse();
 		    sa << " encap ";
 		    sa << it.value()._encap.unparse();
 		    sa << " ssid ";
 		    sa << it.value()._ssid;
-		    sa << " ssids [ ";
-	    	sa << it.value()._ssids[0];
-		    for (int i = 1; i < it.value()._ssids.size(); i++) {
-		    	sa << ", " << it.value()._ssids[i];
-			}
+		    sa << " networks [ ";
+	    	sa << it.value()._networks[0].unparse();
+	    	if (it.value()._networks.size() > 1) {
+				for (int i = 1; i < it.value()._networks.size(); i++) {
+					sa << ", " << it.value()._networks[i].unparse();
+				}
+	    	}
 			sa << " ] assoc_id ";
 			sa << it.value()._assoc_id;
 			sa << " hwaddr ";
@@ -2147,7 +1981,7 @@ String EmpowerLVAPManager::read_handler(Element *e, void *thunk) {
 	case H_VAPS: {
 	    StringAccum sa;
 		for (VAPIter it = td->vaps()->begin(); it.live(); it++) {
-			sa << "net_bssid ";
+			sa << "bssid ";
 			sa << it.key().unparse();
 			sa << " ssid ";
 			sa << it.value()._ssid;
