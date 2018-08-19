@@ -28,12 +28,12 @@ Keyword arguments:
 
 =item NB_MBUF
 
-Integer.  Number of message buffers to allocate. Defaults to 524288.
+Integer.  Number of message buffers to allocate. Defaults to 65536.
 
 =item MBUF_SIZE
 
 Integer.  Size of a message buffer in bytes. Defaults to 2048 +
-RTE_PKTMBUF_HEADROOM + sizeof (struct rte_mbuf).
+RTE_PKTMBUF_HEADROOM.
 
 =item MBUF_CACHE_SIZE
 
@@ -64,6 +64,16 @@ Integer.  TX host threshold. Defaults to 0.
 
 Integer.  TX write-back threshold. Defaults to 0.
 
+=item MEMPOOL_PREFIX
+
+String. Prefix for the mempool name. Use this to get a predictable
+  mempool name and attach secondary processes.
+
+=item DEF_BURST_SIZE
+
+Integer.  Number of frames to read/write from/to a DPDK device.
+Defaults to 32.
+
 =back
 
 This element is only available at user level, when compiled with DPDK
@@ -83,6 +93,10 @@ public:
     int configure_phase() const { return CONFIGURE_PHASE_FIRST; }
 
     int configure(Vector<String> &conf, ErrorHandler *errh);
+
+    enum {h_pool_count};
+    static String read_handler(Element *e, void * thunk);
+    void add_handlers() override;
 
     static DPDKInfo *instance;
 };
