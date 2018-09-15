@@ -243,14 +243,7 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 
 	if (_rules.find(tr) == _rules.end()) {
 		tr = TrafficRule(ssid, 0);
-		//set_default_traffic_rule(ssid);
-		if (_rules.find(tr) == _rules.end()) {
-			click_chatter(">>>%s", ssid.c_str());
-			click_chatter("ahahah");
-		}
-		trq = _rules.get(tr);
-	} else {
-		trq = _rules.get(tr);
+		assert(_rules.find(tr) != _rules.end());
 	}
 
 	trq = _rules.get(tr);

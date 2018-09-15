@@ -365,8 +365,7 @@ public:
 	}
 
 	EmpowerStationState * get_ess(EtherAddress sta) {
-		EmpowerStationState *ess = _lvaps.get_pointer(sta);
-		return ess;
+		return _lvaps.get_pointer(sta);
 	}
 
 	TxPolicyInfo * get_txp(EtherAddress sta) {

@@ -476,9 +476,17 @@ void EmpowerLVAPManager::send_trq_counters_response(uint32_t counters_id, EtherA
 
 void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 
-	EmpowerStationState ess = _lvaps.get(sta);
+	EmpowerStationState *ess = _lvaps.get_pointer(sta);
 
-	int len = sizeof(empower_status_lvap) + ess._networks.size() * (6 + WIFI_NWID_MAXSIZE + 1);
+	if (!ess) {
+		click_chatter("%{element} :: %s :: unable to find lvap %s",
+					  this,
+					  __func__,
+					  sta.unparse().c_str());
+		return;
+	}
+
+	int len = sizeof(empower_status_lvap) + ess->_networks.size() * (6 + WIFI_NWID_MAXSIZE + 1);
 
 	WritablePacket *p = Packet::make(len);
 
@@ -497,32 +505,32 @@ void EmpowerLVAPManager::send_status_lvap(EtherAddress sta) {
 	status->set_length(len);
 	status->set_type(EMPOWER_PT_STATUS_LVAP);
 	status->set_seq(get_next_seq());
-	status->set_assoc_id(ess._assoc_id);
-	if (ess._set_mask)
+	status->set_assoc_id(ess->_assoc_id);
+	if (ess->_set_mask)
 		status->set_flag(EMPOWER_STATUS_LVAP_SET_MASK);
-	if (ess._authentication_status)
+	if (ess->_authentication_status)
 		status->set_flag(EMPOWER_STATUS_LVAP_AUTHENTICATED);
-	if (ess._association_status)
+	if (ess->_association_status)
 		status->set_flag(EMPOWER_STATUS_LVAP_ASSOCIATED);
 	status->set_wtp(_wtp);
-	status->set_sta(ess._sta);
-	status->set_encap(ess._encap);
-	status->set_bssid(ess._bssid);
-	status->set_hwaddr(ess._hwaddr);
-	status->set_channel(ess._channel);
-	status->set_band(ess._band);
-	status->set_supported_band(ess._supported_band);
-	status->set_ssid(ess._ssid);
+	status->set_sta(ess->_sta);
+	status->set_encap(ess->_encap);
+	status->set_bssid(ess->_bssid);
+	status->set_hwaddr(ess->_hwaddr);
+	status->set_channel(ess->_channel);
+	status->set_band(ess->_band);
+	status->set_supported_band(ess->_supported_band);
+	status->set_ssid(ess->_ssid);
 
 	uint8_t *ptr = (uint8_t *) status;
 	ptr += sizeof(struct empower_status_lvap);
 	uint8_t *end = ptr + (len - sizeof(struct empower_status_lvap));
 
-	for (int i = 0; i < ess._networks.size(); i++) {
+	for (int i = 0; i < ess->_networks.size(); i++) {
 		assert (ptr <= end);
 		ssid_entry *entry = (ssid_entry *) ptr;
-		entry->set_ssid(ess._networks[i]._ssid);
-		entry->set_bssid(ess._networks[i]._bssid);
+		entry->set_ssid(ess->_networks[i]._ssid);
+		entry->set_bssid(ess->_networks[i]._bssid);
 		ptr += sizeof(ssid_entry);
 	}
 
@@ -534,9 +542,17 @@ void EmpowerLVAPManager::send_status_vap(EtherAddress bssid) {
 
 	Vector<String> ssids;
 
-	EmpowerVAPState evs = _vaps.get(bssid);
+	EmpowerVAPState *evs = _vaps.get_pointer(bssid);
 
-	int len = sizeof(empower_status_vap) + evs._ssid.length();
+	if (!evs) {
+		click_chatter("%{element} :: %s :: unable to find vap %s",
+					  this,
+					  __func__,
+					  bssid.unparse().c_str());
+		return;
+	}
+
+	int len = sizeof(empower_status_vap);
 
 	WritablePacket *p = Packet::make(len);
 
@@ -555,11 +571,11 @@ void EmpowerLVAPManager::send_status_vap(EtherAddress bssid) {
 	status->set_type(EMPOWER_PT_STATUS_VAP);
 	status->set_seq(get_next_seq());
 	status->set_wtp(_wtp);
-	status->set_bssid(evs._bssid);
-	status->set_hwaddr(evs._hwaddr);
-	status->set_channel(evs._channel);
-	status->set_band(evs._band);
-	status->set_ssid(evs._ssid);
+	status->set_bssid(evs->_bssid);
+	status->set_hwaddr(evs->_hwaddr);
+	status->set_channel(evs->_channel);
+	status->set_band(evs->_band);
+	status->set_ssid(evs->_ssid);
 
 	send_message(p);
 
@@ -823,8 +839,17 @@ void EmpowerLVAPManager::send_summary_trigger(SummaryTrigger * summary) {
 
 void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t lvap_stats_id) {
 
-	EmpowerStationState ess = _lvaps.get(lvap);
-	MinstrelDstInfo *nfo = _rcs.at(ess._iface_id)->neighbors()->findp(lvap);
+	EmpowerStationState *ess = _lvaps.get_pointer(lvap);
+
+	if (!ess) {
+		click_chatter("%{element} :: %s :: unable to find lvap %s",
+					  this,
+					  __func__,
+					  lvap.unparse().c_str());
+		return;
+	}
+
+	MinstrelDstInfo *nfo = _rcs.at(ess->_iface_id)->neighbors()->findp(lvap);
 
 	if (!nfo) {
 		click_chatter("%{element} :: %s :: no rate information for %s",
