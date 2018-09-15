@@ -728,19 +728,19 @@ struct empower_del_vap : public empower_header {
 /* lvap status packet format */
 struct empower_status_vap : public empower_header {
 private:
-    uint8_t _wtp[6];            /* EtherAddress */
-    uint8_t _hwaddr[6];     /* EtherAddress */
-    uint8_t _channel;           /* WiFi channel (int) */
-    uint8_t _band;              /* WiFi band (empower_band_types) */
-    uint8_t _bssid[6];  /* EtherAddress */
-    char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
+    uint8_t _wtp[6];           				/* EtherAddress */
+    uint8_t _hwaddr[6];     				/* EtherAddress */
+    uint8_t _channel;           			/* WiFi channel (int) */
+    uint8_t _band;              			/* WiFi band (empower_band_types) */
+    uint8_t _bssid[6];  					/* EtherAddress */
+    char    _ssid[WIFI_NWID_MAXSIZE+1];    	/* Null terminated SSID */
 public:
-    void set_band(uint8_t band)            { _band = band; }
-    void set_hwaddr(EtherAddress hwaddr)   { memcpy(_hwaddr, hwaddr.data(), 6); }
-    void set_channel(uint8_t channel)      { _channel = channel; }
-    void set_wtp(EtherAddress wtp)         { memcpy(_wtp, wtp.data(), 6); }
-    void set_bssid(EtherAddress bssid) { memcpy(_bssid, bssid.data(), 6); }
-    void set_ssid(String ssid)          { memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
+    void set_band(uint8_t band)            	{ _band = band; }
+    void set_hwaddr(EtherAddress hwaddr)   	{ memcpy(_hwaddr, hwaddr.data(), 6); }
+    void set_channel(uint8_t channel)      	{ _channel = channel; }
+    void set_wtp(EtherAddress wtp)        	{ memcpy(_wtp, wtp.data(), 6); }
+    void set_bssid(EtherAddress bssid) 		{ memcpy(_bssid, bssid.data(), 6); }
+    void set_ssid(String ssid)          	{ memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* incomming multicast address request format */
