@@ -181,27 +181,27 @@ private:
 typedef HashTable<EtherPair, AggregationQueue*> AggregationQueues;
 typedef AggregationQueues::iterator AQIter;
 
-class TrafficRule {
+class Slice {
   public:
 
     String _ssid;
     int _dscp;
 
-    TrafficRule() : _ssid(""), _dscp(0) {
+    Slice() : _ssid(""), _dscp(0) {
     }
 
-    TrafficRule(String ssid, int dscp) : _ssid(ssid), _dscp(dscp) {
+    Slice(String ssid, int dscp) : _ssid(ssid), _dscp(dscp) {
     }
 
     inline hashcode_t hashcode() const {
     		return CLICK_NAME(hashcode)(_ssid) + CLICK_NAME(hashcode)(_dscp);
     }
 
-    inline bool operator==(TrafficRule other) const {
+    inline bool operator==(Slice other) const {
     		return (other._ssid == _ssid && other._dscp == _dscp);
     }
 
-    inline bool operator!=(TrafficRule other) const {
+    inline bool operator!=(Slice other) const {
     		return (other._ssid != _ssid || other._dscp != _dscp);
     }
 
@@ -213,14 +213,14 @@ class TrafficRule {
 
 };
 
-class TrafficRuleQueue {
+class SliceQueue {
 
 public:
 
     AggregationQueues _queues;
 	Vector<EtherPair> _active_list;
 
-	TrafficRule _tr;
+	Slice _slice;
     uint32_t _capacity;
     uint32_t _size;
     uint32_t _drops;
@@ -233,13 +233,13 @@ public:
     uint32_t _tx_packets;
     uint32_t _tx_bytes;
 
-	TrafficRuleQueue(TrafficRule tr, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation) :
-			_tr(tr), _capacity(capacity), _size(0), _drops(0), _deficit(0),
+    SliceQueue(Slice slice, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation) :
+			_slice(slice), _capacity(capacity), _size(0), _drops(0), _deficit(0),
 			_quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _max_aggr_length(7935),
 			_deficit_used(0), _max_queue_length(0), _tx_packets(0), _tx_bytes(0) {
 	}
 
-	~TrafficRuleQueue() {
+	~SliceQueue() {
 		AQIter itr = _queues.begin();
 		while (itr != _queues.end()) {
 			AggregationQueue *aq = itr.value();
@@ -362,7 +362,7 @@ public:
 
 	String unparse() {
 		StringAccum result;
-		result << _tr.unparse() << " -> capacity: " << _capacity << "\n";
+		result << _slice.unparse() << " -> capacity: " << _capacity << "\n";
 		AQIter itr = _queues.begin();
 		while (itr != _queues.end()) {
 			AggregationQueue *aq = itr.value();
@@ -374,10 +374,10 @@ public:
 
 };
 
-typedef HashTable<TrafficRule, TrafficRuleQueue*> TrafficRules;
-typedef TrafficRules::iterator TRIter;
+typedef HashTable<Slice, SliceQueue*> Slices;
+typedef Slices::iterator SIter;
 
-typedef HashTable<TrafficRule, Packet*> HeadTable;
+typedef HashTable<Slice, Packet*> HeadTable;
 typedef HeadTable::iterator HItr;
 
 class EmpowerQOSManager: public Element {
@@ -398,11 +398,11 @@ public:
 	Packet *pull(int);
 
 	void add_handlers();
-	void set_default_traffic_rule(String);
-	void set_traffic_rule(String, int, uint32_t, bool);
-	void del_traffic_rule(String, int);
+	void set_default_slice(String);
+	void set_slice(String, int, uint32_t, bool);
+	void del_slice(String, int);
 
-	TrafficRules * rules() { return &_rules; }
+	Slices * slices() { return &_slices; }
 
 private:
 
@@ -414,9 +414,9 @@ private:
 	class EmpowerLVAPManager *_el;
 	class Minstrel * _rc;
 
-	TrafficRules _rules;
+	Slices _slices;
     HeadTable _head_table;
-	Vector<TrafficRule> _active_list;
+	Vector<Slice> _active_list;
 
     int _sleepiness;
     uint32_t _capacity;
@@ -427,7 +427,7 @@ private:
     bool _debug;
 
 	void store(String, int, Packet *, EtherAddress, EtherAddress);
-	String list_queues();
+	String list_slices();
 
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);
