@@ -238,23 +238,23 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 
 	_lock.acquire_write();
 
-	TrafficRule tr = TrafficRule(ssid, dscp);
-	TrafficRuleQueue *trq = 0;
+	Slice slice = Slice(ssid, dscp);
+	SliceQueue *sliceq = 0;
 
-	if (_rules.find(tr) == _rules.end()) {
-		tr = TrafficRule(ssid, 0);
-		assert(_rules.find(tr) != _rules.end());
+	if (_slices.find(slice) == _slices.end()) {
+		slice = Slice(ssid, 0);
+		assert(_slices.find(slice) != _slices.end());
 	}
 
-	trq = _rules.get(tr);
+	sliceq = _slices.get(slice);
 
-	if (trq->enqueue(q, ra, ta)) {
-		// check if tr is in active list
-		if (trq->size() == 0) {
-			trq->_deficit = 0;
-			_active_list.push_back(tr);
+	if (sliceq->enqueue(q, ra, ta)) {
+		// check if the slice is in the active list
+		if (sliceq->size() == 0) {
+			sliceq->_deficit = 0;
+			_active_list.push_back(slice);
 		}
-		trq->update_size();
+		sliceq->update_size();
 		// wake up queue
 		_empty_note.wake();
 		// reset sleepiness
@@ -278,17 +278,17 @@ Packet * EmpowerQOSManager::pull(int) {
 
 	_lock.acquire_write();
 
-	TrafficRule tr = _active_list[0];
+	Slice slice = _active_list[0];
 	_active_list.pop_front();
 
-	TRIter active = _rules.find(tr);
-	HItr head = _head_table.find(tr);
-	TrafficRuleQueue* queue = active.value();
+	SIter active = _slices.find(slice);
+	HItr head = _head_table.find(slice);
+	SliceQueue* queue = active.value();
 
 	Packet *p = 0;
 	if (head.value()) {
 		p = head.value();
-		_head_table.set(tr, 0);
+		_head_table.set(slice, 0);
 	} else {
 		p = queue->dequeue();
 	}
@@ -302,13 +302,13 @@ Packet * EmpowerQOSManager::pull(int) {
 		queue->_tx_bytes += p->length();
 		queue->_tx_packets++;
 		if (queue->size() > 0) {
-			_active_list.push_front(tr);
+			_active_list.push_front(slice);
 		}
 		_lock.release_write();
 		return p;
 	} else {
-		_head_table.set(tr, p);
-		_active_list.push_back(tr);
+		_head_table.set(slice, p);
+		_active_list.push_back(slice);
 		queue->_deficit += queue->_quantum;
 	}
 
@@ -317,39 +317,39 @@ Packet * EmpowerQOSManager::pull(int) {
 	return 0;
 }
 
-void EmpowerQOSManager::set_default_traffic_rule(String ssid) {
-	set_traffic_rule(ssid, 0, 12000, false);
+void EmpowerQOSManager::set_default_slice(String ssid) {
+	set_slice(ssid, 0, 12000, false);
 }
 
-void EmpowerQOSManager::set_traffic_rule(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation) {
+void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation) {
 	_lock.acquire_write();
-	TrafficRule tr = TrafficRule(ssid, dscp);
-	if (_rules.find(tr) == _rules.end()) {
+	Slice slice = Slice(ssid, dscp);
+	if (_slices.find(slice) == _slices.end()) {
 		if (_debug) {
-			click_chatter("%{element} :: %s :: Creating new traffic rule queue for ssid %s dscp %u quantum %u A-MSDU %s",
+			click_chatter("%{element} :: %s :: Creating new slice queue for ssid %s dscp %u quantum %u A-MSDU %s",
 						  this,
 						  __func__,
-						  tr._ssid.c_str(),
-						  tr._dscp,
+						  slice._ssid.c_str(),
+						  slice._dscp,
 						  quantum,
 						  amsdu_aggregation ? "yes." : "no");
 		}
 		uint32_t tr_quantum = (quantum == 0) ? _quantum : quantum;
-		TrafficRuleQueue *queue = new TrafficRuleQueue(tr, _capacity, tr_quantum, amsdu_aggregation);
-		_rules.set(tr, queue);
-		_head_table.set(tr, 0);
-		_active_list.push_back(tr);
-		_el->send_status_traffic_rule(ssid, dscp, _iface_id);
+		SliceQueue *queue = new SliceQueue(slice, _capacity, tr_quantum, amsdu_aggregation);
+		_slices.set(slice, queue);
+		_head_table.set(slice, 0);
+		_active_list.push_back(slice);
+		_el->send_status_slice(ssid, dscp, _iface_id);
 	}
 	_lock.release_write();
 }
 
-void EmpowerQOSManager::del_traffic_rule(String ssid, int dscp) {
+void EmpowerQOSManager::del_slice(String ssid, int dscp) {
 
 	_lock.acquire_write();
 
 	if (_debug) {
-		click_chatter("%{element} :: %s :: Deleting traffic rule queue for ssid %s dscp %u",
+		click_chatter("%{element} :: %s :: Deleting slice queue for ssid %s dscp %u",
 					  this,
 					  __func__,
 					  ssid.c_str(),
@@ -357,7 +357,7 @@ void EmpowerQOSManager::del_traffic_rule(String ssid, int dscp) {
 	}
 
 	// remove from active list
-	Vector<TrafficRule>::iterator it = _active_list.begin();
+	Vector<Slice>::iterator it = _active_list.begin();
 	while (it != _active_list.end()) {
 		if (it->_ssid == ssid && it->_dscp == dscp) {
 			it = _active_list.erase(it);
@@ -366,19 +366,19 @@ void EmpowerQOSManager::del_traffic_rule(String ssid, int dscp) {
 		it++;
 	}
 
-	TrafficRule tr = TrafficRule(ssid, dscp);
+	Slice slice = Slice(ssid, dscp);
 
-	// remove traffic rule
-	TRIter itr = _rules.find(tr);
-	if (itr == _rules.end()) {
+	// remove slice
+	SIter itr = _slices.find(slice);
+	if (itr == _slices.end()) {
 		return;
 	}
-	TrafficRuleQueue *trq = itr.value();
-	delete trq;
-	_rules.erase(itr);
+	SliceQueue *sliceq = itr.value();
+	delete sliceq;
+	_slices.erase(itr);
 
 	// remove from head table
-	HItr itr2 = _head_table.find(tr);
+	HItr itr2 = _head_table.find(slice);
 	Packet *p = itr2.value();
 	if (p){
 		p->kill();
@@ -389,26 +389,26 @@ void EmpowerQOSManager::del_traffic_rule(String ssid, int dscp) {
 
 }
 
-String EmpowerQOSManager::list_queues() {
+String EmpowerQOSManager::list_slices() {
 	StringAccum result;
-	TRIter itr = _rules.begin();
-	while (itr != _rules.end()) {
-		TrafficRuleQueue *trq = itr.value();
-		result << trq->unparse();
+	SIter itr = _slices.begin();
+	while (itr != _slices.end()) {
+		SliceQueue *sliceq = itr.value();
+		result << sliceq->unparse();
 		itr++;
 	} // end while
 	return result.take_string();
 }
 
 enum {
-	H_DEBUG, H_QUEUES
+	H_DEBUG, H_SLICES
 };
 
 String EmpowerQOSManager::read_handler(Element *e, void *thunk) {
 	EmpowerQOSManager *td = (EmpowerQOSManager *) e;
 	switch ((uintptr_t) thunk) {
-	case H_QUEUES:
-		return (td->list_queues());
+	case H_SLICES:
+		return (td->list_slices());
 	case H_DEBUG:
 		return String(td->_debug) + "\n";
 	default:
@@ -433,7 +433,7 @@ int EmpowerQOSManager::write_handler(const String &in_s, Element *e, void *vpara
 
 void EmpowerQOSManager::add_handlers() {
 	add_read_handler("debug", read_handler, (void *) H_DEBUG);
-	add_read_handler("queues", read_handler, (void *) H_QUEUES);
+	add_read_handler("slices", read_handler, (void *) H_SLICES);
 	add_write_handler("debug", write_handler, (void *) H_DEBUG);
 }
 

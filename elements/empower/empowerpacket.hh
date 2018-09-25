@@ -44,11 +44,11 @@ enum empower_packet_types {
     EMPOWER_PT_STATUS_PORT = 0x15,                  // wtp -> ac
     EMPOWER_PT_PORT_STATUS_REQ = 0x62,              // ac -> wtp
 
-    // Traffic Rule
-    EMPOWER_PT_SET_TRAFFIC_RULE = 0x56,             // ac -> wtp
-    EMPOWER_PT_DEL_TRAFFIC_RULE = 0x57,             // ac -> wtp
-    EMPOWER_PT_STATUS_TRAFFIC_RULE = 0x58,          // wtp -> ac
-    EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ = 0x61,      // ac -> wtp
+    // Slice messages
+    EMPOWER_PT_SET_SLICE = 0x56,             // ac -> wtp
+    EMPOWER_PT_DEL_SLICE = 0x57,             // ac -> wtp
+    EMPOWER_PT_STATUS_SLICE = 0x58,          // wtp -> ac
+    EMPOWER_PT_SLICE_STATUS_REQ = 0x61,      // ac -> wtp
 
     // IGMP messages
     EMPOWER_PT_IGMP_REPORT = 0x48,                  // wtp -> ac
@@ -81,9 +81,9 @@ enum empower_packet_types {
     EMPOWER_PT_WIFI_STATS_REQUEST = 0x37,           // ac -> wtp
     EMPOWER_PT_WIFI_STATS_RESPONSE = 0x38,          // wtp -> ac
 
-    // Traffic Rule Stats
-	EMPOWER_PT_TRQ_COUNTERS_REQUEST = 0x59,   // ac -> wtp
-	EMPOWER_PT_TRQ_COUNTERS_RESPONSE = 0x60,  // wtp -> ac
+    // Slice Stats
+	EMPOWER_PT_SLICE_QUEUE_COUNTERS_REQUEST = 0x59,   // ac -> wtp
+	EMPOWER_PT_SLICE_QUEUE_COUNTERS_RESPONSE = 0x60,  // wtp -> ac
 
     // TXP Packet/Bytes counters
     EMPOWER_PT_TXP_COUNTERS_REQUEST = 0x35,         // ac -> wtp
@@ -772,7 +772,7 @@ struct empower_igmp_report : public empower_header {
     void set_igmp_type(int igmp_type)               { _igmp_type = igmp_type; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-struct empower_set_traffic_rule : public empower_header {
+struct empower_set_slice : public empower_header {
   private:
     uint16_t    _flags;             /* Aggregation flags */
     uint8_t     _hwaddr[6];         /* EtherAddress */
@@ -788,26 +788,26 @@ struct empower_set_traffic_rule : public empower_header {
     uint32_t        quantum()       { return ntohl(_quantum); }
     bool            flags(int f)    { return ntohs(_flags) & f; }
     uint8_t         dscp()          { return _dscp; }
-    String ssid()                       { return String((char *) _ssid); }
+    String 			ssid()          { return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-struct empower_del_traffic_rule : public empower_header {
+struct empower_del_slice : public empower_header {
   private:
     uint8_t     _hwaddr[6];         /* EtherAddress */
     uint8_t     _channel;           /* WiFi channel (int) */
     uint8_t     _band;              /* WiFi band (empower_band_types) */
     uint8_t     _dscp;              /* Traffic DSCP (int) */
-    char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
+    char        _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
     uint8_t         band()          { return _band; }
     uint8_t         channel()       { return _channel; }
     EtherAddress    hwaddr()        { return EtherAddress(_hwaddr); }
     uint8_t         dscp()          { return _dscp; }
-    String ssid()                       { return String((char *) _ssid); }
+    String 			ssid()          { return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* traffic rule status packet format */
-struct empower_status_traffic_rule : public empower_header {
+/* slice status packet format */
+struct empower_status_slice : public empower_header {
   private:
     uint8_t     _wtp[6];            /* EtherAddress */
     uint16_t    _flags;             /* Aggregation flags */
@@ -816,7 +816,7 @@ struct empower_status_traffic_rule : public empower_header {
     uint8_t     _band;              /* WiFi band (empower_band_types) */
     uint32_t    _quantum;           /* Priority of the slice (int) */
     uint8_t     _dscp;              /* Traffic DSCP (int) */
-    char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
+    char        _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
     void set_band(uint8_t band)             { _band = band; }
     void set_channel(uint8_t channel)       { _channel = channel; }
@@ -825,29 +825,29 @@ struct empower_status_traffic_rule : public empower_header {
     void set_dscp(uint8_t dscp)             { _dscp = dscp; }
     void set_quantum(uint32_t quantum)      { _quantum = htonl(quantum); }
     void set_flags(uint16_t f)              { _flags = htons(ntohs(_flags) | f); }
-    void set_ssid(String ssid)          { memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
+    void set_ssid(String ssid)          	{ memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* tr stats request packet format */
-struct empower_trq_counters_request : public empower_header {
+/* slice queue stats request packet format */
+struct empower_slice_queue_counters_request : public empower_header {
 private:
-  uint32_t _tr_stats_id;    /* Module id (int) */
-  uint8_t  _hwaddr[6];      /* EtherAddress */
-  uint8_t  _channel;        /* WiFi Channel (int) */
-  uint8_t  _band;           /* WiFi band (empower_band_types) */
-  uint8_t  _dscp;           /* Traffic DSCP (int) */
-  char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
+  uint32_t _slice_stats_id;    	/* Module id (int) */
+  uint8_t  _hwaddr[6];      	/* EtherAddress */
+  uint8_t  _channel;        	/* WiFi Channel (int) */
+  uint8_t  _band;           	/* WiFi band (empower_band_types) */
+  uint8_t  _dscp;           	/* Traffic DSCP (int) */
+  char     _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
 public:
-    uint32_t tr_stats_id()  { return ntohl(_tr_stats_id); }
-    uint8_t channel()       { return _channel; }
-    uint8_t band()          { return _band; }
-    EtherAddress hwaddr()   { return EtherAddress(_hwaddr); }
-    uint8_t dscp()          { return _dscp; }
-    String ssid()                       { return String((char *) _ssid); }
+    uint32_t slice_stats_id()  	{ return ntohl(_slice_stats_id); }
+    uint8_t channel()       	{ return _channel; }
+    uint8_t band()          	{ return _band; }
+    EtherAddress hwaddr()   	{ return EtherAddress(_hwaddr); }
+    uint8_t dscp()          	{ return _dscp; }
+    String ssid()				{ return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* traffic rule status packet format */
-struct empower_trq_counters_response : public empower_header {
+/* slice queue status packet format */
+struct empower_slice_queue_counters_response : public empower_header {
   private:
     uint32_t    _counters_id;       /* Module id (int) */
     uint8_t     _wtp[6];            /* EtherAddress */

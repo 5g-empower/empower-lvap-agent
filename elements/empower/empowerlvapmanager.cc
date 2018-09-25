@@ -347,12 +347,12 @@ void EmpowerLVAPManager::send_hello() {
 
 }
 
-void EmpowerLVAPManager::send_status_traffic_rule(String ssid, int dscp, int iface_id) {
+void EmpowerLVAPManager::send_status_slice(String ssid, int dscp, int iface_id) {
 
-	TrafficRule tr = TrafficRule(ssid, dscp);
-	TrafficRuleQueue * queue = _eqms[iface_id]->rules()->find(tr).value();
+	Slice slice = Slice(ssid, dscp);
+	SliceQueue * queue = _eqms[iface_id]->slices()->find(slice).value();
 
-	int len = sizeof(empower_status_traffic_rule) + ssid.length();
+	int len = sizeof(empower_status_slice) + ssid.length();
     ResourceElement* re = iface_to_element(iface_id);
 
 	WritablePacket *p = Packet::make(len);
@@ -366,14 +366,14 @@ void EmpowerLVAPManager::send_status_traffic_rule(String ssid, int dscp, int ifa
 
 	memset(p->data(), 0, p->length());
 
-	empower_status_traffic_rule *status = (struct empower_status_traffic_rule *) (p->data());
+	empower_status_slice *status = (struct empower_status_slice *) (p->data());
 	status->set_version(_empower_version);
 	status->set_length(len);
-	status->set_type(EMPOWER_PT_STATUS_TRAFFIC_RULE);
+	status->set_type(EMPOWER_PT_STATUS_SLICE);
 	status->set_seq(get_next_seq());
 	status->set_wtp(_wtp);
-	status->set_dscp(queue->_tr._dscp);
-	status->set_ssid(queue->_tr._ssid);
+	status->set_dscp(queue->_slice._dscp);
+	status->set_ssid(queue->_slice._ssid);
 	status->set_quantum(queue->_quantum);
     status->set_hwaddr(re->_hwaddr);
     status->set_channel(re->_channel);
@@ -387,23 +387,23 @@ void EmpowerLVAPManager::send_status_traffic_rule(String ssid, int dscp, int ifa
 }
 
 
-int EmpowerLVAPManager::handle_trq_counters_request(Packet *p, uint32_t offset) {
-    struct empower_trq_counters_request *q = (struct empower_trq_counters_request *) (p->data() + offset);
+int EmpowerLVAPManager::handle_slice_queue_counters_request(Packet *p, uint32_t offset) {
+    struct empower_slice_queue_counters_request *q = (struct empower_slice_queue_counters_request *) (p->data() + offset);
     EtherAddress hwaddr = q->hwaddr();
     empower_bands_types band = (empower_bands_types) q->band();
     uint8_t channel = q->channel();
 	String ssid = q->ssid();
 	int dscp = q->dscp();
-    send_trq_counters_response(q->tr_stats_id(), hwaddr, channel, band, ssid, dscp);
+	send_slice_queue_counters_response(q->slice_stats_id(), hwaddr, channel, band, ssid, dscp);
     return 0;
 }
 
-int EmpowerLVAPManager::handle_traffic_rule_status_request(Packet *, uint32_t) {
+int EmpowerLVAPManager::handle_slice_status_request(Packet *, uint32_t) {
 
 	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
 		int iface_id = it_re.key();
-		for (TRIter it = _eqms[iface_id]->rules()->begin(); it.live(); it++) {
-			send_status_traffic_rule(it.key()._ssid, it.key()._dscp, iface_id);
+		for (SIter it = _eqms[iface_id]->slices()->begin(); it.live(); it++) {
+			send_status_slice(it.key()._ssid, it.key()._dscp, iface_id);
 		}
 	}
 
@@ -424,7 +424,7 @@ int EmpowerLVAPManager::handle_port_status_request(Packet *, uint32_t) {
 
 }
 
-void EmpowerLVAPManager::send_trq_counters_response(uint32_t counters_id, EtherAddress hwaddr, uint8_t channel, empower_bands_types band, String ssid, int dscp) {
+void EmpowerLVAPManager::send_slice_queue_counters_response(uint32_t counters_id, EtherAddress hwaddr, uint8_t channel, empower_bands_types band, String ssid, int dscp) {
 
     int iface_id = element_to_iface(hwaddr, channel, band);
 
@@ -438,14 +438,14 @@ void EmpowerLVAPManager::send_trq_counters_response(uint32_t counters_id, EtherA
         return;
     }
 
-	TrafficRule tr = TrafficRule(ssid, dscp);
-	TrafficRuleQueue * queue = _eqms[iface_id]->rules()->get(tr);
+	Slice slice = Slice(ssid, dscp);
+	SliceQueue * queue = _eqms[iface_id]->slices()->get(slice);
 
 	if (!queue) {
 		return;
 	}
 
-    int len = sizeof(empower_trq_counters_response);
+    int len = sizeof(empower_slice_queue_counters_response);
 
     WritablePacket *p = Packet::make(len);
 
@@ -458,10 +458,10 @@ void EmpowerLVAPManager::send_trq_counters_response(uint32_t counters_id, EtherA
 
     memset(p->data(), 0, p->length());
 
-    empower_trq_counters_response *counters = (struct empower_trq_counters_response *) (p->data());
+    empower_slice_queue_counters_response *counters = (struct empower_slice_queue_counters_response *) (p->data());
     counters->set_version(_empower_version);
     counters->set_length(len);
-    counters->set_type(EMPOWER_PT_TRQ_COUNTERS_RESPONSE);
+    counters->set_type(EMPOWER_PT_SLICE_QUEUE_COUNTERS_RESPONSE);
     counters->set_seq(get_next_seq());
     counters->set_counters_id(counters_id);
     counters->set_wtp(_wtp);
@@ -1218,10 +1218,10 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		/* Regenerate the BSSID mask */
 		compute_bssid_mask();
 
-		/* create default traffic rule */
+		/* create default slice */
 		if (ssid != "") {
 			// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
-			_eqms[iface]->set_traffic_rule(ssid, 0, 12000, false);
+			_eqms[iface]->set_slice(ssid, 0, 12000, false);
 		}
 
 		return 0;
@@ -1350,10 +1350,10 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 		_lock.release_write();
 
-		/* create default traffic rule */
+		/* create default slice */
 		if (ssid != "") {
 			// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
-			_eqms[iface]->set_default_traffic_rule(ssid);
+			_eqms[iface]->set_default_slice(ssid);
 		}
 
 		return 0;
@@ -1376,10 +1376,10 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 	_lock.release_write();
 
-	/* create default traffic rule */
+	/* create default slice */
 	if (ssid != "") {
 		// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
-		_eqms[iface]->set_default_traffic_rule(ssid);
+		_eqms[iface]->set_default_slice(ssid);
 	}
 
 	return 0;
@@ -1662,41 +1662,41 @@ int EmpowerLVAPManager::handle_nimg_request(Packet *p, uint32_t offset) {
 	return 0;
 }
 
-int EmpowerLVAPManager::handle_set_traffic_rule(Packet *p, uint32_t offset) {
+int EmpowerLVAPManager::handle_set_slice(Packet *p, uint32_t offset) {
 
-	struct empower_set_traffic_rule *add_traffic_rule = (struct empower_set_traffic_rule *) (p->data() + offset);
+	struct empower_set_slice *add_slice = (struct empower_set_slice *) (p->data() + offset);
 
-	EtherAddress hwaddr = add_traffic_rule->hwaddr();
-	int channel = add_traffic_rule->channel();
-	empower_bands_types band = (empower_bands_types) add_traffic_rule->band();
+	EtherAddress hwaddr = add_slice->hwaddr();
+	int channel = add_slice->channel();
+	empower_bands_types band = (empower_bands_types) add_slice->band();
 
 	int iface_id = element_to_iface(hwaddr, channel, band);
 
-	int dscp = add_traffic_rule->dscp();
-	String ssid = add_traffic_rule->ssid();
-	uint32_t quantum = add_traffic_rule->quantum();
-	bool amsdu_aggregation = add_traffic_rule->flags(EMPOWER_AMSDU_AGGREGATION);
+	int dscp = add_slice->dscp();
+	String ssid = add_slice->ssid();
+	uint32_t quantum = add_slice->quantum();
+	bool amsdu_aggregation = add_slice->flags(EMPOWER_AMSDU_AGGREGATION);
 
-	_eqms[iface_id]->set_traffic_rule(ssid, dscp, quantum, amsdu_aggregation);
+	_eqms[iface_id]->set_slice(ssid, dscp, quantum, amsdu_aggregation);
 
 	return 0;
 
 }
 
-int EmpowerLVAPManager::handle_del_traffic_rule(Packet *p, uint32_t offset) {
+int EmpowerLVAPManager::handle_del_slice(Packet *p, uint32_t offset) {
 
-	struct empower_del_traffic_rule *del_traffic_rule = (struct empower_del_traffic_rule *) (p->data() + offset);
+	struct empower_del_slice *del_slice = (struct empower_del_slice *) (p->data() + offset);
 
-	EtherAddress hwaddr = del_traffic_rule->hwaddr();
-	int channel = del_traffic_rule->channel();
-	empower_bands_types band = (empower_bands_types) del_traffic_rule->band();
+	EtherAddress hwaddr = del_slice->hwaddr();
+	int channel = del_slice->channel();
+	empower_bands_types band = (empower_bands_types) del_slice->band();
 
 	int iface_id = element_to_iface(hwaddr, channel, band);
 
-	int dscp = del_traffic_rule->dscp();
-	String ssid = del_traffic_rule->ssid();
+	int dscp = del_slice->dscp();
+	String ssid = del_slice->ssid();
 
-	_eqms[iface_id]->del_traffic_rule(ssid, dscp);
+	_eqms[iface_id]->del_slice(ssid, dscp);
 
 	return 0;
 
@@ -1789,17 +1789,17 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 		case EMPOWER_PT_VAP_STATUS_REQ:
 			handle_vap_status_request(p, offset);
 			break;
-		case EMPOWER_PT_SET_TRAFFIC_RULE:
-			handle_set_traffic_rule(p, offset);
+		case EMPOWER_PT_SET_SLICE:
+			handle_set_slice(p, offset);
 			break;
-		case EMPOWER_PT_DEL_TRAFFIC_RULE:
-			handle_del_traffic_rule(p, offset);
+		case EMPOWER_PT_DEL_SLICE:
+			handle_del_slice(p, offset);
 			break;
-		case EMPOWER_PT_TRQ_COUNTERS_REQUEST:
-			handle_trq_counters_request(p, offset);
+		case EMPOWER_PT_SLICE_QUEUE_COUNTERS_REQUEST:
+			handle_slice_queue_counters_request(p, offset);
 			break;
-		case EMPOWER_PT_TRAFFIC_RULE_STATUS_REQ:
-			handle_traffic_rule_status_request(p, offset);
+		case EMPOWER_PT_SLICE_STATUS_REQ:
+			handle_slice_status_request(p, offset);
 			break;
 		case EMPOWER_PT_PORT_STATUS_REQ:
 			handle_port_status_request(p, offset);
