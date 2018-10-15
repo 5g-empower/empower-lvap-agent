@@ -392,7 +392,7 @@ public:
 			return false;
 		}
 		EmpowerVAPState *vap = _vaps.get_pointer(ess->_bssid);
-		if (!vap) {
+		if (vap) {
 			return false;
 		}
 		return true;
