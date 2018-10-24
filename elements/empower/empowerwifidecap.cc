@@ -134,7 +134,7 @@ EmpowerWifiDecap::push(int, Packet *p) {
 		return;
 	}
 
-	if (ess->_lvap_bssid != bssid) {
+	if (ess->_bssid != bssid) {
 		p->kill();
 		return;
 	}

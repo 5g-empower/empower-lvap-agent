@@ -98,6 +98,7 @@ void EmpowerDisassocResponder::push(int, Packet *p) {
 				      this,
 				      __func__,
 				      ess->_sta.unparse().c_str());
+		p->kill();
     	return;
     }
 
@@ -120,6 +121,17 @@ void EmpowerDisassocResponder::push(int, Packet *p) {
 		return;
 	}
 
+	//If the bssid does not match, ignore
+	if (ess->_bssid != bssid) {
+		click_chatter("%{element} :: %s :: BSSIDs do not match, expected %s received %s",
+				      this,
+				      __func__,
+				      ess->_bssid.unparse().c_str(),
+				      bssid.unparse().c_str());
+		p->kill();
+		return;
+	}
+
 	if (_debug) {
 		click_chatter("%{element} :: %s :: src %s dst %s bssid %s",
 				      this,
@@ -129,19 +141,7 @@ void EmpowerDisassocResponder::push(int, Packet *p) {
 					  bssid.unparse().c_str());
 	}
 
-	//If the bssid does not match, ignore
-	if (ess->_lvap_bssid != bssid) {
-		click_chatter("%{element} :: %s :: BSSIDs do not match, expected %s received %s",
-				      this,
-				      __func__,
-				      ess->_lvap_bssid.unparse().c_str(),
-				      bssid.unparse().c_str());
-		p->kill();
-		return;
-	}
-
 	ess->_association_status = false;
-	ess->_assoc_id = 0;
 	ess->_ssid = "";
 
 	_el->send_status_lvap(src);

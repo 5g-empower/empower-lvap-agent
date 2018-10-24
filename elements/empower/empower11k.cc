@@ -162,8 +162,8 @@ void Empower11k::send_neighbor_report_request(EtherAddress sta, uint8_t token) {
 	w->i_fc[1] = WIFI_FC1_DIR_NODS;
 
 	memcpy(w->i_addr1, sta.data(), 6);
-	memcpy(w->i_addr2, ess->_lvap_bssid.data(), 6);
-	memcpy(w->i_addr3, ess->_lvap_bssid.data(), 6);
+	memcpy(w->i_addr2, ess->_bssid.data(), 6);
+	memcpy(w->i_addr3, ess->_bssid.data(), 6);
 
 	w->i_dur = 0;
 	w->i_seq = 0;
@@ -227,8 +227,8 @@ void Empower11k::send_link_measurement_request(EtherAddress sta, uint8_t token) 
 	w->i_fc[1] = WIFI_FC1_DIR_NODS;
 
 	memcpy(w->i_addr1, sta.data(), 6);
-	memcpy(w->i_addr2, ess->_lvap_bssid.data(), 6);
-	memcpy(w->i_addr3, ess->_lvap_bssid.data(), 6);
+	memcpy(w->i_addr2, ess->_bssid.data(), 6);
+	memcpy(w->i_addr3, ess->_bssid.data(), 6);
 
 	w->i_dur = 0;
 	w->i_seq = 0;

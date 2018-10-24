@@ -47,7 +47,7 @@ public:
 
 	int configure(Vector<String> &, ErrorHandler *);
 	void add_handlers();
-	void send_association_response(EtherAddress, uint16_t, int, int);
+	void send_association_response(EtherAddress);
 	void push(int, Packet *);
 
 private:

@@ -135,11 +135,11 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 	}
 
 	//If the bssid does not match, ignore
-	if (ess->_lvap_bssid != bssid) {
+	if (ess->_bssid != bssid) {
 		click_chatter("%{element} :: %s :: BSSIDs do not match, expected %s received %s",
 				      this,
 				      __func__,
-				      ess->_lvap_bssid.unparse().c_str(),
+				      ess->_bssid.unparse().c_str(),
 				      bssid.unparse().c_str());
 		p->kill();
 		return;
@@ -154,9 +154,8 @@ void EmpowerDeAuthResponder::push(int, Packet *p) {
 
 	ess->_association_status = false;
 	ess->_authentication_status = false;
-	ess->_assoc_id = 0;
 	ess->_ssid = "";
-	ess->_lvap_bssid = ess->_net_bssid;
+	ess->_bssid = EtherAddress();
 
 	_el->send_status_lvap(src);
 
@@ -192,8 +191,8 @@ void EmpowerDeAuthResponder::send_deauth_request(EtherAddress dst, uint16_t reas
 	w->i_fc[1] = WIFI_FC1_DIR_NODS;
 
 	memcpy(w->i_addr1, dst.data(), 6);
-	memcpy(w->i_addr2, ess->_lvap_bssid.data(), 6);
-	memcpy(w->i_addr3, ess->_lvap_bssid.data(), 6);
+	memcpy(w->i_addr2, ess->_bssid.data(), 6);
+	memcpy(w->i_addr3, ess->_bssid.data(), 6);
 
 	w->i_dur = 0;
 	w->i_seq = 0;
@@ -209,7 +208,7 @@ void EmpowerDeAuthResponder::send_deauth_request(EtherAddress dst, uint16_t reas
                   this,
 				  __func__,
 				  dst.unparse_colon().c_str(),
-				  ess->_lvap_bssid.unparse_colon().c_str());
+				  ess->_bssid.unparse_colon().c_str());
 
 	SET_PAINT_ANNO(p, iface_id);
 	output(0).push(p);

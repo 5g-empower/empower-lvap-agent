@@ -109,6 +109,12 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 		return;
 	}
 
+	// if the lvap is not authenticated then ignore request
+	if (!ess->_authentication_status) {
+		p->kill();
+		return;
+	}
+
     // If auth request is coming from different channel, ignore
 	if (ess->_iface_id != iface_id) {
 		click_chatter("%{element} :: %s :: %s is on iface %u, message coming from %u",
@@ -183,10 +189,6 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 	}
 
 	if (!ssid) {
-		click_chatter("%{element} :: %s :: Blank SSID from %s",
-					  this,
-					  __func__,
-					  src.unparse().c_str());
 		p->kill();
 		return;
 	}
@@ -390,16 +392,17 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 				      sa.take_string().c_str());
 	}
 
-	// if authenticated with the requested bssid then send request to the
-	// controller, otherwise ignore the message
-	if (ess->_authentication_status && ess->_lvap_bssid == bssid) {
-		if (htcaps && (ess->_band == EMPOWER_BT_HT20)) {
-			_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, ess->_band, EMPOWER_BT_HT20);
-		} else {
-			_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, ess->_band, EMPOWER_BT_L20);
-		}
+	// if bssid does not match then ignore request
+	if (ess->_bssid != bssid) {
 		p->kill();
 		return;
+	}
+
+	// always ask to the controller because we may want to reject this request
+	if (htcaps && (ess->_band == EMPOWER_BT_HT20)) {
+		_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, ess->_band, EMPOWER_BT_HT20);
+	} else {
+		_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, ess->_band, EMPOWER_BT_L20);
 	}
 
 	p->kill();
@@ -407,19 +410,23 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 
 }
 
-void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
-		uint16_t status, int channel, int iface_id) {
+void EmpowerAssociationResponder::send_association_response(EtherAddress dst) {
 
     EmpowerStationState *ess = _el->get_ess(dst);
 
-	ess->_association_status = true;
+    String ssid = ess->_ssid;
+    uint16_t status = WIFI_STATUS_SUCCESS;
+    int channel = ess->_channel;
+    int iface_id = ess->_iface_id;
 
 	if (_debug) {
-		click_chatter("%{element} :: %s :: association %s assoc_id %d",
+		click_chatter("%{element} :: %s :: dst %s assoc_id %d ssid %s channel %u",
 				      this,
 				      __func__,
 				      dst.unparse().c_str(),
-				      ess->_assoc_id);
+				      ess->_assoc_id,
+					  ssid.c_str(),
+					  channel);
 	}
 
 	int max_len = sizeof(struct click_wifi) + 2 + /* cap_info */
@@ -447,8 +454,8 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst,
 	w->i_fc[1] = WIFI_FC1_DIR_NODS;
 
 	memcpy(w->i_addr1, dst.data(), 6);
-	memcpy(w->i_addr2, ess->_lvap_bssid.data(), 6);
-	memcpy(w->i_addr3, ess->_lvap_bssid.data(), 6);
+	memcpy(w->i_addr2, ess->_bssid.data(), 6);
+	memcpy(w->i_addr3, ess->_bssid.data(), 6);
 
 	w->i_dur = 0;
 	w->i_seq = 0;
