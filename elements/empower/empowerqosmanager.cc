@@ -285,7 +285,6 @@ Packet * EmpowerQOSManager::pull(int) {
 
 	SIter active = _slices.find(slice);
 	HItr head = _head_table.find(slice);
-
 	SliceQueue* queue = active.value();
 
 	Packet *p = 0;
@@ -367,7 +366,7 @@ void EmpowerQOSManager::del_slice(String ssid, int dscp) {
 	Vector<Slice>::iterator it = _active_list.begin();
 	while (it != _active_list.end()) {
 		if (it->_ssid == ssid && it->_dscp == dscp) {
-			 it = _active_list.erase(it);
+			it = _active_list.erase(it);
 			break;
 		}
 		it++;
