@@ -249,10 +249,12 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 	sliceq = _slices.get(slice);
 
 	if (sliceq->enqueue(q, ra, ta)) {
-		// check if the slice is in the active list
 		if (sliceq->size() == 0) {
 			sliceq->_deficit = 0;
-			_active_list.push_back(slice);
+			// check if the slice is in the active list
+			if (!slice_in_active_list(slice)) {
+				_active_list.push_back(slice);
+			}
 		}
 		sliceq->update_size();
 		// wake up queue
@@ -283,6 +285,7 @@ Packet * EmpowerQOSManager::pull(int) {
 
 	SIter active = _slices.find(slice);
 	HItr head = _head_table.find(slice);
+
 	SliceQueue* queue = active.value();
 
 	Packet *p = 0;
@@ -301,14 +304,16 @@ Packet * EmpowerQOSManager::pull(int) {
 		queue->_deficit_used += deficit;
 		queue->_tx_bytes += p->length();
 		queue->_tx_packets++;
-		if (queue->size() > 0) {
+		if (queue->size() > 0 && !slice_in_active_list(slice)) {
 			_active_list.push_front(slice);
 		}
 		_lock.release_write();
 		return p;
 	} else {
 		_head_table.set(slice, p);
-		_active_list.push_back(slice);
+		if (!slice_in_active_list(slice)) {
+			_active_list.push_back(slice);
+		}
 		queue->_deficit += queue->_quantum;
 	}
 
@@ -338,7 +343,9 @@ void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool 
 		SliceQueue *queue = new SliceQueue(slice, _capacity, tr_quantum, amsdu_aggregation);
 		_slices.set(slice, queue);
 		_head_table.set(slice, 0);
-		_active_list.push_back(slice);
+		if (!slice_in_active_list(slice)) {
+			_active_list.push_back(slice);
+		}
 		_el->send_status_slice(ssid, dscp, _iface_id);
 	}
 	_lock.release_write();
@@ -360,7 +367,7 @@ void EmpowerQOSManager::del_slice(String ssid, int dscp) {
 	Vector<Slice>::iterator it = _active_list.begin();
 	while (it != _active_list.end()) {
 		if (it->_ssid == ssid && it->_dscp == dscp) {
-			it = _active_list.erase(it);
+			 it = _active_list.erase(it);
 			break;
 		}
 		it++;
@@ -398,6 +405,22 @@ String EmpowerQOSManager::list_slices() {
 		itr++;
 	} // end while
 	return result.take_string();
+}
+
+inline bool EmpowerQOSManager::slice_in_active_list(Slice slice) {
+
+	Vector<Slice>::iterator it = _active_list.begin();
+	while (it != _active_list.end()) {
+		if ((*it) == slice) {
+			return true;
+		}
+		else {
+			return false;
+		}
+		it++;
+	}
+
+	return false;
 }
 
 enum {

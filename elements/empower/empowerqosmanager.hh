@@ -428,6 +428,7 @@ private:
 
 	void store(String, int, Packet *, EtherAddress, EtherAddress);
 	String list_slices();
+	inline bool slice_in_active_list(Slice);
 
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);
