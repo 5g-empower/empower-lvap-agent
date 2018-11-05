@@ -300,7 +300,9 @@ Packet * EmpowerQOSManager::pull(int) {
 		queue->_deficit_used += deficit;
 		queue->_tx_bytes += p->length();
 		queue->_tx_packets++;
-		_active_list.push_front(slice);
+		if (queue->size() > 0) {
+			_active_list.push_front(slice);
+		}
 		_lock.release_write();
 		return p;
 	} else {
