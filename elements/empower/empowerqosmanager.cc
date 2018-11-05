@@ -249,14 +249,11 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 	sliceq = _slices.get(slice);
 
 	if (sliceq->enqueue(q, ra, ta)) {
-		if (sliceq->size() == 0) {
+		// check if queue was empty and no packet in buffer
+		if (sliceq->size() == 1 && _head_table.find(slice).value() == 0) {
 			sliceq->_deficit = 0;
-			// check if the slice is in the active list
-			if (!slice_in_active_list(slice)) {
-				_active_list.push_back(slice);
-			}
+			_active_list.push_back(slice);
 		}
-		sliceq->update_size();
 		// wake up queue
 		_empty_note.wake();
 		// reset sleepiness
@@ -303,16 +300,12 @@ Packet * EmpowerQOSManager::pull(int) {
 		queue->_deficit_used += deficit;
 		queue->_tx_bytes += p->length();
 		queue->_tx_packets++;
-		if (queue->size() > 0 && !slice_in_active_list(slice)) {
-			_active_list.push_front(slice);
-		}
+		_active_list.push_front(slice);
 		_lock.release_write();
 		return p;
 	} else {
 		_head_table.set(slice, p);
-		if (!slice_in_active_list(slice)) {
-			_active_list.push_back(slice);
-		}
+		_active_list.push_back(slice);
 		queue->_deficit += queue->_quantum;
 	}
 
@@ -342,9 +335,6 @@ void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool 
 		SliceQueue *queue = new SliceQueue(slice, _capacity, tr_quantum, amsdu_aggregation);
 		_slices.set(slice, queue);
 		_head_table.set(slice, 0);
-		if (!slice_in_active_list(slice)) {
-			_active_list.push_back(slice);
-		}
 		_el->send_status_slice(ssid, dscp, _iface_id);
 	}
 	_lock.release_write();
@@ -404,22 +394,6 @@ String EmpowerQOSManager::list_slices() {
 		itr++;
 	} // end while
 	return result.take_string();
-}
-
-inline bool EmpowerQOSManager::slice_in_active_list(Slice slice) {
-
-	Vector<Slice>::iterator it = _active_list.begin();
-	while (it != _active_list.end()) {
-		if ((*it) == slice) {
-			return true;
-		}
-		else {
-			return false;
-		}
-		it++;
-	}
-
-	return false;
 }
 
 enum {
