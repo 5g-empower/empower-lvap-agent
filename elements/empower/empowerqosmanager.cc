@@ -249,12 +249,11 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 	sliceq = _slices.get(slice);
 
 	if (sliceq->enqueue(q, ra, ta)) {
-		// check if the slice is in the active list
-		if (sliceq->size() == 0) {
+		// check if queue was empty and no packet in buffer
+		if (sliceq->size() == 1 && _head_table.find(slice).value() == 0) {
 			sliceq->_deficit = 0;
 			_active_list.push_back(slice);
 		}
-		sliceq->update_size();
 		// wake up queue
 		_empty_note.wake();
 		// reset sleepiness
@@ -338,7 +337,6 @@ void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool 
 		SliceQueue *queue = new SliceQueue(slice, _capacity, tr_quantum, amsdu_aggregation);
 		_slices.set(slice, queue);
 		_head_table.set(slice, 0);
-		_active_list.push_back(slice);
 		_el->send_status_slice(ssid, dscp, _iface_id);
 	}
 	_lock.release_write();

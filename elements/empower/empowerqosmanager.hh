@@ -251,11 +251,6 @@ public:
 
 	uint32_t size() { return _size; }
 
-	void update_size() {
-		// update size
-		_size++;
-	}
-
     Packet * wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
 
         WritablePacket *q = p->uniqueify();
@@ -323,6 +318,7 @@ public:
 			if (queue->nb_pkts() > _max_queue_length) {
 				_max_queue_length = queue->nb_pkts();
 			}
+			 _size++;
 			return true;
 		}
 
