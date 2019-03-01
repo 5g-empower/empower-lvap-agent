@@ -358,7 +358,9 @@ public:
 
 	String unparse() {
 		StringAccum result;
-		result << _slice.unparse() << " -> capacity: " << _capacity << "\n";
+		result << _slice.unparse();
+		result << " -> capacity: " << _capacity << ", ";
+		result << "quantum: " << _quantum << "\n";
 		AQIter itr = _queues.begin();
 		while (itr != _queues.end()) {
 			AggregationQueue *aq = itr.value();
