@@ -321,26 +321,43 @@ void EmpowerQOSManager::set_default_slice(String ssid) {
 }
 
 void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation) {
+
 	_lock.acquire_write();
+
 	Slice slice = Slice(ssid, dscp);
+	SIter itr = _slices.find(slice);
 
-	if (_slices.find(slice) != _slices.end()) {
-		del_slice(ssid, dscp);
+	if (itr == _slices.end()) {
+		if (_debug) {
+			click_chatter("%{element} :: %s :: Creating new slice queue for ssid %s dscp %u quantum %u A-MSDU %s",
+						  this,
+						  __func__,
+						  slice._ssid.c_str(),
+						  slice._dscp,
+						  quantum,
+						  amsdu_aggregation ? "yes" : "no");
+		}
+
+		uint32_t tr_quantum = (quantum == 0) ? _quantum : quantum;
+		SliceQueue *queue = new SliceQueue(slice, _capacity, tr_quantum, amsdu_aggregation);
+		_slices.set(slice, queue);
+		_head_table.set(slice, 0);
+	} else {
+		if (_debug) {
+			click_chatter("%{element} :: %s :: Updating slice queue for ssid %s dscp %u quantum %u A-MSDU %s",
+						  this,
+						  __func__,
+						  slice._ssid.c_str(),
+						  slice._dscp,
+						  quantum,
+						  amsdu_aggregation ? "yes" : "no");
+		}
+
+		SliceQueue* queue = itr.value();
+		queue->_quantum = quantum;
+		queue->_amsdu_aggregation = amsdu_aggregation;
 	}
 
-	if (_debug) {
-		click_chatter("%{element} :: %s :: Creating new slice queue for ssid %s dscp %u quantum %u A-MSDU %s",
-					  this,
-					  __func__,
-					  slice._ssid.c_str(),
-					  slice._dscp,
-					  quantum,
-					  amsdu_aggregation ? "yes." : "no");
-	}
-	uint32_t tr_quantum = (quantum == 0) ? _quantum : quantum;
-	SliceQueue *queue = new SliceQueue(slice, _capacity, tr_quantum, amsdu_aggregation);
-	_slices.set(slice, queue);
-	_head_table.set(slice, 0);
 	_el->send_status_slice(ssid, dscp, _iface_id);
 
 	_lock.release_write();
