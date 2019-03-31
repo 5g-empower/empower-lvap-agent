@@ -16,4 +16,5 @@ Checkout out our [website](http://5g-empower.io/) and our [wiki](https://github.
 
 This repository includes the 5G-EmPOWER LVAP Agent. The Agent is built using the Click modular router and implements a reference 5G-EmPOWER WiFi Access Point.
 
+### License
 Code is released under the Apache License, Version 2.0.
