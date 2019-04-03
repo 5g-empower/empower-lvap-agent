@@ -84,6 +84,11 @@ enum empower_aggregation_flags {
 	EMPOWER_AMSDU_AGGREGATION = (1<<0)
 };
 
+enum empower_slice_scheduleruler {
+	EMPOWER_AIRTIME_ROUND_ROBIN = 0x0,
+	EMPOWER_AIRTIME_FAIRNESS = 0x1,
+};
+
 enum empower_regmon_types {
     EMPOWER_REGMON_TX = 0x0,
 	EMPOWER_REGMON_RX = 0x1,

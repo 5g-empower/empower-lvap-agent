@@ -178,9 +178,16 @@ class Minstrel : public Element { public:
 	void process_feedback(Packet *);
 
 	inline uint32_t estimate_usecs_wifi_packet(Packet *p) {
-		//struct click_wifi *w = (struct click_wifi *) p->data();
-		//EtherAddress dst = EtherAddress(w->i_addr1);
-		return calc_usecs_wifi_packet(p->length(), 1, 0);
+		struct click_wifi *w = (struct click_wifi *) p->data();
+		EtherAddress dst = EtherAddress(w->i_addr1);
+
+		if (!dst.is_broadcast() and !dst.is_group()) {
+			MinstrelDstInfo *nfo = _neighbors.findp(dst);
+			uint32_t rate = nfo->max_tp_rate;
+			return calc_usecs_wifi_packet(p->length(), rate, 0);
+		} else {
+			return calc_usecs_wifi_packet(p->length(), 1, 0);
+		}
 	}
 
 	MinstrelNeighborTable * neighbors() { return &_neighbors; }

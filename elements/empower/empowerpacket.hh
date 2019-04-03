@@ -774,18 +774,20 @@ struct empower_igmp_report : public empower_header {
 
 struct empower_set_slice : public empower_header {
   private:
-    uint16_t    _flags;             /* Aggregation flags */
-    uint8_t     _hwaddr[6];         /* EtherAddress */
-    uint8_t     _channel;           /* WiFi channel (int) */
-    uint8_t     _band;              /* WiFi band (empower_band_types) */
-    uint32_t    _quantum;           /* Priority of the slice (int) */
-    uint8_t     _dscp;              /* Traffic DSCP (int) */
-    char         _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
+    uint16_t    _flags;         /* Aggregation flags */
+    uint8_t     _hwaddr[6];     /* EtherAddress */
+    uint8_t     _channel;       /* WiFi channel (int) */
+    uint8_t     _band;          /* WiFi band (empower_band_types) */
+    uint32_t    _quantum;       /* Priority of the slice (int) */
+    uint32_t    _scheduler;     /* User airtime scheduler (int) */
+    uint8_t     _dscp;          /* Traffic DSCP (int) */
+    char        _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
     uint8_t         band()          { return _band; }
     uint8_t         channel()       { return _channel; }
     EtherAddress    hwaddr()        { return EtherAddress(_hwaddr); }
     uint32_t        quantum()       { return ntohl(_quantum); }
+    uint32_t        scheduler()     { return ntohl(_scheduler); }
     bool            flags(int f)    { return ntohs(_flags) & f; }
     uint8_t         dscp()          { return _dscp; }
     String 			ssid()          { return String((char *) _ssid); }
@@ -809,23 +811,25 @@ struct empower_del_slice : public empower_header {
 /* slice status packet format */
 struct empower_status_slice : public empower_header {
   private:
-    uint8_t     _wtp[6];            /* EtherAddress */
-    uint16_t    _flags;             /* Aggregation flags */
-    uint8_t     _hwaddr[6];         /* EtherAddress */
-    uint8_t     _channel;           /* WiFi channel (int) */
-    uint8_t     _band;              /* WiFi band (empower_band_types) */
-    uint32_t    _quantum;           /* Priority of the slice (int) */
-    uint8_t     _dscp;              /* Traffic DSCP (int) */
+    uint8_t     _wtp[6];    /* EtherAddress */
+    uint16_t    _flags;     /* Aggregation flags */
+    uint8_t     _hwaddr[6]; /* EtherAddress */
+    uint8_t     _channel;   /* WiFi channel (int) */
+    uint8_t     _band;      /* WiFi band (empower_band_types) */
+    uint32_t    _quantum;   /* Priority of the slice (int) */
+    uint32_t    _scheduler; /* User airtime scheduler (int) */
+    uint8_t     _dscp;      /* Traffic DSCP (int) */
     char        _ssid[WIFI_NWID_MAXSIZE+1];    /* Null terminated SSID */
   public:
-    void set_band(uint8_t band)             { _band = band; }
-    void set_channel(uint8_t channel)       { _channel = channel; }
-    void set_hwaddr(EtherAddress hwaddr)    { memcpy(_hwaddr, hwaddr.data(), 6); }
-    void set_wtp(EtherAddress wtp)          { memcpy(_wtp, wtp.data(), 6); }
-    void set_dscp(uint8_t dscp)             { _dscp = dscp; }
-    void set_quantum(uint32_t quantum)      { _quantum = htonl(quantum); }
-    void set_flags(uint16_t f)              { _flags = htons(ntohs(_flags) | f); }
-    void set_ssid(String ssid)          	{ memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
+    void set_band(uint8_t band)             	{ _band = band; }
+    void set_channel(uint8_t channel)       	{ _channel = channel; }
+    void set_hwaddr(EtherAddress hwaddr)    	{ memcpy(_hwaddr, hwaddr.data(), 6); }
+    void set_wtp(EtherAddress wtp)          	{ memcpy(_wtp, wtp.data(), 6); }
+    void set_dscp(uint8_t dscp)             	{ _dscp = dscp; }
+    void set_quantum(uint32_t quantum)       	{ _quantum = htonl(quantum); }
+    void set_scheduler(uint32_t scheduler)   	{ _scheduler = htonl(scheduler); }
+    void set_flags(uint16_t f)              	{ _flags = htons(ntohs(_flags) | f); }
+    void set_ssid(String ssid)              	{ memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* slice queue stats request packet format */
