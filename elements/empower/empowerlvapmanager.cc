@@ -378,6 +378,7 @@ void EmpowerLVAPManager::send_status_slice(String ssid, int dscp, int iface_id) 
     status->set_hwaddr(re->_hwaddr);
     status->set_channel(re->_channel);
     status->set_band(re->_band);
+    status->set_scheduler(queue->_scheduler);
 
 	if (queue->_amsdu_aggregation) {
 		status->set_flags(EMPOWER_AMSDU_AGGREGATION);
@@ -1221,7 +1222,7 @@ int EmpowerLVAPManager::handle_add_vap(Packet *p, uint32_t offset) {
 		/* create default slice */
 		if (ssid != "") {
 			// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
-			_eqms[iface]->set_slice(ssid, 0, 12000, false);
+			_eqms[iface]->set_slice(ssid, 0, 12000, false, 0);
 		}
 
 		return 0;
@@ -1676,8 +1677,9 @@ int EmpowerLVAPManager::handle_set_slice(Packet *p, uint32_t offset) {
 	String ssid = add_slice->ssid();
 	uint32_t quantum = add_slice->quantum();
 	bool amsdu_aggregation = add_slice->flags(EMPOWER_AMSDU_AGGREGATION);
+	uint32_t scheduler = add_slice->scheduler();
 
-	_eqms[iface_id]->set_slice(ssid, dscp, quantum, amsdu_aggregation);
+	_eqms[iface_id]->set_slice(ssid, dscp, quantum, amsdu_aggregation, scheduler);
 
 	return 0;
 
