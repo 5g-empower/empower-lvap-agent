@@ -28,13 +28,11 @@
 #include <clicknet/llc.h>
 #include <elements/wifi/wirelessinfo.hh>
 #include <elements/wifi/transmissionpolicy.hh>
-#include <elements/wifi/minstrel.hh>
-#include <elements/wifi/bitrate.hh>
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 
 EmpowerQOSManager::EmpowerQOSManager() :
-		_el(0), _rc(0), _sleepiness(0), _capacity(500), _quantum(1470), _iface_id(0), _debug(false) {
+		_el(0), _rc(0), _sleepiness(0), _iface_id(0), _debug(false) {
 }
 
 EmpowerQOSManager::~EmpowerQOSManager() {
@@ -47,7 +45,6 @@ int EmpowerQOSManager::configure(Vector<String> &conf,
 			.read_m("EL", ElementCastArg("EmpowerLVAPManager"), _el)
 			.read_m("RC", ElementCastArg("Minstrel"), _rc)
 			.read_m("IFACE_ID", _iface_id)
-			.read("QUANTUM", _quantum)
 			.read("DEBUG", _debug)
 			.complete();
 
@@ -238,21 +235,33 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 
 	_lock.acquire_write();
 
-	Slice slice = Slice(ssid, dscp);
-	SliceQueue *sliceq = 0;
+	SliceKey slice_key = SliceKey(ssid, dscp);
+	Slice *slice;
 
-	if (_slices.find(slice) == _slices.end()) {
-		slice = Slice(ssid, 0);
-		assert(_slices.find(slice) != _slices.end());
+	SlicePairKey slice_pair_key = SlicePairKey(ra, ta);
+	SlicePair *slice_pair;
+
+	if (_slices.find(slice_key) == _slices.end()) {
+		slice_key = SliceKey(ssid, 0);
+	}
+	slice = _slices.get(slice_key);
+
+	if (slice->_slice_pairs.find(slice_pair_key) == slice->_slice_pairs.end()) {
+		slice_pair = new SlicePair(ra, ta, 12000);
+		slice->_slice_pairs.set(slice_pair_key, slice_pair);
+		slice->set_aggr_queues_quantum(_rc);
+	} else {
+		slice_pair = slice->_slice_pairs.get(slice_pair_key);
 	}
 
-	sliceq = _slices.get(slice);
+	SlicePairQueueKey queue_key = SlicePairQueueKey(slice_key, slice_pair_key);
+	SlicePairQueue *queue = &slice_pair->_queue;
 
-	if (sliceq->enqueue(q, ra, ta)) {
+	if (queue->push(q)) {
 		// check if queue was empty and no packet in buffer
-		if (sliceq->size() == 1 && _head_table.find(slice).value() == 0) {
-			sliceq->_deficit = 0;
-			_active_list.push_back(slice);
+		if (queue->_nb_pkts == 1 && _head_table.find(queue_key) == _head_table.end()) {
+			queue->_deficit = 0;
+			_active_list.push_back(queue_key);
 		}
 		// wake up queue
 		_empty_note.wake();
@@ -277,38 +286,44 @@ Packet * EmpowerQOSManager::pull(int) {
 
 	_lock.acquire_write();
 
-	Slice slice = _active_list[0];
+	SlicePairQueueKey queue_key = _active_list[0];
 	_active_list.pop_front();
 
-	SIter active = _slices.find(slice);
-	HItr head = _head_table.find(slice);
-	SliceQueue* queue = active.value();
+	Slice *slice = _slices.get(queue_key.first);
+	SlicePair *slice_pair = slice->_slice_pairs.get(queue_key.second);
+	SlicePairQueue *queue = &slice_pair->_queue;
 
 	Packet *p = 0;
-	if (head.value()) {
-		p = head.value();
-		_head_table.set(slice, 0);
+	if (_head_table.find(queue_key) == _head_table.end()) {
+		p = queue->pull();
+		assert(p);
+
+		click_ether *eh = (click_ether *) p->data();
+		EtherAddress src = EtherAddress(eh->ether_shost);
+		p = wifi_encap(p, slice_pair->_key._ra, src, slice_pair->_key._ta);
 	} else {
-		p = queue->dequeue();
+		p = _head_table.get(queue_key);
+		_head_table.erase(queue_key);
 	}
 
-	if (!p) {
-		queue->_deficit = 0;
-	} else if (_rc->estimate_usecs_wifi_packet(p) <= queue->_deficit) {
-		uint32_t deficit = _rc->estimate_usecs_wifi_packet(p);
+	uint32_t deficit = _rc->estimate_usecs_wifi_packet(p);
+
+	if (deficit <= queue->_deficit) {
 		queue->_deficit -= deficit;
 		queue->_deficit_used += deficit;
 		queue->_tx_bytes += p->length();
 		queue->_tx_packets++;
-		if (queue->size() > 0) {
-			_active_list.push_front(slice);
+		if (queue->_nb_pkts > 0) {
+			_active_list.push_front(queue_key);
+		} else {
+			queue->_deficit = 0;
 		}
 		_lock.release_write();
 		return p;
 	} else {
-		_head_table.set(slice, p);
-		_active_list.push_back(slice);
-		queue->_deficit += queue->_quantum;
+		_head_table.set(queue_key, p);
+		_active_list.push_back(queue_key);
+		queue->_deficit += slice_pair->_quantum;
 	}
 
 	_lock.release_write();
@@ -324,41 +339,43 @@ void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool 
 
 	_lock.acquire_write();
 
-	Slice slice = Slice(ssid, dscp);
-	SIter itr = _slices.find(slice);
+	SliceKey slice_key = SliceKey(ssid, dscp);
 
-	if (itr == _slices.end()) {
+	if (_slices.find(slice_key) == _slices.end()) {
 		if (_debug) {
 			click_chatter("%{element} :: %s :: Creating new slice queue for ssid %s dscp %u quantum %u A-MSDU %s scheduler %u",
 						  this,
 						  __func__,
-						  slice._ssid.c_str(),
-						  slice._dscp,
+						  slice_key._ssid.c_str(),
+						  slice_key._dscp,
 						  quantum,
 						  amsdu_aggregation ? "yes" : "no",
 						  scheduler);
 		}
 
-		uint32_t tr_quantum = (quantum == 0) ? _quantum : quantum;
-		SliceQueue *queue = new SliceQueue(slice, _capacity, tr_quantum, amsdu_aggregation, scheduler);
-		_slices.set(slice, queue);
-		_head_table.set(slice, 0);
+		uint32_t tr_quantum = (quantum == 0) ? 12000 : quantum;
+		Slice *slice = new Slice(ssid, dscp, tr_quantum, amsdu_aggregation, scheduler);
+		_slices.set(slice_key, slice);
+
+		slice->set_aggr_queues_quantum(_rc);
 	} else {
 		if (_debug) {
 			click_chatter("%{element} :: %s :: Updating slice queue for ssid %s dscp %u quantum %u A-MSDU %s scheduler %u",
 						  this,
 						  __func__,
-						  slice._ssid.c_str(),
-						  slice._dscp,
+						  slice_key._ssid.c_str(),
+						  slice_key._dscp,
 						  quantum,
 						  amsdu_aggregation ? "yes" : "no",
 						  scheduler);
 		}
 
-		SliceQueue* queue = itr.value();
-		queue->_quantum = quantum;
-		queue->_amsdu_aggregation = amsdu_aggregation;
-		queue->_scheduler = scheduler;
+		Slice *slice = _slices.get(slice_key);
+		slice->_quantum = quantum;
+		slice->_amsdu_aggregation = amsdu_aggregation;
+		slice->_scheduler = scheduler;
+
+		slice->set_aggr_queues_quantum(_rc);
 	}
 
 	_el->send_status_slice(ssid, dscp, _iface_id);
@@ -370,6 +387,8 @@ void EmpowerQOSManager::del_slice(String ssid, int dscp) {
 
 	_lock.acquire_write();
 
+	SliceKey slice_key = SliceKey(ssid, dscp);
+
 	if (_debug) {
 		click_chatter("%{element} :: %s :: Deleting slice queue for ssid %s dscp %u",
 					  this,
@@ -379,47 +398,88 @@ void EmpowerQOSManager::del_slice(String ssid, int dscp) {
 	}
 
 	// remove from active list
-	Vector<Slice>::iterator it = _active_list.begin();
+	Vector<SlicePairQueueKey>::iterator it = _active_list.begin();
 	while (it != _active_list.end()) {
-		if (it->_ssid == ssid && it->_dscp == dscp) {
+		if (it->first == slice_key) {
 			it = _active_list.erase(it);
-			break;
+
+			if (_head_table.find(*it) != _head_table.end()) {
+				_head_table.erase(*it);
+			}
+		} else {
+			it++;
 		}
-		it++;
 	}
 
-	Slice slice = Slice(ssid, dscp);
+	Slice *slice = _slices.get(slice_key);
 
-	// remove slice
-	SIter itr = _slices.find(slice);
-	if (itr == _slices.end()) {
-		return;
+	for (SlicePairsIter it = slice->_slice_pairs.begin(); it.live(); it++) {
+		delete it.value();
 	}
-	SliceQueue *sliceq = itr.value();
-	delete sliceq;
-	_slices.erase(itr);
 
-	// remove from head table
-	HItr itr2 = _head_table.find(slice);
-	Packet *p = itr2.value();
-	if (p){
-		p->kill();
-	}
-	_head_table.erase(itr2);
+	_slices.erase(slice_key);
+	delete slice;
 
 	_lock.release_write();
-
 }
 
 String EmpowerQOSManager::list_slices() {
+
 	StringAccum result;
-	SIter itr = _slices.begin();
-	while (itr != _slices.end()) {
-		SliceQueue *sliceq = itr.value();
-		result << sliceq->unparse();
-		itr++;
+
+	for (SlicesIter it = _slices.begin(); it.live(); it++) {
+		Slice *slice = it.value();
+		result << slice->unparse() << "\n";
 	} // end while
+
 	return result.take_string();
+}
+
+Packet * EmpowerQOSManager::wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
+
+    WritablePacket *q = p->uniqueify();
+
+	if (!q) {
+		return 0;
+	}
+
+	uint8_t mode = WIFI_FC1_DIR_FROMDS;
+	uint16_t ethtype;
+
+	memcpy(&ethtype, q->data() + 12, 2);
+
+	q->pull(sizeof(struct click_ether));
+	q = q->push(sizeof(struct click_llc));
+
+	if (!q) {
+		q->kill();
+		return 0;
+	}
+
+	memcpy(q->data(), WIFI_LLC_HEADER, WIFI_LLC_HEADER_LEN);
+	memcpy(q->data() + 6, &ethtype, 2);
+
+	q = q->push(sizeof(struct click_wifi));
+
+	if (!q) {
+		q->kill();
+		return 0;
+	}
+
+	struct click_wifi *w = (struct click_wifi *) q->data();
+
+	memset(q->data(), 0, sizeof(click_wifi));
+
+	w->i_fc[0] = (uint8_t) (WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_DATA);
+	w->i_fc[1] = 0;
+	w->i_fc[1] |= (uint8_t) (WIFI_FC1_DIR_MASK & mode);
+
+	memcpy(w->i_addr1, ra.data(), 6);
+	memcpy(w->i_addr2, ta.data(), 6);
+	memcpy(w->i_addr3, sa.data(), 6);
+
+	return q;
+
 }
 
 enum {

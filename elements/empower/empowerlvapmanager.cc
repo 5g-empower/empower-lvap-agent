@@ -349,8 +349,8 @@ void EmpowerLVAPManager::send_hello() {
 
 void EmpowerLVAPManager::send_status_slice(String ssid, int dscp, int iface_id) {
 
-	Slice slice = Slice(ssid, dscp);
-	SliceQueue * queue = _eqms[iface_id]->slices()->find(slice).value();
+	SliceKey slice_key = SliceKey(ssid, dscp);
+	Slice * slice = _eqms[iface_id]->slices()->get(slice_key);
 
 	int len = sizeof(empower_status_slice) + ssid.length();
     ResourceElement* re = iface_to_element(iface_id);
@@ -372,15 +372,15 @@ void EmpowerLVAPManager::send_status_slice(String ssid, int dscp, int iface_id) 
 	status->set_type(EMPOWER_PT_STATUS_SLICE);
 	status->set_seq(get_next_seq());
 	status->set_wtp(_wtp);
-	status->set_dscp(queue->_slice._dscp);
-	status->set_ssid(queue->_slice._ssid);
-	status->set_quantum(queue->_quantum);
+	status->set_dscp(dscp);
+	status->set_ssid(ssid);
+	status->set_quantum(slice->_quantum);
     status->set_hwaddr(re->_hwaddr);
     status->set_channel(re->_channel);
     status->set_band(re->_band);
-    status->set_scheduler(queue->_scheduler);
+    status->set_scheduler(slice->_scheduler);
 
-	if (queue->_amsdu_aggregation) {
+	if (slice->_amsdu_aggregation) {
 		status->set_flags(EMPOWER_AMSDU_AGGREGATION);
 	}
 
@@ -403,7 +403,7 @@ int EmpowerLVAPManager::handle_slice_status_request(Packet *, uint32_t) {
 
 	for (REIter it_re = _ifaces_to_elements.begin(); it_re.live(); it_re++) {
 		int iface_id = it_re.key();
-		for (SIter it = _eqms[iface_id]->slices()->begin(); it.live(); it++) {
+		for (HashTable<SliceKey, Slice*>::iterator it = _eqms[iface_id]->slices()->begin(); it.live(); it++) {
 			send_status_slice(it.key()._ssid, it.key()._dscp, iface_id);
 		}
 	}
@@ -439,12 +439,13 @@ void EmpowerLVAPManager::send_slice_queue_counters_response(uint32_t counters_id
         return;
     }
 
-	Slice slice = Slice(ssid, dscp);
-	SliceQueue * queue = _eqms[iface_id]->slices()->get(slice);
+	SliceKey slice_key = SliceKey(ssid, dscp);
+	Slice * slice;
 
-	if (!queue) {
+	if (_eqms[iface_id]->slices()->find(slice_key) == _eqms[iface_id]->slices()->end()) {
 		return;
 	}
+	slice = _eqms[iface_id]->slices()->get(slice_key);
 
     int len = sizeof(empower_slice_queue_counters_response);
 
@@ -459,6 +460,18 @@ void EmpowerLVAPManager::send_slice_queue_counters_response(uint32_t counters_id
 
     memset(p->data(), 0, p->length());
 
+    uint32_t max_queue_length = 0;
+    uint32_t deficit_used = 0;
+    uint32_t tx_bytes = 0;
+    uint32_t tx_packets = 0;
+    for (SlicePairsIter it = slice->_slice_pairs.begin(); it.live(); it++) {
+        SlicePairQueue *queue = &it.value()->_queue;
+        max_queue_length += queue->_max_queue_length;
+        deficit_used += queue->_deficit_used;
+        tx_bytes += queue->_tx_bytes;
+        tx_packets += queue->_tx_packets;
+    }
+
     empower_slice_queue_counters_response *counters = (struct empower_slice_queue_counters_response *) (p->data());
     counters->set_version(_empower_version);
     counters->set_length(len);
@@ -466,10 +479,10 @@ void EmpowerLVAPManager::send_slice_queue_counters_response(uint32_t counters_id
     counters->set_seq(get_next_seq());
     counters->set_counters_id(counters_id);
     counters->set_wtp(_wtp);
-    counters->set_max_queue_length(queue->_max_queue_length);
-    counters->set_deficit_used(queue->_deficit_used);
-    counters->set_tx_bytes(queue->_tx_bytes);
-    counters->set_tx_packets(queue->_tx_packets);
+    counters->set_max_queue_length(max_queue_length);
+    counters->set_deficit_used(deficit_used);
+    counters->set_tx_bytes(tx_bytes);
+    counters->set_tx_packets(tx_packets);
 
     send_message(p);
 
