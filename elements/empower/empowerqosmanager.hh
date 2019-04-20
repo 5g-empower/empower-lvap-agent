@@ -13,8 +13,6 @@
 #include <clicknet/wifi.h>
 #include <clicknet/llc.h>
 #include <elements/standard/simplequeue.hh>
-#include <elements/wifi/minstrel.hh>
-#include <elements/wifi/bitrate.hh>
 CLICK_DECLS
 
 /*
@@ -47,35 +45,53 @@ Turn debug on/off
 =a EmpowerWifiDecap
 */
 
-class SlicePairQueue {
+class EtherPair {
+  public:
+
+    EtherAddress _ra;
+    EtherAddress _ta;
+
+    EtherPair() {
+    }
+
+    EtherPair(EtherAddress ra, EtherAddress ta) : _ra(ra), _ta(ta) {
+    }
+
+    EtherPair(const EtherPair &pair) : _ra(pair._ra), _ta(pair._ta) {
+    }
+
+    inline hashcode_t hashcode() const {
+    		return CLICK_NAME(hashcode)(_ra) + CLICK_NAME(hashcode)(_ta);
+    }
+
+    inline bool operator==(EtherPair other) const {
+    		return (other._ra == _ra && other._ta == _ta);
+    }
+
+    inline bool operator!=(EtherPair other) const {
+    		return (other._ra != _ra || other._ta != _ta);
+    }
+
+	String unparse() {
+		StringAccum result;
+		result << "(" << _ra.unparse() << ", " << _ta.unparse() << ")";
+		return result.take_string();
+	}
+
+};
+
+class AggregationQueue {
 
 public:
+	uint32_t _quantum;
 
-	ReadWriteLock _queue_lock;
-	Packet** _q;
-
-	uint32_t _capacity;
-	uint32_t _deficit;
-	uint32_t _deficit_used;
-	uint32_t _tx_packets;
-	uint32_t _tx_bytes;
-	uint32_t _nb_pkts;
-	uint32_t _max_queue_length;
-	uint32_t _drops;
-	uint32_t _head;
-	uint32_t _tail;
-
-public:
-
-	SlicePairQueue(uint32_t capacity) {
+	AggregationQueue(uint32_t capacity, EtherPair pair) {
 		_q = new Packet*[capacity];
 		_deficit = 0;
-		_deficit_used = 0;
-		_tx_bytes = 0;
-		_tx_packets = 0;
+		_quantum = 0;
 		_capacity = capacity;
+		_pair = pair;
 		_nb_pkts = 0;
-		_max_queue_length = 0;
 		_drops = 0;
 		_head = 0;
 		_tail = 0;
@@ -87,16 +103,12 @@ public:
 	String unparse() {
 		StringAccum result;
 		_queue_lock.acquire_read();
-		result << "    status: " << _nb_pkts << "/" << _capacity << "\n";
-		result << "    deficit: " << _deficit << "\n";
-		result << "    deficit_used: " << _deficit_used << "\n";
-		result << "    tx_packets: " << _tx_packets << "\n";
-		result << "    tx_bytes: " << _tx_bytes << "\n";
+		result << _pair.unparse() << " -> status: " << _nb_pkts << "/" << _capacity << "\n";
 		_queue_lock.release_read();
 		return result.take_string();
 	}
 
-	~SlicePairQueue() {
+	~AggregationQueue() {
 		_queue_lock.acquire_write();
 		for (uint32_t i = 0; i < _capacity; i++) {
 			if (_q[i]) {
@@ -132,225 +144,244 @@ public:
 			_tail++;
 			_tail %= _capacity;
 			_nb_pkts++;
-			if (_nb_pkts > _max_queue_length)
-				_max_queue_length = _nb_pkts;
 			result = true;
 		}
 		_queue_lock.release_write();
 		return result;
 	}
 
-};
-
-class SlicePairKey {
-
-public:
-
-    EtherAddress _ra;
-    EtherAddress _ta;
-
-    SlicePairKey(EtherAddress ra, EtherAddress ta) :
-        _ra(ra), _ta(ta) {
+    const Packet* top() {
+      Packet* p = 0;
+      _queue_lock.acquire_write();
+      if(_head != _tail) {
+        p = _q[(_head+1) % _capacity];
+      }
+      _queue_lock.release_write();
+      return p;
     }
 
-    inline hashcode_t hashcode() const {
-        return CLICK_NAME(hashcode)(_ra) + CLICK_NAME(hashcode)(_ta);
-    }
+	uint32_t top_length() {
+		return top()->length();
+	}
 
-    inline bool operator==(SlicePairKey other) const {
-        return (other._ra == _ra && other._ta == _ta);
-    }
+    uint32_t nb_pkts() { return _nb_pkts; }
+    EtherPair pair() { return _pair; }
 
-    inline bool operator!=(SlicePairKey other) const {
-        return (other._ra != _ra || other._ta != _ta);
-    }
+private:
 
-    String unparse() {
-        StringAccum result;
-        result << "(" << _ra.unparse() << ", " << _ta.unparse() << ")";
-        return result.take_string();
-    }
+	ReadWriteLock _queue_lock;
+	Packet** _q;
 
-};
-
-class SlicePair {
-
-public:
-
-    SlicePairKey _key;
-    uint32_t _quantum;
-    SlicePairQueue _queue;
-
-    SlicePair(EtherAddress ra, EtherAddress ta, uint32_t quantum) :
-        _key(ra, ta), _quantum(quantum), _queue(500) {
-    }
-
-    inline bool operator==(SlicePairKey other) const {
-        return (other == _key);
-    }
-
-    inline bool operator!=(SlicePairKey other) const {
-        return (other != _key);
-    }
-
-    inline bool operator==(SlicePair other) const {
-        return (other._key == _key && other._key == _key);
-    }
-
-    inline bool operator!=(SlicePair other) const {
-        return (other._key != _key || other._key != _key);
-    }
-
-    String unparse() {
-        return _key.unparse();
-    }
+	uint32_t _capacity;
+	uint32_t _deficit;
+	EtherPair _pair;
+	uint32_t _nb_pkts;
+	uint32_t _drops;
+	uint32_t _head;
+	uint32_t _tail;
 
 };
 
-typedef HashTable<SlicePairKey, SlicePair*> SlicePairs;
-typedef SlicePairs::iterator SlicePairsIter;
+typedef HashTable<EtherPair, AggregationQueue*> AggregationQueues;
+typedef AggregationQueues::iterator AQIter;
 
-class SliceKey {
-
-public:
+class Slice {
+  public:
 
     String _ssid;
     int _dscp;
 
-    SliceKey(String ssid, int dscp) :
-        _ssid(ssid),_dscp(dscp) {
+    Slice() : _ssid(""), _dscp(0) {
+    }
+
+    Slice(String ssid, int dscp) : _ssid(ssid), _dscp(dscp) {
     }
 
     inline hashcode_t hashcode() const {
-        return CLICK_NAME(hashcode)(_ssid) + CLICK_NAME(hashcode)(_dscp);
-    }
-
-    inline bool operator==(SliceKey other) const {
-        return (other._ssid == _ssid && other._dscp == _dscp);
-    }
-
-    inline bool operator!=(SliceKey other) const {
-        return (other._ssid != _ssid || other._dscp != _dscp);
-    }
-
-    String unparse() {
-        StringAccum result;
-        result << _ssid << ":" << _dscp;
-        return result.take_string();
-    }
-
-};
-
-class Slice {
-
-public:
-
-    SliceKey _key;
-
-    uint32_t _quantum;
-    bool _amsdu_aggregation;
-    uint32_t _scheduler;
-
-    SlicePairs _slice_pairs;
-
-    Slice(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation, uint32_t scheduler) :
-        _key(ssid, dscp), _quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _scheduler(scheduler) {
-    }
-
-    inline bool operator==(SliceKey other) const {
-        return (other == _key);
-    }
-
-    inline bool operator!=(SliceKey other) const {
-        return (other != _key);
+    		return CLICK_NAME(hashcode)(_ssid) + CLICK_NAME(hashcode)(_dscp);
     }
 
     inline bool operator==(Slice other) const {
-        return (other._key == _key && other._key == _key);
+    		return (other._ssid == _ssid && other._dscp == _dscp);
     }
 
     inline bool operator!=(Slice other) const {
-        return (other._key != _key || other._key != _key);
+    		return (other._ssid != _ssid || other._dscp != _dscp);
     }
 
-    String unparse() {
-        StringAccum result;
-        result << _key.unparse() << "  - ";
-        result << " quantum: " << _quantum;
-        result << " scheduler: " << _scheduler << " \n";
+	String unparse() {
+		StringAccum result;
+		result << _ssid << ":" << _dscp;
+		return result.take_string();
+	}
 
-        for (SlicePairsIter it = _slice_pairs.begin(); it.live(); it++) {
-            result << "  Pair: " << it.value()->_key.unparse() << " \n";
-            result << "    quantum: " << it.value()->_quantum << "\n";
-            result << it.value()->_queue.unparse();
-        }
-
-        return result.take_string();
-    }
-
-    void set_aggr_queues_quantum(class Minstrel *rc) {
-
-        // Each time the slice is renewed quantum, the time is divided
-        // according to the scheduler policy.
-
-        switch (_scheduler) {
-        // Airtime fairness
-        case 1: {
-            Vector<uint32_t> transm_times;
-            uint32_t total_time = 0;
-
-            // Estimation of the time needed by each stations depending on the
-            // most probable MCS and a standard 1500 bytes packet.
-            if (_slice_pairs.size() > 0) {
-
-                uint32_t estimated_time = 0;
-                for (SlicePairsIter it = _slice_pairs.begin(); it.live();
-                        it++) {
-                    estimated_time = rc->estimate_usecs_default_packet(1500,
-                            it.value()->_key._ra);
-                    transm_times.push_back(estimated_time);
-                    total_time += estimated_time;
-                }
-
-                if (total_time == 0) {
-                    break;
-                }
-
-                int station = 0;
-                for (SlicePairsIter it = _slice_pairs.begin(); it.live();
-                        it++) {
-                    it.value()->_quantum = (_quantum * (transm_times[station]))
-                            / total_time;
-                    station++;
-                }
-            }
-            break;
-        }
-            // Round robin
-        case 0:
-        default: {
-            if (_slice_pairs.size() > 0) {
-                uint32_t new_quantum = floor(_quantum / _slice_pairs.size());
-
-                for (SlicePairsIter it = _slice_pairs.begin(); it.live();
-                        it++) {
-                    it.value()->_quantum = new_quantum;
-                }
-            }
-            break;
-        }
-        }
-    }
 };
 
-typedef HashTable<SliceKey, Slice*> Slices;
-typedef Slices::iterator SlicesIter;
+class SliceQueue {
 
-typedef Pair<SliceKey, SlicePairKey> SlicePairQueueKey;
+public:
 
-typedef HashTable<SlicePairQueueKey, SlicePairQueue*> SlicePairQueues;
+    AggregationQueues _queues;
+	Vector<EtherPair> _active_list;
 
-typedef HashTable<SlicePairQueueKey, Packet*> HeadTable;
+	Slice _slice;
+    uint32_t _capacity;
+    uint32_t _size;
+    uint32_t _drops;
+    uint32_t _deficit;
+    uint32_t _quantum;
+    bool _amsdu_aggregation;
+    uint32_t _max_aggr_length;
+    uint32_t _deficit_used;
+    uint32_t _max_queue_length;
+    uint32_t _tx_packets;
+    uint32_t _tx_bytes;
+    uint32_t _scheduler;
+
+    SliceQueue(Slice slice, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation, uint32_t scheduler) :
+			_slice(slice), _capacity(capacity), _size(0), _drops(0), _deficit(0),
+			_quantum(quantum), _amsdu_aggregation(amsdu_aggregation), _max_aggr_length(7935),
+			_deficit_used(0), _max_queue_length(0), _tx_packets(0), _tx_bytes(0), _scheduler(scheduler) {
+	}
+
+	~SliceQueue() {
+		AQIter itr = _queues.begin();
+		while (itr != _queues.end()) {
+			AggregationQueue *aq = itr.value();
+			delete aq;
+			itr++;
+		}
+		_queues.clear();
+	}
+
+	uint32_t size() { return _size; }
+
+    Packet * wifi_encap(Packet *p, EtherAddress ra, EtherAddress sa, EtherAddress ta) {
+
+        WritablePacket *q = p->uniqueify();
+
+		if (!q) {
+			return 0;
+		}
+
+		uint8_t mode = WIFI_FC1_DIR_FROMDS;
+		uint16_t ethtype;
+
+		memcpy(&ethtype, q->data() + 12, 2);
+
+		q->pull(sizeof(struct click_ether));
+		q = q->push(sizeof(struct click_llc));
+
+		if (!q) {
+			q->kill();
+			return 0;
+		}
+
+		memcpy(q->data(), WIFI_LLC_HEADER, WIFI_LLC_HEADER_LEN);
+		memcpy(q->data() + 6, &ethtype, 2);
+
+		q = q->push(sizeof(struct click_wifi));
+
+		if (!q) {
+			q->kill();
+			return 0;
+		}
+
+		struct click_wifi *w = (struct click_wifi *) q->data();
+
+		memset(q->data(), 0, sizeof(click_wifi));
+
+		w->i_fc[0] = (uint8_t) (WIFI_FC0_VERSION_0 | WIFI_FC0_TYPE_DATA);
+		w->i_fc[1] = 0;
+		w->i_fc[1] |= (uint8_t) (WIFI_FC1_DIR_MASK & mode);
+
+		memcpy(w->i_addr1, ra.data(), 6);
+		memcpy(w->i_addr2, ta.data(), 6);
+		memcpy(w->i_addr3, sa.data(), 6);
+
+		return q;
+
+    }
+
+    bool enqueue(Packet *p, EtherAddress ra, EtherAddress ta) {
+
+    	EtherPair pair = EtherPair(ra, ta);
+
+		if (_queues.find(pair) == _queues.end()) {
+			AggregationQueue *queue = new AggregationQueue(_capacity, pair);
+			_queues.set(pair, queue);
+			_active_list.push_back(pair);
+		}
+
+		AggregationQueue *queue = _queues.get(pair);
+
+		if (queue->push(p)) {
+			// check if ra is in active list
+			if (find(_active_list.begin(), _active_list.end(), pair) == _active_list.end()) {
+				_active_list.push_back(pair);
+			}
+			if (queue->nb_pkts() > _max_queue_length) {
+				_max_queue_length = queue->nb_pkts();
+			}
+			 _size++;
+			return true;
+		}
+
+		_drops++;
+		return false;
+
+    }
+
+    Packet *dequeue() {
+
+		if (_active_list.empty()) {
+			return 0;
+		}
+
+		EtherPair pair = _active_list[0];
+		_active_list.pop_front();
+
+		AQIter active = _queues.find(pair);
+		AggregationQueue* queue = active.value();
+		Packet *p = queue->pull();
+
+		if (!p) {
+			return dequeue();
+		}
+
+		_size--;
+
+		click_ether *eh = (click_ether *) p->data();
+		EtherAddress src = EtherAddress(eh->ether_shost);
+		p = wifi_encap(p, queue->pair()._ra, src, queue->pair()._ta);
+
+		_active_list.push_back(pair);
+
+		return p;
+
+    }
+
+	String unparse() {
+		StringAccum result;
+		result << _slice.unparse();
+		result << " -> capacity: " << _capacity << ", ";
+		result << "quantum: " << _quantum << "\n";
+		AQIter itr = _queues.begin();
+		while (itr != _queues.end()) {
+			AggregationQueue *aq = itr.value();
+			result << "  " << aq->unparse();
+			itr++;
+		}
+		return result.take_string();
+	}
+
+};
+
+typedef HashTable<Slice, SliceQueue*> Slices;
+typedef Slices::iterator SIter;
+
+typedef HashTable<Slice, Packet*> HeadTable;
+typedef HeadTable::iterator HItr;
 
 class EmpowerQOSManager: public Element {
 
@@ -374,11 +405,11 @@ public:
 	void set_slice(String, int, uint32_t, bool, uint32_t);
 	void del_slice(String, int);
 
-	Slices *slices() { return &_slices; }
+	Slices * slices() { return &_slices; }
 
 private:
 
-    ReadWriteLock _lock;
+	ReadWriteLock _lock;
 
     enum { SLEEPINESS_TRIGGER = 9 };
 
@@ -387,11 +418,12 @@ private:
 	class Minstrel * _rc;
 
 	Slices _slices;
-
-    Vector<SlicePairQueueKey> _active_list;
     HeadTable _head_table;
+	Vector<Slice> _active_list;
 
     int _sleepiness;
+    uint32_t _capacity;
+    uint32_t _quantum;
 
     int _iface_id;
 
@@ -399,8 +431,6 @@ private:
 
 	void store(String, int, Packet *, EtherAddress, EtherAddress);
 	String list_slices();
-
-	Packet * wifi_encap(Packet *, EtherAddress, EtherAddress, EtherAddress);
 
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);
 	static String read_handler(Element *, void *);

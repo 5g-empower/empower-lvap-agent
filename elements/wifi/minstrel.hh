@@ -182,28 +182,12 @@ class Minstrel : public Element { public:
 		EtherAddress dst = EtherAddress(w->i_addr1);
 
 		if (!dst.is_broadcast() and !dst.is_group()) {
-			uint32_t rate = 1;
 			MinstrelDstInfo *nfo = _neighbors.findp(dst);
-			if (nfo) {
-				rate = nfo->rates[nfo->max_tp_rate];
-			}
+			uint32_t rate = nfo->max_tp_rate;
 			return calc_usecs_wifi_packet(p->length(), rate, 0);
 		} else {
 			return calc_usecs_wifi_packet(p->length(), 1, 0);
 		}
-	}
-
-	inline uint32_t estimate_usecs_default_packet(uint32_t size, EtherAddress dst) {
-        if (!dst.is_broadcast() and !dst.is_group()) {
-            uint32_t rate = 1;
-            MinstrelDstInfo *nfo = _neighbors.findp(dst);
-            if (nfo) {
-                rate = nfo->rates[nfo->max_tp_rate];
-            }
-            return calc_usecs_wifi_packet(size, rate, 0);
-        } else {
-            return calc_usecs_wifi_packet(size, 1, 0);
-        }
 	}
 
 	MinstrelNeighborTable * neighbors() { return &_neighbors; }
@@ -211,16 +195,16 @@ class Minstrel : public Element { public:
 	bool forget_station(EtherAddress addr) { return _neighbors.erase(addr); }
 
 	MinstrelDstInfo * insert_neighbor(EtherAddress dst, TxPolicyInfo * txp) {
-	    MinstrelDstInfo *nfo;
-	    if (txp->_ht_mcs.size()) {
-	        _neighbors.insert(dst, MinstrelDstInfo(dst, txp->_ht_mcs, true));
-	        nfo = _neighbors.findp(dst);
-	    } else {
-	        _neighbors.insert(dst, MinstrelDstInfo(dst, txp->_mcs, false));
-	        nfo = _neighbors.findp(dst);
-	    }
-	    return nfo;
-    }
+		MinstrelDstInfo *nfo;
+		if (txp->_ht_mcs.size()) {
+			_neighbors.insert(dst, MinstrelDstInfo(dst, txp->_ht_mcs, true));
+			nfo = _neighbors.findp(dst);
+		} else {
+			_neighbors.insert(dst, MinstrelDstInfo(dst, txp->_mcs, false));
+			nfo = _neighbors.findp(dst);
+		}
+		return nfo;
+	}
 
 private:
 
