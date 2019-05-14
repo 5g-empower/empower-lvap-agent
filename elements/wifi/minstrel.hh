@@ -178,7 +178,7 @@ class Minstrel : public Element { public:
 	void process_feedback(Packet *);
 
 	inline uint32_t estimate_usecs_wifi_packet(Packet *p) {
-		struct click_wifi *w = (struct click_wifi ) p->data();
+		struct click_wifi *w = (struct click_wifi *) p->data();
 		EtherAddress dst = EtherAddress(w->i_addr1);
 		if (!dst.is_broadcast() && !dst.is_group()) {
 			uint32_t rate = 1;
