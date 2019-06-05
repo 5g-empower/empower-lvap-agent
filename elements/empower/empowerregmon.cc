@@ -150,10 +150,10 @@ void EmpowerRegmon::run_timer(Timer *) {
 			valid = true;
 		}
 
-		Timestamp timestamp = Timestamp(sec, nsec);
-		_registers[EMPOWER_REGMON_TX].add_sample(timestamp.usecval(), tx, mac_ticks_delta, valid);
-		_registers[EMPOWER_REGMON_RX].add_sample(timestamp.usecval(), rx, mac_ticks_delta, valid);
-		_registers[EMPOWER_REGMON_ED].add_sample(timestamp.usecval(), ed, mac_ticks_delta, valid);
+		uint64_t ts_int = sec * 1000000LL + nsec / 1000;
+		_registers[EMPOWER_REGMON_TX].add_sample(ts_int, tx, mac_ticks_delta, valid);
+		_registers[EMPOWER_REGMON_RX].add_sample(ts_int, rx, mac_ticks_delta, valid);
+		_registers[EMPOWER_REGMON_ED].add_sample(ts_int, ed, mac_ticks_delta, valid);
 	}
 
 	fclose(fp);

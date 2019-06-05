@@ -18,7 +18,7 @@ public:
 		_iface_id = iface_id;
 		_size = size;
 		_samples = new uint32_t[size]();
-		_timestamps = new uint32_t[size]();
+		_timestamps = new uint64_t[size]();
 		_index = 0;
 		_last_value = 0;
 		_skipped = 0;
@@ -28,7 +28,7 @@ public:
 		memset(_samples, 0, _size);
 	}
 
-	void add_sample(uint32_t timestamp, uint32_t value, uint32_t mac_ticks_delta, bool valid) {
+	void add_sample(uint64_t timestamp, uint32_t value, uint32_t mac_ticks_delta, bool valid) {
 
 		if (_first_run) {
 			_first_run = false;
@@ -88,7 +88,7 @@ public:
 	int _iface_id;
 	int _size;
 	uint32_t *_samples;
-	uint32_t *_timestamps;
+	uint64_t *_timestamps;
 	int _index;
 	uint32_t _last_value;
 	int _skipped;

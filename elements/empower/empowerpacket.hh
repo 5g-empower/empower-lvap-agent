@@ -294,12 +294,12 @@ public:
 struct wifi_stats_entry {
   private:
       uint8_t  _type;       /* EtherAddress */
-      uint32_t _timestamp;  /* Timestamp in microseconds (int) */
+      uint64_t _timestamp;  /* Timestamp in microseconds (int) */
       uint32_t _sample;     /* Std RSSI during last window in dBm (int) */
   public:
     void set_type(uint8_t type)                         { _type = type; }
     void set_sample(uint32_t sample)                    { _sample = htonl(sample); }
-    void set_timestamp(uint32_t timestamp)              { _timestamp = htonl(timestamp); }
+    void set_timestamp(uint64_t timestamp)              { _timestamp = htobe64(timestamp); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* wifi stats response packet format */
