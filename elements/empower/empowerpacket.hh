@@ -467,9 +467,9 @@ struct empower_del_lvap : public empower_header {
   private:
     uint32_t _module_id;          /* Transaction id */
     uint8_t _sta[6];              /* EtherAddress */
-    uint8_t _csa_switch_channel;  /* WiFi channel (int) */
     uint8_t _csa_switch_mode;
     uint8_t _csa_switch_count;
+    uint8_t _csa_switch_channel;  /* WiFi channel (int) */
   public:
     uint32_t module_id()            { return ntohl(_module_id); }
     EtherAddress sta()              { return EtherAddress(_sta); }
