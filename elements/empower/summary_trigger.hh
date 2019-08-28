@@ -16,7 +16,7 @@ class SummaryTrigger: public Trigger {
 public:
 
 	EtherAddress _eth;
-	int _iface;
+	int _iface_id;
 	uint32_t _sent;
 	int16_t _limit;
 	FramesList _frames;
@@ -27,7 +27,7 @@ public:
 	String unparse();
 
 	inline bool operator==(const SummaryTrigger &b) {
-		return (_iface == b._iface) && (_eth == b._eth);
+		return (_iface_id == b._iface_id) && (_eth == b._eth);
 	}
 
 };

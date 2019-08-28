@@ -45,6 +45,7 @@ public:
 	empower_tx_mcast_type _tx_mcast;
 	int _ur_mcast_count;
 	int _rts_cts;
+	int _max_amsdu_len;
 	CBytes _tx;
 	CBytes _rx;
 
@@ -54,17 +55,19 @@ public:
 		_no_ack = false;
 		_tx_mcast = TX_MCAST_DMS;
 		_rts_cts = 2436;
+		_max_amsdu_len = 3839;
 		_ur_mcast_count = 3;
 	}
 
 	TxPolicyInfo(Vector<int> mcs, Vector<int> ht_mcs, bool no_ack, empower_tx_mcast_type tx_mcast,
-			int ur_mcast_count, int rts_cts) {
+			int ur_mcast_count, int rts_cts, int max_amsdu_len) {
 
 		_mcs = mcs;
 		_ht_mcs = ht_mcs;
 		_no_ack = no_ack;
 		_tx_mcast = tx_mcast;
 		_rts_cts = rts_cts;
+		_max_amsdu_len = max_amsdu_len;
 		_ur_mcast_count = ur_mcast_count;
 	}
 
@@ -106,6 +109,7 @@ public:
 		}
 		sa << " ur_mcast_count " << _ur_mcast_count;
 		sa << " rts_cts " << _rts_cts;
+		sa << " max_amsdu_len " << _max_amsdu_len;
 		return sa.take_string();
 	}
 

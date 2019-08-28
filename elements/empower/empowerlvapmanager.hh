@@ -69,10 +69,15 @@ enum empower_port_flags {
     EMPOWER_STATUS_PORT_NOACK = (1<<0),
 };
 
+enum empower_probe_assoc_flags {
+    EMPOWER_HT_CAPS = (1<<0),
+};
+
 enum empower_lvap_flags {
     EMPOWER_STATUS_LVAP_AUTHENTICATED = (1<<0),
     EMPOWER_STATUS_LVAP_ASSOCIATED = (1<<1),
     EMPOWER_STATUS_LVAP_SET_MASK = (1<<2),
+    EMPOWER_STATUS_LVAP_HT_CAPS = (1<<3),
 };
 
 enum empower_bands_types {
@@ -80,13 +85,14 @@ enum empower_bands_types {
     EMPOWER_BT_HT20 = 0x1,
 };
 
-enum empower_aggregation_flags {
+enum empower_slice_flags {
 	EMPOWER_AMSDU_AGGREGATION = (1<<0)
 };
 
 enum empower_slice_scheduleruler {
-	EMPOWER_AIRTIME_ROUND_ROBIN = 0x0,
-	EMPOWER_AIRTIME_FAIRNESS = 0x1,
+	EMPOWER_ROUND_ROBIN = 0x0,
+	EMPOWER_DEFICIT_ROUND_ROBIN = 0x1,
+	EMPOWER_AIRTIME_DEFICIT_ROUND_ROBIN = 0x2,
 };
 
 enum empower_regmon_types {
@@ -102,24 +108,6 @@ class Minstrel;
 class EmpowerQOSManager;
 class EmpowerRegmon;
 
-class NetworkPort {
-public:
-	EtherAddress _hwaddr;
-	String _iface;
-	uint16_t _port_id;
-	NetworkPort() :
-			_hwaddr(EtherAddress()), _port_id(0) {
-	}
-	NetworkPort(EtherAddress hwaddr, String iface, uint16_t port_id) :
-			_hwaddr(hwaddr), _iface(iface), _port_id(port_id) {
-	}
-	String unparse() {
-		StringAccum sa;
-		sa << _hwaddr.unparse() << ' ' << _iface << ' ' << _port_id;
-		return sa.take_string();
-	}
-};
-
 // An EmPOWER Virtual Access Point or VAP. This is an AP than
 // can be used by multiple clients (unlike the LVAP that is
 // specific to each client).
@@ -127,9 +115,6 @@ class EmpowerVAPState {
 public:
 	EtherAddress _bssid;
 	String _ssid;
-	EtherAddress _hwaddr;
-	int _channel;
-	int _band;
 	int _iface_id;
 };
 
@@ -159,10 +144,8 @@ public:
 	EtherAddress _encap;
 	Vector<EmpowerNetwork> _networks;
 	int _assoc_id;
-	EtherAddress _hwaddr;
-	int _channel;
-	empower_bands_types _band;
-	empower_bands_types _supported_band;
+	bool _ht_caps;
+	uint16_t _ht_caps_info;
 	int _iface_id;
 	bool _set_mask;
 	bool _authentication_status;
@@ -173,7 +156,7 @@ public:
 	int _csa_switch_count;
 	int _csa_switch_channel;
 	// ADD/DEL LVAP response entries
-	uint32_t _module_id;
+	uint32_t _xid;
 	bool is_valid(int iface_id) {
 		if (_iface_id != iface_id) {
 			return false;
@@ -209,26 +192,24 @@ typedef VAP::iterator VAPIter;
 typedef HashTable<EtherAddress, EmpowerStationState> LVAP;
 typedef LVAP::iterator LVAPIter;
 
-typedef HashTable<int, NetworkPort> Ports;
-typedef Ports::iterator PortsIter;
-
 class ResourceElement {
 public:
 
+	int _iface_id;
 	EtherAddress _hwaddr;
 	int _channel;
 	empower_bands_types _band;
 
 	ResourceElement() :
-			_hwaddr(EtherAddress()), _channel(1), _band(EMPOWER_BT_L20) {
+		_iface_id(0), _hwaddr(EtherAddress()), _channel(1), _band(EMPOWER_BT_L20) {
 	}
 
-	ResourceElement(EtherAddress hwaddr, int channel, empower_bands_types band) :
-			_hwaddr(hwaddr), _channel(channel), _band(band) {
+	ResourceElement(int iface_id, EtherAddress hwaddr, int channel, empower_bands_types band) :
+		_iface_id(iface_id), _hwaddr(hwaddr), _channel(channel), _band(band) {
 	}
 
 	inline size_t hashcode() const {
-		return _hwaddr.hashcode();
+		return _iface_id;
 	}
 
 	inline String unparse() const {
@@ -253,7 +234,7 @@ public:
 };
 
 inline bool operator==(const ResourceElement &a, const ResourceElement &b) {
-	return a._hwaddr == b._hwaddr && a._channel == b._channel && a._band == b._band;
+	return a._iface_id == b._iface_id;
 }
 
 typedef HashTable<int, ResourceElement *> RETable;
@@ -272,11 +253,11 @@ public:
 	int initialize(ErrorHandler *);
 	int configure(Vector<String> &, ErrorHandler *);
 	void add_handlers();
-	void run_timer(Timer *);
 	void reset();
 
 	void push(int, Packet *);
 
+	int handle_hello_request(Packet *, uint32_t);
 	int handle_add_lvap(Packet *, uint32_t);
 	int handle_del_lvap(Packet *, uint32_t);
 	int handle_add_vap(Packet *, uint32_t);
@@ -306,26 +287,26 @@ public:
 	int handle_slice_status_request(Packet *, uint32_t);
 	int handle_port_status_request(Packet *, uint32_t);
 
-	void send_hello();
-	void send_probe_request(EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
-	void send_auth_request(EtherAddress, EtherAddress);
-	void send_association_request(EtherAddress, EtherAddress, String, EtherAddress, int, empower_bands_types, empower_bands_types);
-	void send_status_lvap(EtherAddress);
-	void send_status_vap(EtherAddress);
-	void send_status_port(EtherAddress, int);
-	void send_status_slice(String, int, int);
-	void send_counters_response(EtherAddress, uint32_t);
-	void send_txp_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, EtherAddress);
-	void send_img_response(int, uint32_t, EtherAddress, uint8_t, empower_bands_types);
-	void send_wifi_stats_response(uint32_t, EtherAddress, uint8_t, empower_bands_types);
-	void send_caps();
-	void send_rssi_trigger(uint32_t, uint32_t, uint8_t);
-	void send_summary_trigger(SummaryTrigger *);
-	void send_lvap_stats_response(EtherAddress, uint32_t);
-	void send_incoming_mcast_address (EtherAddress, int);
+	void send_hello_response();
+	void send_probe_request(uint32_t iface_id, EtherAddress src, String ssid, bool ht_caps, uint16_t ht_caps_info);
+	void send_auth_request(EtherAddress src, EtherAddress bssid);
+	void send_association_request(EtherAddress src, EtherAddress bssid, String ssid, bool ht_caps, uint16_t ht_caps_info);
+	void send_status_lvap(EtherAddress sta);
+	void send_status_vap(EtherAddress bssid);
+	void send_status_port(uint32_t iface_id, EtherAddress sta);
+	void send_status_slice(uint32_t iface_id, String ssid, int dscp);
+	void send_counters_response(EtherAddress sta, uint32_t xid);
+	void send_txp_counters_response(uint32_t iface_id, uint32_t xid, EtherAddress mcast);
+	void send_img_response(uint32_t iface_id, int type, uint32_t xid);
+	void send_wifi_stats_response(uint32_t iface_id, uint32_t xid);
+	void send_caps_response();
+	void send_rssi_trigger(uint32_t iface_id, uint32_t xid, uint8_t current);
+	void send_summary_trigger(SummaryTrigger * summary);
+	void send_lvap_stats_response(EtherAddress lvap, uint32_t xid);
+	void send_incoming_mcast_address (uint32_t iface_id, EtherAddress mcast_address);
 	void send_igmp_report(EtherAddress, Vector<IPAddress>*, Vector<enum empower_igmp_record_type>*);
-	void send_add_del_lvap_response(uint8_t, EtherAddress, uint32_t, uint32_t);
-	void send_slice_queue_counters_response(uint32_t, EtherAddress, uint8_t, empower_bands_types, String, int);
+	void send_add_del_lvap_response(uint8_t type, EtherAddress sta, uint32_t xid, uint32_t status);
+	void send_slice_queue_counters_response(uint32_t iface_id, uint32_t xid);
 
 	ReadWriteLock* lock() { return &_lock; }
 	LVAP* lvaps() { return &_lvaps; }
@@ -352,21 +333,8 @@ public:
 
 	}
 
-	int element_to_iface(EtherAddress hwaddr, uint8_t channel, empower_bands_types band) {
-		for (REIter iter = _ifaces_to_elements.begin(); iter.live(); iter++) {
-			if (iter.value()->_hwaddr == hwaddr && iter.value()->_channel == channel && iter.value()->_band == band) {
-				return iter.key();
-			}
-		}
-		return -1;
-	}
-
-	ResourceElement* iface_to_element(int iface) {
-		return _ifaces_to_elements.get(iface);
-	}
-
-	int num_ifaces() {
-		return _rcs.size();
+	RETable* ifaces() {
+		return &_ifaces;
 	}
 
 	EmpowerStationState * get_ess(EtherAddress sta) {
@@ -407,7 +375,7 @@ private:
 
 	ReadWriteLock _lock;
 
-	RETable _ifaces_to_elements;
+	RETable _ifaces;
 
 	void compute_bssid_mask();
 	void send_message(Packet *);
@@ -421,18 +389,14 @@ private:
 	class EmpowerMulticastTable * _mtbl;
 
 	LVAP _lvaps;
-	Ports _ports;
 	VAP _vaps;
 	Vector<EtherAddress> _masks;
 	Vector<Minstrel *> _rcs;
 	Vector<EmpowerRegmon *> _regmons;
 	Vector<EmpowerQOSManager *> _eqms;
 	Vector<String> _debugfs_strings;
-	Timer _timer;
 	uint32_t _seq;
 	EtherAddress _wtp;
-	uint8_t _dpid[8];
-	unsigned int _period; // msecs
 	bool _debug;
 
 	static int write_handler(const String &, Element *, void *, ErrorHandler *);

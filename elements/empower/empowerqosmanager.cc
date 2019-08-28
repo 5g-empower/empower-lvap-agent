@@ -162,7 +162,7 @@ EmpowerQOSManager::push(int, Packet *p) {
 																 dst.unparse().c_str(),
 																 iface_id);
 			}
-			_el->send_incoming_mcast_address(dst, iface_id);
+			_el->send_incoming_mcast_address(iface_id, dst);
 		}
 
 		if (mcast_tx_policy) {
@@ -250,7 +250,7 @@ void EmpowerQOSManager::store(String ssid, int dscp, Packet *q, EtherAddress ra,
 
 	if (sliceq->enqueue(q, ra, ta)) {
 		// check if queue was empty and no packet in buffer
-		if (sliceq->size() == 1 && _head_table.find(slice).value() == 0) {
+		if (sliceq->_size == 1 && _head_table.find(slice).value() == 0) {
 			sliceq->_deficit = 0;
 			_active_list.push_back(slice);
 		}
@@ -300,7 +300,7 @@ Packet * EmpowerQOSManager::pull(int) {
 		queue->_deficit_used += deficit;
 		queue->_tx_bytes += p->length();
 		queue->_tx_packets++;
-		if (queue->size() > 0) {
+		if (queue->_size > 0) {
 			_active_list.push_front(slice);
 		}
 		_lock.release_write();
@@ -320,7 +320,7 @@ void EmpowerQOSManager::set_default_slice(String ssid) {
 	set_slice(ssid, 0, 12000, false, 0);
 }
 
-void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation, uint32_t scheduler) {
+void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool amsdu_aggregation, uint8_t scheduler) {
 
 	_lock.acquire_write();
 
@@ -361,7 +361,7 @@ void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool 
 		queue->_scheduler = scheduler;
 	}
 
-	_el->send_status_slice(ssid, dscp, _iface_id);
+	_el->send_status_slice(_iface_id, ssid, dscp);
 
 	_lock.release_write();
 }

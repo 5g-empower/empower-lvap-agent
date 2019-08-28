@@ -71,13 +71,23 @@ struct click_qos_control {
 	uint16_t	qos_control;
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
+#define WIFI_QOS_CONTROL_QOS_TID_MASK               0x000F
+#define WIFI_QOS_CONTROL_QOS_TID_SHIFT              0
+#define WIFI_QOS_CONTROL_QOS_EOSP_MASK              0x0010
+#define WIFI_QOS_CONTROL_QOS_EOSP_SHIFT             4
+#define WIFI_QOS_CONTROL_ACK_POLICY_MASK            0x0060
+#define WIFI_QOS_CONTROL_ACK_POLICY_SHIFT           5
+#define WIFI_QOS_CONTROL_QOS_AMSDU_PRESENT_MASK     0x0080
+#define WIFI_QOS_CONTROL_QOS_AMSDU_PRESENT_SHIFT    7
+#define WIFI_QOS_CONTROL_QOS_STUFF_MASK             0xFF00
+#define WIFI_QOS_CONTROL_QOS_STUFF_SHIFT            8
+
 #define	WIFI_FC0_VERSION_MASK	0x03
 #define	WIFI_FC0_VERSION_0		0x00
 #define	WIFI_FC0_TYPE_MASK		0x0c
 #define	WIFI_FC0_TYPE_MGT		0x00
 #define	WIFI_FC0_TYPE_CTL		0x04
 #define	WIFI_FC0_TYPE_DATA		0x08
-#define WIFI_QOS_CONTROL			0x0080
 
 #define	WIFI_FC0_SUBTYPE_MASK		0xf0
 /* for TYPE_MGT */
@@ -336,9 +346,9 @@ struct click_wifi_wmm {
  * AMSDU subframe header
  */
 struct click_wifi_amsdu_subframe_header {
-    uint8_t		sa[6];		/* 0-5   Ethernet destination address */
-    uint8_t		da[6];		/* 6-11  Ethernet source address      */
-	uint8_t		len;
+	uint8_t     da[6];      /* 0-5    Ethernet destination address */
+	uint8_t     sa[6];      /* 6-11   Ethernet source address */
+	uint16_t    len;        /* A-MSDU Length without including header and padding */
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 #define WIFI_RATES_MAXSIZE	15

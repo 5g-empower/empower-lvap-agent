@@ -118,11 +118,7 @@ TransmissionPolicies::supported(EtherAddress eth) {
 
 }
 
-int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> ht_mcs) {
-	return insert(eth, mcs, ht_mcs, false, TX_MCAST_LEGACY, 3, 2436);
-}
-
-int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> ht_mcs, bool no_ack, empower_tx_mcast_type tx_mcast, int ur_mcast_count, int rts_cts) {
+int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> ht_mcs, bool no_ack, empower_tx_mcast_type tx_mcast, int ur_mcast_count, int rts_cts, int max_amsdu_len) {
 
 	if (!(eth)) {
 		click_chatter("TransmissionPolicies %s: You fool, you tried to insert %s\n",
@@ -144,6 +140,7 @@ int TransmissionPolicies::insert(EtherAddress eth, Vector<int> mcs, Vector<int> 
 	dst->_tx_mcast = tx_mcast;
 	dst->_ur_mcast_count = ur_mcast_count;
 	dst->_rts_cts = rts_cts;
+	dst->_max_amsdu_len = max_amsdu_len;
 
 	if (_default_tx_policy->_mcs.size()) {
 		/* only add rates that are in the default rates */

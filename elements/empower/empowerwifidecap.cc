@@ -54,7 +54,7 @@ EmpowerWifiDecap::push(int, Packet *p) {
 				      this,
 				      __func__,
 				      p->length(),
-				      sizeof(struct click_ether));
+				      sizeof(struct click_wifi));
 		p->kill();
 		return;
 	}

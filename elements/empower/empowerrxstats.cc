@@ -55,7 +55,7 @@ void send_rssi_trigger_callback(Timer *timer, void *data) {
 		}
 		// check if condition matches
 		if (rssi->matches(nfo) && !rssi->_dispatched) {
-			rssi->_el->send_rssi_trigger(rssi->_trigger_id, nfo->_iface_id, nfo->_sma_rssi->avg());
+			rssi->_el->send_rssi_trigger(nfo->_iface_id, rssi->_trigger_id, nfo->_sma_rssi->avg());
 			rssi->_dispatched = true;
 		} else if (!rssi->matches(nfo) && rssi->_dispatched) {
 			rssi->_dispatched = false;
@@ -214,7 +214,7 @@ EmpowerRXStats::simple_action(Packet *p) {
 
 	// check if frame meta-data should be saved
 	for (DTIter qi = _summary_triggers.begin(); qi != _summary_triggers.end(); qi++) {
-		if ((*qi)->_iface != iface_id) {
+		if ((*qi)->_iface_id != iface_id) {
 			continue;
 		}
 		if ((*qi)->_eth == ta || (*qi)->_eth.is_broadcast()) {

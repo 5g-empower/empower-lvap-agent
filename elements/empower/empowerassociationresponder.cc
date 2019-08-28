@@ -250,8 +250,11 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 		}
 	}
 
+	struct click_wifi_ht_caps *ht;
+
 	if (htcaps) {
-		struct click_wifi_ht_caps *ht = (struct click_wifi_ht_caps *) htcaps;
+
+		ht = (struct click_wifi_ht_caps *) htcaps;
 
 		sa << " HT_CAPS [";
 
@@ -399,10 +402,11 @@ void EmpowerAssociationResponder::push(int, Packet *p) {
 	}
 
 	// always ask to the controller because we may want to reject this request
-	if (htcaps && (ess->_band == EMPOWER_BT_HT20)) {
-		_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, ess->_band, EMPOWER_BT_HT20);
+	int band = _el->ifaces()->get(ess->_iface_id)->_band;
+	if (htcaps && (band == EMPOWER_BT_HT20)) {
+		_el->send_association_request(src, bssid, ssid, true, ht->ht_caps_info);
 	} else {
-		_el->send_association_request(src, bssid, ssid, ess->_hwaddr, ess->_channel, ess->_band, EMPOWER_BT_L20);
+		_el->send_association_request(src, bssid, ssid, false, 0);
 	}
 
 	p->kill();
@@ -416,8 +420,8 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst) {
 
     String ssid = ess->_ssid;
     uint16_t status = WIFI_STATUS_SUCCESS;
-    int channel = ess->_channel;
     int iface_id = ess->_iface_id;
+    int channel = _el->ifaces()->get(ess->_iface_id)->_channel;
 
 	if (_debug) {
 		click_chatter("%{element} :: %s :: dst %s assoc_id %d ssid %s channel %u",
@@ -508,7 +512,7 @@ void EmpowerAssociationResponder::send_association_response(EtherAddress dst) {
 	}
 
 	/* 802.11n fields */
-	ResourceElement *elm = _el->iface_to_element(iface_id);
+	ResourceElement *elm = _el->ifaces()->get(iface_id);
 	if (elm->_band == EMPOWER_BT_HT20) {
 
 		/* ht capabilities */
