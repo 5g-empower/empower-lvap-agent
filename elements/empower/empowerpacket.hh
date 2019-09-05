@@ -68,8 +68,8 @@ enum empower_packet_types {
     EMPOWER_PT_WIFI_STATS_RESPONSE = 0x4B,          // wtp -> ac
 
     // Slice Stats
-    EMPOWER_PT_SLICE_QUEUE_COUNTERS_REQUEST = 0x4C,   // ac -> wtp
-    EMPOWER_PT_SLICE_QUEUE_COUNTERS_RESPONSE = 0x4D,  // wtp -> ac
+    EMPOWER_PT_SLICE_STATS_REQUEST = 0x4C,   		// ac -> wtp
+    EMPOWER_PT_SLICE_STATS_RESPONSE = 0x4D,  		// wtp -> ac
 
 	/* Primitives 0x80 - 0xCF*/
 
@@ -136,7 +136,7 @@ typedef struct empower_header empower_hello_response;
 /* probe request packet format */
 struct empower_probe_request : public empower_header {
   private:
-    uint32_t _iface_id; /* sequence number */
+    uint32_t _iface_id; 				/* Interface id (int) */
     uint8_t _sta[6];                    /* EtherAddress */
     uint8_t _flags;            			/* Flags (empower_probe_assoc_flags) */
     uint16_t _ht_caps_info;				/* HT capabilities */
@@ -237,9 +237,9 @@ struct empower_lvap_stats_request : public empower_header {
 /* link stats response packet format */
 struct empower_lvap_stats_response : public empower_header {
   private:
-    uint32_t _iface_id; /* sequence number */
-    uint8_t  _sta[6];     /* EtherAddress */
-    uint16_t _nb_entries; /* Int */
+    uint32_t _iface_id; 	/* sequence number */
+    uint8_t  _sta[6];     	/* EtherAddress */
+    uint16_t _nb_entries; 	/* Int */
   public:
     void set_iface_id(uint32_t iface_id) { _iface_id = htonl(iface_id); }
     void set_sta(EtherAddress sta) { memcpy(_sta, sta.data(), 6); }
@@ -679,8 +679,8 @@ struct empower_del_slice : public empower_header {
     char        _ssid[WIFI_NWID_MAXSIZE+1]; /* Null terminated SSID */
   public:
     uint32_t     iface_id()                 { return ntohl(_iface_id); }
-    uint8_t         dscp()          		{ return _dscp; }
-    String          ssid()          		{ return String((char *) _ssid); }
+    uint8_t      dscp()          			{ return _dscp; }
+    String       ssid()          			{ return String((char *) _ssid); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* slice status packet format */
@@ -701,42 +701,42 @@ struct empower_status_slice : public empower_header {
     void set_ssid(String ssid)                  				{ memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* slice queue stats request packet format */
-struct empower_slice_queue_counters_request : public empower_header {
+/* slice stats request packet format */
+struct empower_slice_stats_request : public empower_header {
   private:
-    uint32_t _iface_id; /* sequence number */
+    char    _ssid[WIFI_NWID_MAXSIZE+1]; /* Null terminated SSID */
+	uint8_t _dscp;  					/* Traffic DSCP (int) */
   public:
-    uint32_t iface_id()         { return ntohl(_iface_id); }
+    String   ssid()          		{ return String((char *) _ssid); }
+    uint32_t dscp() 				{ return _dscp; }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* slice queue status packet format */
-struct empower_slice_queue_counters_entry {
+struct empower_slice_stats_entry {
   private:
-    uint8_t  	_dscp;                      	/* Traffic DSCP (int) */
-    char    	_ssid[WIFI_NWID_MAXSIZE+1];		/* Null terminated SSID */
+    uint32_t 	_iface_id; 						/* Interface id (int) */
     uint32_t    _deficit_used;      			/* Total deficit used by this queue */
     uint32_t    _max_queue_length;  			/* Maximum queue length reached */
     uint32_t    _tx_packets;        			/* Int */
     uint32_t    _tx_bytes;          			/* Int */
   public:
-    void set_dscp(uint8_t dscp) 							{ _dscp = dscp; }
-    void set_ssid(String ssid) 								{ memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
+    void set_iface_id(uint32_t iface_id)            		{ _iface_id = htonl(iface_id); }
     void set_deficit_used(uint32_t deficit_used)            { _deficit_used = htonl(deficit_used); }
     void set_max_queue_length(uint32_t max_queue_length)    { _max_queue_length = htonl(max_queue_length); }
     void set_tx_packets(uint32_t tx_packets)                { _tx_packets = htonl(tx_packets); }
     void set_tx_bytes(uint32_t tx_bytes)                    { _tx_bytes = htonl(tx_bytes); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
-/* slice queue status packet format */
-struct empower_slice_queue_counters_response : public empower_header {
+/* slice stats response packet format */
+struct empower_slice_stats_response : public empower_header {
   private:
-    uint32_t _iface_id; 	/* sequence number */
-    uint16_t _nb_entries;   /* Int */
+    char    	_ssid[WIFI_NWID_MAXSIZE+1];		/* Null terminated SSID */
+    uint8_t  	_dscp;                      	/* Traffic DSCP (int) */
+    uint16_t 	_nb_entries; 					/* Int */
   public:
-    void set_iface_id(uint32_t iface_id) 		{ _iface_id = htonl(iface_id); }
-    void set_nb_entries(uint16_t nb_entries)	{ _nb_entries = htons(nb_entries); }
-
-
+    void set_dscp(uint8_t dscp) 					{ _dscp = dscp; }
+    void set_ssid(String ssid) 						{ memset(_ssid, 0, WIFI_NWID_MAXSIZE+1); memcpy(_ssid, ssid.data(), ssid.length()); }
+    void set_nb_entries(uint16_t nb_entries)       	{ _nb_entries = htons(nb_entries); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 CLICK_ENDDECLS

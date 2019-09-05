@@ -357,10 +357,11 @@ void EmpowerLVAPManager::send_status_slice(uint32_t iface_id, String ssid, int d
 }
 
 
-int EmpowerLVAPManager::handle_slice_queue_counters_request(Packet *p, uint32_t offset) {
-    empower_slice_queue_counters_request *q = (empower_slice_queue_counters_request *) (p->data() + offset);
-	uint32_t iface_id = q->iface_id();
-	send_slice_queue_counters_response(iface_id, q->xid());
+int EmpowerLVAPManager::handle_slice_stats_request(Packet *p, uint32_t offset) {
+	empower_slice_stats_request *q = (empower_slice_stats_request *) (p->data() + offset);
+	String ssid = q->ssid();
+	uint8_t dscp = q->dscp();
+	send_slice_stats_response(ssid, dscp, q->xid());
     return 0;
 }
 
@@ -390,12 +391,9 @@ int EmpowerLVAPManager::handle_port_status_request(Packet *, uint32_t) {
 
 }
 
-void EmpowerLVAPManager::send_slice_queue_counters_response(uint32_t iface_id, uint32_t xid) {
+void EmpowerLVAPManager::send_slice_stats_response(String ssid, uint8_t dscp, uint32_t xid) {
 
-
-	uint16_t nr_entries = _eqms[iface_id]->slices()->size();
-
-    int len = sizeof(empower_slice_queue_counters_response) + nr_entries * sizeof(empower_slice_queue_counters_entry);
+	int len = sizeof(empower_slice_stats_response) + _eqms.size() * sizeof(empower_slice_stats_entry);
 
     WritablePacket *p = Packet::make(len);
 
@@ -408,34 +406,37 @@ void EmpowerLVAPManager::send_slice_queue_counters_response(uint32_t iface_id, u
 
     memset(p->data(), 0, p->length());
 
-    empower_slice_queue_counters_response *counters = (empower_slice_queue_counters_response *) (p->data());
-    counters->set_version(_empower_version);
-    counters->set_length(len);
-    counters->set_type(EMPOWER_PT_SLICE_QUEUE_COUNTERS_RESPONSE);
-    counters->set_seq(get_next_seq());
-    counters->set_xid(xid);
-    counters->set_wtp(_wtp);
-    counters->set_nb_entries(nr_entries);
+    empower_slice_stats_response *stats = (empower_slice_stats_response *) (p->data());
+    stats->set_version(_empower_version);
+    stats->set_length(len);
+    stats->set_type(EMPOWER_PT_SLICE_STATS_RESPONSE);
+    stats->set_seq(get_next_seq());
+    stats->set_xid(xid);
+    stats->set_wtp(_wtp);
+    stats->set_nb_entries(_eqms.size());
 
-	uint8_t *ptr = (uint8_t *) counters;
-	ptr += sizeof(empower_slice_queue_counters_response);
+	uint8_t *ptr = (uint8_t *) stats;
+	ptr += sizeof(empower_slice_stats_response);
 
-	uint8_t *end = ptr + (len - sizeof(empower_slice_queue_counters_response));
+	uint8_t *end = ptr + (len - sizeof(empower_slice_stats_response));
 
-	for (SIter it = _eqms[iface_id]->slices()->begin(); it.live(); it++) {
+	Slice slice = Slice(ssid, dscp);
+
+	for (int i = 0; i < _eqms.size(); i++) {
 
 		assert (ptr <= end);
 
-		empower_slice_queue_counters_entry *entry = (empower_slice_queue_counters_entry *) ptr;
+		empower_slice_stats_entry *entry = (empower_slice_stats_entry *) ptr;
 
-		entry->set_dscp(it.key()._dscp);
-		entry->set_ssid(it.key()._ssid);
-		entry->set_deficit_used(it.value()->_deficit_used);
-		entry->set_max_queue_length(it.value()->_max_queue_length);
-		entry->set_tx_bytes(it.value()->_tx_bytes);
-		entry->set_tx_packets(it.value()->_tx_packets);
+		SIter itr = _eqms[i]->slices()->find(slice);
 
-		ptr += sizeof(empower_slice_queue_counters_entry);
+		entry->set_iface_id(i);
+		entry->set_deficit_used(itr.value()->_deficit_used);
+		entry->set_max_queue_length(itr.value()->_max_queue_length);
+		entry->set_tx_bytes(itr.value()->_tx_bytes);
+		entry->set_tx_packets(itr.value()->_tx_packets);
+
+		ptr += sizeof(empower_slice_stats_entry);
 
 	}
 
@@ -1672,8 +1673,8 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 		case EMPOWER_PT_DEL_SLICE:
 			handle_del_slice(p, offset);
 			break;
-		case EMPOWER_PT_SLICE_QUEUE_COUNTERS_REQUEST:
-			handle_slice_queue_counters_request(p, offset);
+		case EMPOWER_PT_SLICE_STATS_REQUEST:
+			handle_slice_stats_request(p, offset);
 			break;
 		case EMPOWER_PT_SLICE_STATUS_REQ:
 			handle_slice_status_request(p, offset);

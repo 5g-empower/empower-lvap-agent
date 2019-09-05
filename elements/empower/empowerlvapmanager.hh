@@ -283,7 +283,7 @@ public:
 	int handle_vap_status_request(Packet *, uint32_t);
 	int handle_set_slice(Packet *, uint32_t);
 	int handle_del_slice(Packet *, uint32_t);
-	int handle_slice_queue_counters_request(Packet *, uint32_t);
+	int handle_slice_stats_request(Packet *, uint32_t);
 	int handle_slice_status_request(Packet *, uint32_t);
 	int handle_port_status_request(Packet *, uint32_t);
 
@@ -306,7 +306,7 @@ public:
 	void send_incoming_mcast_address (uint32_t iface_id, EtherAddress mcast_address);
 	void send_igmp_report(EtherAddress, Vector<IPAddress>*, Vector<enum empower_igmp_record_type>*);
 	void send_add_del_lvap_response(uint8_t type, EtherAddress sta, uint32_t xid, uint32_t status);
-	void send_slice_queue_counters_response(uint32_t iface_id, uint32_t xid);
+	void send_slice_stats_response(String ssid, uint8_t dscp, uint32_t xid);
 
 	ReadWriteLock* lock() { return &_lock; }
 	LVAP* lvaps() { return &_lvaps; }
