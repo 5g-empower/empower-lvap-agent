@@ -340,7 +340,7 @@ void EmpowerQOSManager::set_slice(String ssid, int dscp, uint32_t quantum, bool 
 		}
 
 		uint32_t tr_quantum = (quantum == 0) ? _quantum : quantum;
-		SliceQueue *queue = new SliceQueue(slice, _capacity, tr_quantum, amsdu_aggregation, scheduler);
+		SliceQueue *queue = new SliceQueue(this, slice, _capacity, tr_quantum, amsdu_aggregation, scheduler);
 		_slices.set(slice, queue);
 		_head_table.set(slice, 0);
 	} else {

@@ -46,6 +46,7 @@ Turn debug on/off
 */
 
 class EtherPair {
+
   public:
 
     EtherAddress _ra;
@@ -80,17 +81,16 @@ class EtherPair {
 
 };
 
-class SliceQueue;
+class EmpowerQOSManager;
 
 class AggregationQueue {
 
 public:
-    uint32_t _quantum;
 
-    AggregationQueue(uint32_t capacity, EtherPair pair) {
+    AggregationQueue(EmpowerQOSManager * eqm, uint32_t capacity, EtherPair pair) {
+        _eqm = eqm;
         _q = new Packet*[capacity];
         _deficit = 0;
-        _quantum = 0;
         _capacity = capacity;
         _pair = pair;
         _nb_pkts = 0;
@@ -118,9 +118,6 @@ public:
             }
         }
         delete[] _q;
-        //if (_amsdu) {
-        //    _amsdu->kill();
-        //}
         _queue_lock.release_write();
     }
 
@@ -386,10 +383,12 @@ public:
 
 private:
 
+	EmpowerQOSManager * _eqm;
+
     ReadWriteLock _queue_lock;
     Packet** _q;
-    //WritablePacket * _amsdu;
 
+    //uint32_t _quantum;
     uint32_t _capacity;
     uint32_t _deficit;
     EtherPair _pair;
@@ -439,6 +438,8 @@ class SliceQueue {
 
 public:
 
+	EmpowerQOSManager * _eqm;
+
     AggregationQueues _queues;
     Vector<EtherPair> _active_list;
 
@@ -455,10 +456,9 @@ public:
     uint32_t _tx_bytes;
     uint8_t _scheduler;
 
-    SliceQueue(Slice slice, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation, uint8_t scheduler) :
-    	_slice(slice), _capacity(capacity), _size(0), _drops(0), _deficit(0), _quantum(quantum),
-		_amsdu_aggregation(amsdu_aggregation), _deficit_used(0), _max_queue_length(0), _tx_packets(0),
-		_tx_bytes(0), _scheduler(scheduler) {
+    SliceQueue(EmpowerQOSManager * eqm, Slice slice, uint32_t capacity, uint32_t quantum, bool amsdu_aggregation, uint8_t scheduler) :
+		_eqm(eqm), _slice(slice), _capacity(capacity), _size(0), _drops(0), _deficit(0), _quantum(quantum), _amsdu_aggregation(amsdu_aggregation),
+		_deficit_used(0), _max_queue_length(0), _tx_packets(0), _tx_bytes(0), _scheduler(scheduler) {
     }
 
     ~SliceQueue() {
@@ -476,7 +476,7 @@ public:
         EtherPair pair = EtherPair(ra, ta);
 
         if (_queues.find(pair) == _queues.end()) {
-            AggregationQueue *queue = new AggregationQueue(_capacity, pair);
+            AggregationQueue *queue = new AggregationQueue(_eqm, _capacity, pair);
             _queues.set(pair, queue);
             _active_list.push_back(pair);
         }
