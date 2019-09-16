@@ -249,13 +249,23 @@ struct empower_lvap_stats_response : public empower_header {
 /* lvap_stats entry format */
 struct lvap_stats_entry {
   private:
-    uint8_t  _rate;     /* Rate in units of 500kbps or MCS index */
-    uint32_t _prob;     /* Probability [0-18000] */
-    uint32_t _cur_prob; /* Probability [0-18000] */
+    uint8_t  _rate;     		/* Rate in units of 500kbps or MCS index */
+    uint32_t _prob;     		/* Probability [0-18000] */
+    uint32_t _cur_prob; 		/* Probability [0-18000] */
+    uint32_t _cur_tp; 			/* Estimate bitrate */
+    uint32_t _last_attempts;	/* Count */
+    uint32_t _last_successes;	/* Count */
+    uint32_t _hist_attempts;	/* Count */
+    uint32_t _hist_successes;	/* Count */
   public:
-    void set_rate(uint8_t rate)          { _rate = rate; }
-    void set_prob(uint32_t prob)         { _prob = htonl(prob); }
-    void set_cur_prob(uint32_t cur_prob) { _cur_prob = htonl(cur_prob); }
+    void set_rate(uint8_t rate)         		 	{ _rate = rate; }
+    void set_prob(uint32_t prob)         			{ _prob = htonl(prob); }
+    void set_cur_prob(uint32_t cur_prob) 			{ _cur_prob = htonl(cur_prob); }
+    void set_cur_tp(uint32_t cur_tp) 				{ _cur_tp = htonl(cur_tp); }
+    void set_last_attempts(uint32_t attempts) 		{ _last_attempts = htonl(attempts); }
+    void set_last_successes(uint32_t successes) 	{ _last_successes = htonl(successes); }
+    void set_hist_attempts(uint32_t attempts) 		{ _hist_attempts = htonl(attempts); }
+    void set_hist_successes(uint32_t successes) 	{ _hist_successes = htonl(successes); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* wifi stats request packet format */

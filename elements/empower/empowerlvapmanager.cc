@@ -836,6 +836,11 @@ void EmpowerLVAPManager::send_lvap_stats_response(EtherAddress lvap, uint32_t xi
 		entry->set_rate(nfo->rates[i]);
 		entry->set_prob((uint32_t) nfo->probability[i]);
 		entry->set_cur_prob((uint32_t) nfo->cur_prob[i]);
+		entry->set_cur_tp((uint32_t) nfo->cur_tp[i]);
+		entry->set_last_attempts((uint32_t) nfo->last_attempts[i]);
+		entry->set_last_successes((uint32_t) nfo->last_successes[i]);
+		entry->set_hist_attempts((uint32_t) nfo->hist_attempts[i]);
+		entry->set_hist_successes((uint32_t) nfo->hist_successes[i]);
 		ptr += sizeof(lvap_stats_entry);
 	}
 
@@ -1289,6 +1294,7 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 
 	}
 
+	/* just update lvap with new configuration */
 	EmpowerStationState *ess = _lvaps.get_pointer(sta);
 
 	ess->_bssid = bssid;
@@ -1305,12 +1311,6 @@ int EmpowerLVAPManager::handle_add_lvap(Packet *p, uint32_t offset) {
 	send_add_del_lvap_response(EMPOWER_PT_ADD_LVAP_RESPONSE, ess->_sta, xid, 0);
 
 	_lock.release_write();
-
-	/* create default slice */
-	if (ssid != "") {
-		// TODO: for the moment assume that at worst a 1500 bytes frame can be sent in 12000 usec
-		_eqms[iface_id]->set_default_slice(ssid);
-	}
 
 	return 0;
 
