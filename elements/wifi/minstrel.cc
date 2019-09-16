@@ -66,16 +66,22 @@ void Minstrel::run_timer(Timer *)
 			if (nfo->attempts[i]) {
 				p = (nfo->successes[i] * 18000) / nfo->attempts[i];
 				nfo->hist_successes[i] += nfo->successes[i];
+				nfo->hist_successes_bytes[i] += nfo->successes_bytes[i];
 				nfo->hist_attempts[i] += nfo->attempts[i];
+				nfo->hist_attempts_bytes[i] += nfo->attempts_bytes[i];
 				nfo->cur_prob[i] = p;
 				p = ((p * (100 - _ewma_level)) + (nfo->probability[i] * _ewma_level)) / 100;
 				nfo->probability[i] = p;
 				nfo->cur_tp[i] = p * (1000000 / usecs);
 			}
 			nfo->last_successes[i] = nfo->successes[i];
+			nfo->last_successes_bytes[i] = nfo->successes_bytes[i];
 			nfo->last_attempts[i] = nfo->attempts[i];
+			nfo->last_attempts_bytes[i] = nfo->attempts_bytes[i];
 			nfo->successes[i] = 0;
+			nfo->successes_bytes[i] = 0;
 			nfo->attempts[i] = 0;
+			nfo->attempts_bytes[i] = 0;
 			/* Sample less often below the 10% chance of success.
 			 * Sample less often above the 95% chance of success. */
 			if ((nfo->probability[i] > 17100) || (nfo->probability[i] < 1800)) {
@@ -168,7 +174,7 @@ void Minstrel::process_feedback(Packet *p_in) {
 		}
 		return;
 	}
-	nfo->add_result(ceh->rate, ceh->max_tries, success);
+	nfo->add_result(ceh->rate, ceh->max_tries, success, p_in->length());
 	return;
 }
 

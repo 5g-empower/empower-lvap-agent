@@ -29,6 +29,12 @@ public:
 	Vector<int> last_attempts;
 	Vector<int> hist_successes;
 	Vector<int> hist_attempts;
+	Vector<uint32_t> successes_bytes;
+	Vector<uint32_t> attempts_bytes;
+	Vector<uint32_t> last_successes_bytes;
+	Vector<uint32_t> last_attempts_bytes;
+	Vector<uint32_t> hist_successes_bytes;
+	Vector<uint32_t> hist_attempts_bytes;
 	Vector<int> cur_prob;
 	Vector<int> cur_tp;
 	Vector<int> probability;
@@ -48,6 +54,12 @@ public:
 		last_attempts = Vector<int>();
 		hist_successes = Vector<int>();
 		hist_attempts = Vector<int>();
+		successes_bytes = Vector<uint32_t>();
+		attempts_bytes = Vector<uint32_t>();
+		last_successes_bytes = Vector<uint32_t>();
+		last_attempts_bytes = Vector<uint32_t>();
+		hist_successes_bytes = Vector<uint32_t>();
+		hist_attempts_bytes = Vector<uint32_t>();
 		cur_prob = Vector<int>();
 		cur_tp = Vector<int>();
 		probability = Vector<int>();
@@ -70,6 +82,12 @@ public:
 		last_attempts = Vector<int>(supported.size(), 0);
 		hist_successes = Vector<int>(supported.size(), 0);
 		hist_attempts = Vector<int>(supported.size(), 0);
+		successes_bytes = Vector<uint32_t>(supported.size(), 0);
+		attempts_bytes = Vector<uint32_t>(supported.size(), 0);
+		last_successes_bytes = Vector<uint32_t>(supported.size(), 0);
+		last_attempts_bytes = Vector<uint32_t>(supported.size(), 0);
+		hist_successes_bytes = Vector<uint32_t>(supported.size(), 0);
+		hist_attempts_bytes = Vector<uint32_t>(supported.size(), 0);
 		cur_prob = Vector<int>(supported.size(), 0);
 		cur_tp = Vector<int>(supported.size(), 0);
 		probability = Vector<int>(supported.size(), 0);
@@ -91,11 +109,13 @@ public:
 		}
 		return (ndx == rates.size()) ? -1 : ndx;
 	}
-	void add_result(int rate, int tries, int success) {
+	void add_result(int rate, int tries, int success, uint32_t pkt_length) {
 		int ndx = rate_index(rate);
 		if (ndx >= 0) {
 			successes[ndx] += success;
 			attempts[ndx] += tries;
+			successes_bytes[ndx] += uint32_t (success * pkt_length);
+			attempts_bytes[ndx] += uint32_t (tries * pkt_length);
 		}
 	}
 	String unparse() {
@@ -103,7 +123,7 @@ public:
 		int tp, prob, eprob, rate;
 		char buffer[4096];
 		sa << eth << "\n";
-		sa << "rate    throughput    ewma prob    this prob    this success (attempts)    success    attempts\n";
+		sa << "rate    throughput    ewma prob    this prob    this success (attempts)    success    attempts    this success_bytes    this attempts_bytes        success_bytes    attempts_bytes\n";
 		for (int i = 0; i < rates.size(); i++) {
 			tp = cur_tp[i] / ((18000 << 10) / 96);
 			prob = cur_prob[i] / 18;
@@ -113,7 +133,7 @@ public:
 			} else {
 				rate = rates[i] / 2;
 			}
-			sprintf(buffer, "%2d%s    %2u.%1u    %3u.%1u    %3u.%1u    %3u (%3u)    %8llu    %8llu\n",
+			sprintf(buffer, "%2d%s    %2u.%1u    %3u.%1u    %3u.%1u    %3u (%3u)    %8llu    %8llu    %8llu    %8llu    %8llu    %8llu\n",
 					rate,
 					(rates[i] % 1 && !ht) ? ".5" : "  ",
 					tp / 10, tp % 10,
@@ -122,7 +142,11 @@ public:
 					last_successes[i],
 					last_attempts[i],
 					(unsigned long long) hist_successes[i],
-					(unsigned long long) hist_attempts[i]);
+					(unsigned long long) hist_attempts[i],
+                    (unsigned long long) last_successes_bytes[i],
+                    (unsigned long long) last_attempts_bytes[i],
+                    (unsigned long long) hist_successes_bytes[i],
+                    (unsigned long long) hist_attempts_bytes[i]);
 			if (i == max_tp_rate)
 				sa << 'T';
 			else if (i == max_tp_rate2)
