@@ -373,7 +373,7 @@ public:
       Packet* p = 0;
       _queue_lock.acquire_write();
       if(_head != _tail) {
-        p = _q[(_head+1) % _capacity];
+        p = _q[_head];
       }
       _queue_lock.release_write();
       return p;
