@@ -584,6 +584,7 @@ void EmpowerLVAPManager::send_status_port(uint32_t iface_id, EtherAddress sta) {
 	status->set_nb_ht_mcs(tx_policy->_ht_mcs.size());
 	status->set_iface_id(iface_id);
 	status->set_ur_mcast_count(tx_policy->_ur_mcast_count);
+	status->set_tx_mcast(tx_policy->_tx_mcast);
 
 	uint8_t *ptr = (uint8_t *) status;
 	ptr += sizeof(empower_status_port);
