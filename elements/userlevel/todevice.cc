@@ -46,7 +46,7 @@
 # include <sys/socket.h>
 # include <sys/ioctl.h>
 # include <net/if.h>
-# include <net/if_packet.h>
+//# include <net/if_packet.h>
 # include <features.h>
 # if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 1
 #  include <netpacket/packet.h>

@@ -34,6 +34,11 @@
 #endif
 CLICK_DECLS
 
+#ifdef HAVE_VA_LIST_AS_ARRAY
+#define MAKE_POINTER_FROM_VA_LIST_ARG(arg) ((va_list *)(arg))
+#else
+#define MAKE_POINTER_FROM_VA_LIST_ARG(arg) (&(arg))
+#endif
 /** @file error.hh
  * @brief Flexible error handling classes.
  */
@@ -728,7 +733,8 @@ ErrorHandler::vxformat(int default_flags, const char *s, va_list val)
 	    s = s2 + 1;
 	    for (Conversion *item = error_items; item; item = item->next)
 		if (item->name.equals(s1, s2 - s1)) {
-		    strstore = item->hook(flags, VA_LIST_REF(val));
+		    //strstore = item->hook(flags, VA_LIST_REF(val));
+		    strstore = item->hook(flags, MAKE_POINTER_FROM_VA_LIST_ARG(VA_LIST_REF(val)));
 		    s1 = strstore.begin();
 		    s2 = strstore.end();
 		    goto got_result;

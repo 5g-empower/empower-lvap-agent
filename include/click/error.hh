@@ -25,6 +25,7 @@
 #else
 # define ERRH_SENTINEL __attribute__((sentinel))
 #endif
+# define HAVE_VA_LIST_AS_ARRAY 1
 CLICK_DECLS
 
 /** @class ErrorHandler

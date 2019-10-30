@@ -6,6 +6,7 @@
 #include <click/glue.hh>
 #include <click/timer.hh>
 #include <click/hashtable.hh>
+#include <clicknet/wifi.h>
 #include <elements/wifi/bitrate.hh>
 #include "transmissionpolicies.hh"
 CLICK_DECLS
@@ -201,8 +202,9 @@ class Minstrel : public Element { public:
 	void assign_rate(Packet *);
 	void process_feedback(Packet *);
 
-	inline uint32_t estimate_usecs_wifi_packet(Packet *p) {
+	uint32_t estimate_usecs_wifi_packet(Packet *p) {
 		struct click_wifi *w = (struct click_wifi *) p->data();
+		w->i_addr1;
 		EtherAddress dst = EtherAddress(w->i_addr1);
 		if (!dst.is_broadcast() && !dst.is_group()) {
 			uint32_t rate = 1;

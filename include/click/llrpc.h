@@ -13,7 +13,7 @@ CLICK_CXX_UNPROTECT
 # include <sys/ioccom.h>
 #else
 # include <errno.h>
-# include <sys/ioctl.h>
+# include <linux/ioctl.h>
 #endif
 
 /* Click low-level RPC interface */
