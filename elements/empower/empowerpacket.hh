@@ -111,7 +111,6 @@ struct empower_header {
     uint32_t _seq;      /* sequence number */
     uint32_t _xid;      /* sequence number */
     uint8_t  _wtp[6];   /* EtherAddress */
-
   public:
     uint8_t      version()                   { return _version; }
     uint8_t      type()                      { return _type; }
@@ -128,10 +127,20 @@ struct empower_header {
 } CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* hello request packet format */
-typedef struct empower_header empower_hello_request;
+struct empower_hello_request : public empower_header {
+  private:
+    uint32_t _period;         /* Hello period in ms (int) */
+  public:
+    void set_period(uint32_t period) { _period = htonl(period); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* hello response packet format */
-typedef struct empower_header empower_hello_response;
+struct empower_hello_response : public empower_header {
+  private:
+    uint32_t _period;         /* Hello period in ms (int) */
+  public:
+    uint32_t period()  { return ntohl(_period); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
 
 /* probe request packet format */
 struct empower_probe_request : public empower_header {
@@ -478,8 +487,6 @@ struct empower_set_port : public empower_header {
     uint8_t  _ur_mcast_count; /* Number of unsolicited replies (int) */
     uint8_t  _nb_mcs;         /* Number of rate entries (int) */
     uint8_t  _nb_ht_mcs;      /* Number of HT rate entries (int) */
-    uint8_t  *mcs[];          /* Rates in units of 500kbps or MCS index */
-    uint8_t  *ht_mcs[];       /* HT Rate entries as MCS index */
   public:
     uint32_t iface_id()                 { return ntohl(_iface_id); }
     bool flag(int f)                    { return _flags & f;  }
@@ -514,8 +521,6 @@ struct empower_status_port : public empower_header {
     uint8_t  _ur_mcast_count;   /* Number of unsolicited replies (int) */
     uint8_t  _nb_mcs;           /* Number of rate entries (int) */
     uint8_t  _nb_ht_mcs;        /* Number of HT rate entries (int) */
-    uint8_t  *mcs[];            /* Rate entries in units of 500kbps or MCS index */
-    uint8_t  *ht_mcs[];         /* HT Rate entries as MCS index */
   public:
     void set_flag(uint16_t f)                           { _flags = _flags | f; }
     void set_sta(EtherAddress sta)                      { memcpy(_sta, sta.data(), 6); }

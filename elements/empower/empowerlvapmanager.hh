@@ -253,11 +253,12 @@ public:
 	int initialize(ErrorHandler *);
 	int configure(Vector<String> &, ErrorHandler *);
 	void add_handlers();
+	void run_timer(Timer *);
 	void reset();
 
 	void push(int, Packet *);
 
-	int handle_hello_request(Packet *, uint32_t);
+	int handle_hello_response(Packet *, uint32_t);
 	int handle_add_lvap(Packet *, uint32_t);
 	int handle_del_lvap(Packet *, uint32_t);
 	int handle_add_vap(Packet *, uint32_t);
@@ -287,7 +288,7 @@ public:
 	int handle_slice_status_request(Packet *, uint32_t);
 	int handle_port_status_request(Packet *, uint32_t);
 
-	void send_hello_response();
+	void send_hello_request();
 	void send_probe_request(uint32_t iface_id, EtherAddress src, String ssid, bool ht_caps, uint16_t ht_caps_info);
 	void send_auth_request(EtherAddress src, EtherAddress bssid);
 	void send_association_request(EtherAddress src, EtherAddress bssid, String ssid, bool ht_caps, uint16_t ht_caps_info);
@@ -376,6 +377,9 @@ private:
 	ReadWriteLock _lock;
 
 	RETable _ifaces;
+
+	unsigned int _period; // msecs
+	Timer _timer;
 
 	void compute_bssid_mask();
 	void send_message(Packet *);

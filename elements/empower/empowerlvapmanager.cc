@@ -37,8 +37,8 @@
 CLICK_DECLS
 
 EmpowerLVAPManager::EmpowerLVAPManager() :
-		_e11k(0), _ebs(0), _eauthr(0), _eassor(0), _edeauthr(0), _ers(0),
-		_mtbl(0), _seq(0), _debug(false) {
+		_period(2000), _timer(this), _e11k(0), _ebs(0), _eauthr(0), _eassor(0),
+		_edeauthr(0), _ers(0), _mtbl(0), _seq(0), _debug(false) {
 }
 
 EmpowerLVAPManager::~EmpowerLVAPManager() {
@@ -46,6 +46,8 @@ EmpowerLVAPManager::~EmpowerLVAPManager() {
 
 int EmpowerLVAPManager::initialize(ErrorHandler *) {
 	compute_bssid_mask();
+	_timer.initialize(this);
+	_timer.schedule_now();
 	return 0;
 }
 
@@ -71,20 +73,21 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 	String regmon_strings;
 
 	res = Args(conf, this, errh).read_m("WTP", _wtp)
-						        .read_m("E11K", ElementCastArg("Empower11k"), _e11k)
-						        .read_m("EBS", ElementCastArg("EmpowerBeaconSource"), _ebs)
-			                    .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
-			                    .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
+						    .read_m("E11K", ElementCastArg("Empower11k"), _e11k)
+						    .read_m("EBS", ElementCastArg("EmpowerBeaconSource"), _ebs)
+			          .read_m("EAUTHR", ElementCastArg("EmpowerOpenAuthResponder"), _eauthr)
+			          .read_m("EASSOR", ElementCastArg("EmpowerAssociationResponder"), _eassor)
 								.read_m("EDEAUTHR", ElementCastArg("EmpowerDeAuthResponder"), _edeauthr)
-			                    .read_m("DEBUGFS", debugfs_strings)
-			                    .read_m("EQMS", eqms_strings)
-			                    .read_m("RCS", rcs_strings)
-			                    .read_m("RES", res_strings)
-								.read("REGMONS", regmon_strings)
-			                    .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
+			          .read_m("DEBUGFS", debugfs_strings)
+			          .read_m("EQMS", eqms_strings)
+			          .read_m("RCS", rcs_strings)
+			          .read_m("RES", res_strings)
+			          .read_m("ERS", ElementCastArg("EmpowerRXStats"), _ers)
+			          .read("REGMONS", regmon_strings)
 								.read("MTBL", ElementCastArg("EmpowerMulticastTable"), _mtbl)
-			                    .read("DEBUG", _debug)
-			                    .complete();
+				  			.read("PERIOD", _period)
+			          .read("DEBUG", _debug)
+			          .complete();
 
 	cp_spacevec(debugfs_strings, _debugfs_strings);
 
@@ -170,6 +173,16 @@ int EmpowerLVAPManager::configure(Vector<String> &conf,
 	}
 
 	return res;
+
+}
+
+void EmpowerLVAPManager::run_timer(Timer *) {
+
+	// send hello request
+	send_hello_request();
+
+	// re-schedule the timer with some jitter
+	_timer.schedule_after_msec(_period);
 
 }
 
@@ -294,9 +307,9 @@ void EmpowerLVAPManager::send_message(Packet *p) {
 	output(0).push(p);
 }
 
-void EmpowerLVAPManager::send_hello_response() {
+void EmpowerLVAPManager::send_hello_request() {
 
-	WritablePacket *p = Packet::make(sizeof(empower_hello_response));
+	WritablePacket *p = Packet::make(sizeof(empower_hello_request));
 
 	if (!p) {
 		click_chatter("%{element} :: %s :: cannot make packet!",
@@ -307,13 +320,14 @@ void EmpowerLVAPManager::send_hello_response() {
 
 	memset(p->data(), 0, p->length());
 
-	empower_hello_response *hello = (empower_hello_response *) (p->data());
+	empower_hello_request *hello = (empower_hello_request *) (p->data());
 
 	hello->set_version(_empower_version);
-	hello->set_length(sizeof(empower_hello_response));
-	hello->set_type(EMPOWER_PT_HELLO_RESPONSE);
+	hello->set_length(sizeof(empower_hello_request));
+	hello->set_type(EMPOWER_PT_HELLO_REQUEST);
 	hello->set_seq(get_next_seq());
 	hello->set_wtp(_wtp);
+	hello->set_period(_period);
 
 	send_message(p);
 
@@ -1121,9 +1135,10 @@ void EmpowerLVAPManager::send_caps_response() {
 
 }
 
-int EmpowerLVAPManager::handle_hello_request(Packet *, uint32_t) {
-	// send hello response
-	send_hello_response();
+int EmpowerLVAPManager::handle_hello_response(Packet *p, uint32_t offset) {
+	// Process hello response and update period
+	empower_hello_response *q = (empower_hello_response *) (p->data() + offset);
+	_period = q->period();
 	return 0;
 }
 
@@ -1599,8 +1614,8 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 	while (offset < p->length()) {
 		empower_header *w = (empower_header *) (p->data() + offset);
 		switch (w->type()) {
-		case EMPOWER_PT_HELLO_REQUEST:
-			handle_hello_request(p, offset);
+		case EMPOWER_PT_HELLO_RESPONSE:
+			handle_hello_response(p, offset);
 			break;
 		case EMPOWER_PT_ADD_LVAP:
 			handle_add_lvap(p, offset);
