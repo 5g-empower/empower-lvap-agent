@@ -4,7 +4,6 @@
 #include <click/element.hh>
 #include <click/config.h>
 #include <click/timer.hh>
-#include <elements/wifi/availablerates.hh>
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 

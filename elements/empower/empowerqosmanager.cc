@@ -27,9 +27,9 @@
 #include <click/packet_anno.hh>
 #include <clicknet/llc.h>
 #include <elements/wifi/wirelessinfo.hh>
-#include <elements/wifi/transmissionpolicy.hh>
-#include <elements/wifi/minstrel.hh>
 #include <elements/wifi/bitrate.hh>
+#include "transmissionpolicy.hh"
+#include "minstrel.hh"
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 

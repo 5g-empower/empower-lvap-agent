@@ -8,7 +8,7 @@
 #include <click/hashtable.hh>
 #include <clicknet/wifi.h>
 #include <click/sync.hh>
-#include <elements/wifi/minstrel.hh>
+#include "minstrel.hh"
 #include "empowerrxstats.hh"
 #include "empowerpacket.hh"
 #include "igmppacket.hh"

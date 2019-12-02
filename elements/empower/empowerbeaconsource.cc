@@ -23,7 +23,7 @@
 #include <click/error.hh>
 #include <click/packet_anno.hh>
 #include <clicknet/wifi.h>
-#include <elements/wifi/minstrel.hh>
+#include "minstrel.hh"
 #include "empowerpacket.hh"
 #include "empowerlvapmanager.hh"
 CLICK_DECLS

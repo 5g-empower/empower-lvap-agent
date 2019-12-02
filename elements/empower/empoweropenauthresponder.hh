@@ -3,7 +3,6 @@
 #define CLICK_EMPOWEROPENAUTHRESPONDER_HH
 #include <click/element.hh>
 #include <click/config.h>
-#include <elements/wifi/availablerates.hh>
 CLICK_DECLS
 
 /*

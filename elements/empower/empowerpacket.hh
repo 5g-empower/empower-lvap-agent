@@ -1,7 +1,7 @@
 #ifndef CLICK_EMPOWERPACKET_HH
 #define CLICK_EMPOWERPACKET_HH
 #include <clicknet/wifi.h>
-#include <elements/wifi/transmissionpolicies.hh>
+#include "transmissionpolicies.hh"
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 

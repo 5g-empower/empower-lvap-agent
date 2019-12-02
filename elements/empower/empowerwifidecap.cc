@@ -25,7 +25,7 @@
 #include <clicknet/ether.h>
 #include <click/packet_anno.hh>
 #include <click/etheraddress.hh>
-#include <elements/wifi/minstrel.hh>
+#include "minstrel.hh"
 #include "empowerlvapmanager.hh"
 CLICK_DECLS
 

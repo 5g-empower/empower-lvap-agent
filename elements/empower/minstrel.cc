@@ -23,7 +23,6 @@
 #include <click/straccum.hh>
 #include <clicknet/ether.h>
 #include <clicknet/wifi.h>
-#include <elements/wifi/availablerates.hh>
 #include "minstrel.hh"
 
 CLICK_DECLS
