@@ -647,6 +647,12 @@ void EmpowerBeaconSource::push(int, Packet *p) {
 
 void EmpowerBeaconSource::send_probe_response(EmpowerStationState *ess, String ssid) {
 
+	if (!ess) {
+		click_chatter("%{element} :: %s :: invalid ess",
+				      this,
+				      __func__);
+	}
+
 	int current_channel = _el->ifaces()->get(ess->_iface_id)->_channel;
 
 	if (ssid == "") {
