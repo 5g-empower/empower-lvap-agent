@@ -1626,6 +1626,9 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 		case EMPOWER_PT_HELLO_RESPONSE:
 			handle_hello_response(p, offset);
 			break;
+		case EMPOWER_PT_TRIGGER_BEACON:
+			handle_trigger_beacon(p, offset);
+			break;
 		case EMPOWER_PT_ADD_LVAP:
 			handle_add_lvap(p, offset);
 			break;
