@@ -259,6 +259,7 @@ public:
 	void push(int, Packet *);
 
 	int handle_hello_response(Packet *, uint32_t);
+	int handle_trigger_beacon(Packet *, uint32_t);
 	int handle_add_lvap(Packet *, uint32_t);
 	int handle_del_lvap(Packet *, uint32_t);
 	int handle_add_vap(Packet *, uint32_t);

@@ -1142,6 +1142,15 @@ int EmpowerLVAPManager::handle_hello_response(Packet *p, uint32_t offset) {
 	return 0;
 }
 
+int EmpowerLVAPManager::handle_trigger_beacon(Packet *p, uint32_t offset) {
+	// Process the trigger beacon
+	empower_trigger_beacon *q = (empower_trigger_beacon *) (p->data() + offset);
+	int iface_id = q->iface_id();
+	int current_channel = _ifaces.get(iface_id)->_channel;
+	_ebs->send_beacon(q->dst(), q->bssid(), q->ssid(), current_channel, iface_id, false, false, 0, 0, 0);
+	return 0;
+}
+
 int EmpowerLVAPManager::handle_caps_request(Packet *, uint32_t) {
 	// send caps response
 	send_caps_response();

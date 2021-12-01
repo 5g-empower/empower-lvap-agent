@@ -55,6 +55,9 @@ enum empower_packet_types {
     EMPOWER_PT_STATUS_SLICE = 0x1B,          		// wtp -> ac
     EMPOWER_PT_SLICE_STATUS_REQ = 0x1C,      		// ac -> wtp
 
+    // Beacon messages
+	EMPOWER_PT_TRIGGER_BEACON = 0x1D,             	// ac -> wtp
+
 	/* Workers 0x40 - 0x7F */
 
     // Channel Quality Maps
@@ -141,6 +144,21 @@ struct empower_hello_response : public empower_header {
   public:
     uint32_t period()  { return ntohl(_period); }
 } CLICK_SIZE_PACKED_ATTRIBUTE;
+
+/* trigger beacon */
+struct empower_trigger_beacon : public empower_header {
+  private:
+    uint32_t _iface_id; 				/* Interface id (int) */
+    uint8_t _dst[6];                 	/* EtherAddress */
+    uint8_t _bssid[6];                 	/* EtherAddress */
+    char _ssid[WIFI_NWID_MAXSIZE+1]; 	/* Null terminated SSID */
+  public:
+    uint32_t iface_id()   { return ntohl(_iface_id); }
+    EtherAddress dst()    { return EtherAddress(_dst); }
+    EtherAddress bssid()  { return EtherAddress(_bssid); }
+    String ssid()         { return String((char *) _ssid); }
+} CLICK_SIZE_PACKED_ATTRIBUTE;
+
 
 /* probe request packet format */
 struct empower_probe_request : public empower_header {
