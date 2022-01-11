@@ -446,7 +446,7 @@ void EmpowerLVAPManager::send_slice_stats_response(String ssid, uint8_t dscp, ui
 
 		entry->set_iface_id(i);
 
-		if (itr) {
+		if (itr != _eqms[i]->slices()->end()) {
 			entry->set_deficit_used(itr.value()->_deficit_used);
 			entry->set_max_queue_length(itr.value()->_max_queue_length);
 			entry->set_tx_bytes(itr.value()->_tx_bytes);
