@@ -1628,7 +1628,7 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 
 	uint32_t offset = 0;
 
-	while (offset < p->length()) {
+	//while (offset < p->length()) {
 		empower_header *w = (empower_header *) (p->data() + offset);
 		switch (w->type()) {
 		case EMPOWER_PT_HELLO_RESPONSE:
@@ -1724,8 +1724,8 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 					      __func__,
 					      w->type());
 		}
-		offset += w->length();
-	}
+		//offset += w->length();
+	//}
 
 	p->kill();
 	return;
