@@ -1628,20 +1628,8 @@ void EmpowerLVAPManager::push(int, Packet *p) {
 
 	uint32_t offset = 0;
 
-	empower_header *w = (empower_header *) (p->data() + offset);
-
-	if (p->length() != w->length()) {
-                click_chatter("%{element} :: %s :: Invalid length: got %d expected  %d",
-                                      this,
-                                      __func__,
-                                      p->length(),
-                                      w->length());
-                p->kill();
-                return;
-        }
-
-
 	//while (offset < p->length()) {
+		empower_header *w = (empower_header *) (p->data() + offset);
 		switch (w->type()) {
 		case EMPOWER_PT_HELLO_RESPONSE:
 			handle_hello_response(p, offset);
