@@ -173,7 +173,19 @@ void Minstrel::process_feedback(Packet *p_in) {
 		}
 		return;
 	}
-	nfo->add_result(ceh->rate, ceh->max_tries, success, p_in->length());
+
+    Vector<int> rates = Vector<int>(nfo->retry_chain_size, -1);
+    if(nfo->assigned_rates.size() > 0){
+        int size = nfo->assigned_rates[0].size();
+        for(int i = 0; i < size; i++){
+            rates[i] = nfo->assigned_rates[0][i];
+        }
+        nfo->assigned_rates.pop_front();
+    }
+    else{
+        click_chatter("[DEBUG] assigned_rates is empty\n");
+    }
+	nfo->add_result(rates, ceh->max_tries, success, p_in->length());
 	return;
 }
 
@@ -331,6 +343,12 @@ void Minstrel::assign_rate(Packet *p_in)
 	ceh->max_tries2 = 4;
 	ceh->max_tries3 = 4;
 
+    Vector<int> assigned_rate = Vector<int>(nfo->retry_chain_size, -1);
+    assigned_rate[0] = ceh->rate;
+    assigned_rate[1] = ceh->rate1;
+    assigned_rate[2] = ceh->rate2;
+    assigned_rate[3] = ceh->rate3;
+    nfo->assigned_rates.push_back(assigned_rate);
 	return;
 
 }

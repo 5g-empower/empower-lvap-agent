@@ -39,6 +39,12 @@ public:
 	Vector<int> cur_tp;
 	Vector<int> probability;
 	Vector<int> sample_limit;
+    
+    // A vector to record rates assigned to data frames
+    // Assume that feedback frames will come back in the order that their data frame were sent
+    Vector<Vector<int>> assigned_rates;
+    int retry_chain_size;
+
 	int packet_count;
 	int sample_count;
 	int max_tp_rate;
@@ -64,6 +70,8 @@ public:
 		cur_tp = Vector<int>();
 		probability = Vector<int>();
 		sample_limit = Vector<int>();
+        assigned_rates = Vector<Vector<int>>();
+        retry_chain_size = 4;
 		packet_count = 0;
 		sample_count = 0;
 		max_tp_rate = 0;
@@ -92,6 +100,8 @@ public:
 		cur_tp = Vector<int>(supported.size(), 0);
 		probability = Vector<int>(supported.size(), 0);
 		sample_limit = Vector<int>(supported.size(), -1);
+        assigned_rates = Vector<Vector<int>>();
+        retry_chain_size = 4;
 		packet_count = 0;
 		sample_count = 0;
 		max_tp_rate = 0;
@@ -109,14 +119,24 @@ public:
 		}
 		return (ndx == rates.size()) ? -1 : ndx;
 	}
-	void add_result(int rate, int tries, int success, uint32_t pkt_length) {
-		int ndx = rate_index(rate);
-		if (ndx >= 0) {
-			successes[ndx] += success;
-			attempts[ndx] += tries;
-			successes_bytes[ndx] += uint32_t (success * pkt_length);
-			attempts_bytes[ndx] += uint32_t (tries * pkt_length);
-		}
+	void add_result(Vector<int> &rates, int tries, int success, uint32_t pkt_length) {
+        if(rates.size() == 0){
+            return;
+        }
+
+        int ndx = 0, attemp = 0, size = rates.size();
+		for(int i = 0; i < size && tries > 0; i++){
+            ndx = rate_index(rates[i]);
+            attemp = (tries < 4)? tries : 4;
+            if (ndx >= 0) {
+			    attempts[ndx] += attemp;
+			    attempts_bytes[ndx] += uint32_t (attemp * pkt_length);
+		    }
+            tries -= attemp;
+        }    
+        successes[ndx] += success;
+        successes_bytes[ndx] += uint32_t (success * pkt_length);
+        return;
 	}
 	String unparse() {
 		StringAccum sa;
